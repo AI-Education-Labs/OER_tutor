@@ -59,7 +59,7 @@ docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:lat
 In a new terminal, use the 
 
 ```
-cd textbook-chat-app
+cd OER_TUTOR
 ```
 
 Command again.
