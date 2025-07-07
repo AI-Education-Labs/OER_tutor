@@ -22,7 +22,7 @@ Here's a step-by-step guide to get both the frontend and backend running:
 First, use command
 
 ```
-cd textbook-chat-app
+cd OER_TUTOR
 ```
 
 This will lead you to the correct directory.
