@@ -3,6 +3,12 @@ import json
 import sys
 import os
 
+#
+#
+# TO RUN BE IN ROOT DIRECTORY AND RUN (python scripts/populate_redis.py)
+#
+#
+
 # Add the parent directory to the Python path so we can import backend modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
