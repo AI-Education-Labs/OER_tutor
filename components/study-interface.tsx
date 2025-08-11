@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,7 +27,7 @@ import { ToolGrid } from "@/components/tool-grid"
 import Link from "next/link"
 
 interface StudyInterfaceProps {
-  textbookId: string
+  textbookId?: string // Make optional since we can get from URL
 }
 
 export interface TabItem {
@@ -44,11 +45,15 @@ export interface TabGroupData {
   position: { x: number; y: number; width: number; height: number }
 }
 
-export function StudyInterface({ textbookId }: StudyInterfaceProps) {
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
-  const [rightPanelWidth, setRightPanelWidth] = useState(208)
-  const [showHelpTab, setShowHelpTab] = useState(false)
+export function StudyInterface({ textbookId: propTextbookId }: StudyInterfaceProps) {
+  const params = useParams()
+
+  // Get textbookId from props or URL params
+  const textbookId = propTextbookId || (params?.id as string)
+
+  // Authentication state
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
 
   // Flash animation states
   const [chaptersFlashing, setChaptersFlashing] = useState(false)
@@ -59,27 +64,23 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
   const [mobileChaptersOpen, setMobileChaptersOpen] = useState(false)
 
-  // Flash animation effect for chapters
+  // Get user authentication on component mount
   useEffect(() => {
-    if (leftPanelCollapsed) {
-      setChaptersFlashing(true)
-      const timer = setTimeout(() => {
-        setChaptersFlashing(false)
-      }, 3200) // 4 flashes at 0.8s each = 3.2 seconds
-      return () => clearTimeout(timer)
-    }
-  }, [leftPanelCollapsed])
+    const token = localStorage.getItem("access_token")
+    setIsLoggedIn(!!token)
+    setAuthLoading(false)
 
-  // Flash animation effect for tools
-  useEffect(() => {
-    if (rightPanelCollapsed) {
-      setToolsFlashing(true)
-      const timer = setTimeout(() => {
-        setToolsFlashing(false)
-      }, 3200) // 4 flashes at 0.8s each = 3.2 seconds
-      return () => clearTimeout(timer)
-    }
-  }, [rightPanelCollapsed])
+    console.log("StudyInterface - Authentication check:", {
+      hasToken: !!token,
+      textbookId,
+      isLoggedIn: !!token,
+    })
+  }, [])
+
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
+  const [rightPanelWidth, setRightPanelWidth] = useState(208)
+  const [showHelpTab, setShowHelpTab] = useState(false)
 
   // Track right panel width for responsive behavior
   const [isRightPanelNarrow, setIsRightPanelNarrow] = useState(true)
@@ -87,6 +88,42 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
   useEffect(() => {
     setIsRightPanelNarrow(rightPanelWidth < 300)
   }, [rightPanelWidth])
+
+  // Flash animation effect for chapters
+  const handleChaptersFlash = () => {
+    if (leftPanelCollapsed) {
+      setChaptersFlashing(true)
+      const timer = setTimeout(() => {
+        setChaptersFlashing(false)
+      }, 3200) // 4 flashes at 0.8s each = 3.2 seconds
+      return () => clearTimeout(timer)
+    }
+  }
+
+  // Flash animation effect for tools
+  const handleToolsFlash = () => {
+    if (rightPanelCollapsed) {
+      setToolsFlashing(true)
+      const timer = setTimeout(() => {
+        setToolsFlashing(false)
+      }, 3200) // 4 flashes at 0.8s each = 3.2 seconds
+      return () => clearTimeout(timer)
+    }
+  }
+
+  useEffect(() => {
+    handleChaptersFlash()
+  }, [leftPanelCollapsed])
+
+  useEffect(() => {
+    handleToolsFlash()
+  }, [rightPanelCollapsed])
+
+  console.log("StudyInterface - Render state:", {
+    textbookId,
+    isLoggedIn,
+    authLoading,
+  })
 
   const tutorTabs: TabItem[] = [
     {
@@ -145,7 +182,6 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
       content: "progress",
       description: "Monitor your learning progress and analytics",
     },
-    
   ]
 
   const [tabGroups, setTabGroups] = useState<TabGroupData[]>([])
@@ -292,6 +328,45 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
     }
   }
 
+  // Show authentication required message if not logged in
+  if (authLoading) {
+    return (
+      <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg mb-2">Loading...</div>
+          <div className="text-sm text-[#969696]">Checking authentication</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-4">Authentication Required</div>
+          <div className="text-sm text-[#969696] mb-6">
+            You need to be logged in to access the study interface and track your progress.
+          </div>
+          <Link href="/auth/login">
+            <Button className="bg-[#007acc] hover:bg-[#005a9e] text-white">Sign In</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (!textbookId) {
+    return (
+      <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl mb-4">No Textbook Selected</div>
+          <div className="text-sm text-[#969696]">Please select a textbook to continue.</div>
+        </div>
+      </div>
+    )
+  }
+
   // Mobile bottom drawer for tools
   const renderMobileToolsDrawer = () => (
     <div
@@ -354,7 +429,7 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
         </Button>
       </div>
       <div className="max-h-[60vh] overflow-auto">
-        <ChapterSelector />
+        <ChapterSelector textbookId={textbookId} />
       </div>
     </div>
   )
@@ -385,7 +460,7 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
               </div>
             </Link>
           </div>
-          <div className="flex-1 text-center text-sm">StudyCode - Research Methods in Psychology</div>
+          <div className="flex-1 text-center text-sm">StudyCode - Physics</div>
         </div>
 
         {/* Mobile Navigation Bar */}
@@ -444,7 +519,7 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
                   </Button>
                 </div>
                 <div className="flex-1 overflow-auto">
-                  <ChapterSelector />
+                  <ChapterSelector textbookId={textbookId} />
                 </div>
               </div>
             )}
@@ -474,11 +549,11 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
                   {/* Breadcrumb Navigation */}
                   <div className="flex items-center gap-1 text-sm min-w-0">
                     <span className="text-[#cccccc] hover:text-[#ffffff] cursor-pointer transition-colors truncate">
-                      Chapter 1: The Science of Psychology
+                      Chapter 1: What is Physics?
                     </span>
                     <ChevronRight className="w-3 h-3 text-[#969696] flex-shrink-0" />
-                    <span className="text-[#007acc] font-medium truncate">Methods of Knowing</span>
-                    <span className="text-[#969696] ml-2 flex-shrink-0 hidden sm:inline">• Page 1</span>
+                    <span className="text-[#007acc] font-medium truncate">Physics: Definitions and Applications</span>
+                    <span className="text-[#969696] ml-2 flex-shrink-0 hidden sm:inline">• Page 5</span>
                   </div>
                 </div>
                 {rightPanelCollapsed && (
@@ -595,16 +670,16 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
 
         {/* Desktop Status bar */}
         <div className="hidden md:flex h-6 bg-[#007acc] text-white text-xs items-center px-4 flex-shrink-0">
-          <span>Chapter 1 of 15 • Page 1 • 5% Complete</span>
+          <span>Chapter 1 of 23 • Page 5 • 0% Complete</span>
           <div className="ml-auto flex items-center gap-4">
             <span>Learning Mode: Socratic</span>
-            <span>Study Time: 0h 15m</span>
+            <span>Study Time: 0h 0m</span>
           </div>
         </div>
 
         {/* Mobile Status bar */}
         <div className="md:hidden h-8 bg-[#007acc] text-white text-xs flex items-center justify-center px-4 flex-shrink-0">
-          <span>Ch 1 • Page 1 • 5%</span>
+          <span>Ch 1 • Page 5 • 0%</span>
         </div>
 
         {/* Mobile Drawers */}

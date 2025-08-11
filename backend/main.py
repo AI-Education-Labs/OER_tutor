@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, AsyncGenerator
 from datetime import datetime, timezone
 import jwt
@@ -19,6 +19,8 @@ from backend.redis_client import redis_client
 
 from backend.routes.auth import get_user_by_id
 from backend.routes.auth import router as auth_router
+from backend.routes.user_progress import router as textbook_progress_router
+from backend.routes.textbook_information import router as textbook_router
 
 from openai import OpenAI
 
@@ -38,7 +40,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
-retriever = backend.retriever.create_retriever("data/Physics-WEB_Sab7RrQ.pdf", "Physics")
+
 
 PDF_DIR = "./public"
 
@@ -49,6 +51,8 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="TextbookAI API")
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
+app.include_router(textbook_router, prefix="/textbook", tags=["textbook"])
 
 # Add CORS middleware
 app.add_middleware(
@@ -63,6 +67,12 @@ app.add_middleware(
 SECRET_KEY = settings.SECRET_KEY  # Use your secret key from settings
 ALGORITHM = settings.ALGORITHM  # Use your algorithm from settings
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES  # Use your token expiration time from settings
+
+# Redis URL configuration from environment variables
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+REDIS_DB = os.getenv("REDIS_DB_CHAT", "1")
+REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
 # Models - using str instead of EmailStr
 class User(BaseModel):
@@ -109,14 +119,29 @@ class QuizAnswer(BaseModel):
     optionId: str
     isCorrect: bool
 
+class SubchapterProgress(BaseModel):
+    completed: bool = False
+    progress: float = 0.0  # % of the subchapter completed
+    time_spent: float = 0.0  # in minutes
+
+class ChapterProgress(BaseModel):
+    completed: bool = False
+    progress: float = 0.0  # % of the chapter completed
+    subchapters: Dict[str, SubchapterProgress] = Field(default_factory=dict)
+
 class UserProgress(BaseModel):
-    correct_answers: int = 0
+    user_id: str = ""
+    textbook_id: str = ""
+    overall_progress: float = 0.0  # e.g. 42.5 (%)
+    chapters: Dict[str, ChapterProgress] = Field(default_factory=dict)
     total_answers: int = 0
+    correct_answers: int = 0
     streak: int = 0
-    last_answer_time: Optional[datetime] = None
-    topics_mastered: List[str] = []
-    level: int = 1
     xp: int = 0
+    level: int = 1
+    last_answer_time: Optional[datetime] = None
+    topics_mastered: List[str] = Field(default_factory=list)
+    
 
 class Chapter(BaseModel):
     id: int
@@ -130,6 +155,8 @@ class TextbookInfo(BaseModel):
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
+
+retriever = backend.retriever.create_retriever("data/Research-Methods-in-Psychology_repaired.pdf", "Research_Methods_in_Psychology")   # We need to pass in what retriever the chat is going to use, then build it for the user. Since the chroma is already initialized it shouldnt waste time.
 
 # Authentication helper functions
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -205,99 +232,6 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
         )
     return current_user
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat_with_textbooks(
-    message: ChatMessage,
-    background_tasks: BackgroundTasks,  # For async processing
-    current_user: Optional[User] = Depends(get_current_active_user),
-    authorization: Optional[str] = Header(None)
-):
-    if not message.message:
-        raise HTTPException(status_code=400, detail="Message cannot be empty")
-
-    session_id = current_user.id if current_user else "anonymous"
-    
-    # Get the existing summary from Redis
-    summary_key = f"summary:{session_id}"
-    conversation_summary = await redis_client.get(summary_key)
-    
-    # Get system prompt
-    system_prompt = get_system_prompt()
-    
-    # Prepare messages for the LLM
-    processed_messages = []
-    
-    # Always include system prompt first
-    processed_messages.append(system_prompt)
-    
-    # Add conversation summary if available
-    if conversation_summary:
-        processed_messages.append(SystemMessage(content=f"Previous conversation summary: {conversation_summary}"))
-    
-    # Get the most recent messages (for immediate context)
-    history = RedisChatMessageHistory(session_id=session_id, url="redis://localhost:6379/1")
-    print(f"History: {history.messages}")
-    recent_messages = history.messages[-5:] if len(history.messages) > 5 else history.messages
-    
-    # Filter out system messages from recent messages (we already added the system prompt)
-    recent_messages = [msg for msg in recent_messages if not isinstance(msg, SystemMessage)]
-    processed_messages.extend(recent_messages)
-    
-    # Add the current message
-    processed_messages.append(HumanMessage(content=message.message))
-    print(f"Processed messages: {processed_messages}")
-    
-    # Initialize LLM and graph
-    llm = ChatOpenAI(model="gpt-4o", temperature=0, streaming=True)
-    graph = build_graph(llm, retriever)
-
-    # Process the message with the LLM
-    reply = ""
-    for event in graph.stream(
-        {"messages": processed_messages},
-        {"configurable": {"thread_id": session_id}}
-    ):
-        for value in event.values():
-            reply = value["messages"][-1].content
-
-    # Handle quiz generation
-    saved = current_user is not None
-    quiz = None
-    if random.random() < 0.2:
-        try:
-            quiz = generate_quiz_for_topic(
-                topic=message.message, 
-                graph=graph, 
-                session_id=session_id, 
-                previous_messages=processed_messages
-            )
-        except ValueError as e:
-            print(f"Quiz generation failed: {e}")
-
-    # Save to history if user is authenticated
-    if saved:
-        history.add_user_message(message.message)
-        history.add_ai_message(reply)
-        if quiz:
-            history.add_ai_message(f"[QUIZ] {quiz.json()}")
-    
-    # Schedule the summary update as a background task
-    asyncio.create_task(
-        update_conversation_summary(
-            user_id=session_id,
-            user_message=message.message,
-            ai_response=reply
-        )
-    )
-
-    return {
-        "response": reply,
-        "quiz": quiz.dict() if quiz else None,
-        "saved": saved
-    }
-
-# REMOVED: global active_sessions dictionary - now using Redis
-
 @app.post("/chat/initiate")
 async def initiate_chat(
     request: Request,
@@ -345,6 +279,7 @@ async def process_chat_message(session_id: str, user_message: str, user: Optiona
     """
     Processes a chat message in the background and puts chunks into the Redis queue.
     """
+    
     try:
         # Check if session exists
         if not await session_manager.session_exists(session_id):
@@ -381,13 +316,13 @@ async def process_chat_message(session_id: str, user_message: str, user: Optiona
             processed_messages.append(SystemMessage(content=f"Previous conversation summary: {conversation_summary}"))
         
         # Get the most recent messages (for immediate context)
-        history = RedisChatMessageHistory(session_id=user_id, url="redis://localhost:6379/1")
+        history = RedisChatMessageHistory(session_id=user_id, url=REDIS_URL)
         print(f"History: {history.messages}")
         recent_messages = history.messages[-5:] if len(history.messages) > 5 else history.messages
         
         # Filter out system messages from recent messages (we already added the system prompt)
         recent_messages = [msg for msg in recent_messages if not isinstance(msg, SystemMessage)]
-        processed_messages.append(SystemMessage(content=f"Last 5 message: {recent_messages}"))
+        processed_messages.extend(recent_messages)
         
         # Add the current message
         processed_messages.append(HumanMessage(content=user_message))
@@ -523,79 +458,13 @@ async def periodic_cleanup():
             print(f"Error in periodic cleanup: {e}")
             await asyncio.sleep(60)  # Wait 1 minute before retrying
 
-# REMOVED: Duplicate /chat/stream POST endpoint - using Redis session approach only
-
-async def post_stream_tasks(
-    session_id: str, 
-    user_message: str, 
-    ai_reply: str, 
-    user: Optional[User],
-    should_generate_quiz: bool = False
-):
-    """
-    Tasks to run after streaming is complete:
-    1. Save to history
-    2. Update summary
-    3. Generate quiz (if needed)
-    """
-    try:
-        # Save to history if user is authenticated
-        if user:
-            history = RedisChatMessageHistory(session_id=session_id, url="redis://localhost:6379/1")
-            history.add_user_message(user_message)
-            history.add_ai_message(ai_reply)
-        
-        # Update the conversation summary
-        await update_conversation_summary(
-            user_id=session_id, 
-            user_message=user_message, 
-            ai_response=ai_reply
-        )
-        
-        # Generate quiz if needed (with random chance)
-        quiz = None
-        if should_generate_quiz and random.random() < 0.2:
-            try:
-                # Initialize LLM and graph for quiz generation
-                llm = ChatOpenAI(model="gpt-4o", temperature=0)
-                graph = build_graph(llm, retriever)
-                
-                # Get processed messages for context
-                processed_messages = []
-                history = RedisChatMessageHistory(session_id=session_id, url="redis://localhost:6379/1")
-                recent_messages = history.messages[-5:] if len(history.messages) > 5 else history.messages
-                processed_messages.extend(recent_messages)
-                
-                quiz = generate_quiz_for_topic(
-                    topic=user_message,
-                    graph=graph,
-                    session_id=session_id,
-                    previous_messages=processed_messages
-                )
-                
-                # Save quiz to history if user is authenticated
-                if user and quiz:
-                    history.add_ai_message(f"[QUIZ] {quiz.json()}")
-                
-                # Store the quiz in Redis for retrieval
-                if quiz:
-                    quiz_key = f"quiz:{session_id}:latest"
-                    await redis_client.set(quiz_key, quiz.json())
-                    await redis_client.expire(quiz_key, 3600)  # Expire after 1 hour
-                
-            except Exception as e:
-                print(f"Quiz generation failed: {e}")
-    
-    except Exception as e:
-        print(f"Error in post-stream tasks: {e}")
-
 async def update_conversation_summary(user_id: str, user_message: str, ai_response: str):
     """Update conversation summary with corrected parameter names."""
     try:
         summary_key = f"summary:{user_id}"
         existing_summary = await redis_client.get(summary_key)
 
-        history = RedisChatMessageHistory(session_id=user_id, url="redis://localhost:6379/1")
+        history = RedisChatMessageHistory(session_id=user_id, url=REDIS_URL)
         all_messages = history.messages if history.messages else []
 
         summary_llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
@@ -668,7 +537,7 @@ async def get_chat_history(current_user: User = Depends(get_current_active_user)
     try:
         history = RedisChatMessageHistory(
             session_id=current_user.id,
-            url="redis://localhost:6379/1",
+            url=REDIS_URL,
         )
         chat_history = history.messages  # List of HumanMessage / AIMessage objects
         return [
@@ -707,7 +576,7 @@ async def submit_quiz_answer(
         if progress_data:
             progress = UserProgress.parse_raw(progress_data)
         else:
-            progress = UserProgress()
+            progress = UserProgress(user_id=current_user.id)
         
         # Update progress
         progress.total_answers += 1
@@ -769,7 +638,7 @@ async def get_user_progress(current_user: User = Depends(get_current_active_user
             progress = UserProgress.parse_raw(progress_data)
             return progress.dict()
         else:
-            return UserProgress().dict()
+            return UserProgress(user_id=current_user.id).dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve progress: {str(e)}")
     
@@ -782,7 +651,7 @@ def generate_quiz_for_topic(topic: str, graph, session_id, previous_messages) ->
     """
 
     json_format = '{"question": "question", "options": [{"id": "1", "text": "First possible answer", "isCorrect": false}, {"id": "2", "text": "Second possible answer", "isCorrect": true}, {"id": "3", "text": "Third possible answer", "isCorrect": false}, {"id": "4", "text": "Fourth possible answer", "isCorrect": false}], "explanation": ""}'
-    message = f"Based on this text from the user, text:'{topic}', generate a multipe choice quiz in the json format {json_format}. Use the textbook to generate this quiz and only return the json quiz object. If the text field is not enough to generate a quiz, use previous messages from the user"
+    message = f"Based on this text from the user, text:'{topic}', generate a multipe choice quiz in the json format {json_format}. Use the textbook to generate this quiz and only return the json quiz object. If the text field is not relevant to generate a quiz, use previous messages from the user"
     previous_messages.append(HumanMessage(content=message))
     reply = ""
     for event in graph.stream(
@@ -793,11 +662,11 @@ def generate_quiz_for_topic(topic: str, graph, session_id, previous_messages) ->
             reply = value["messages"][-1].content
 
         # Extract the JSON string
-    json_match = re.search(r'```json\s*({.*?})\s*```', reply, re.DOTALL)
+    json_match = re.search(r'\`\`\`json\s*({.*?})\s*\`\`\`', reply, re.DOTALL)
     if json_match:
         json_str = json_match.group(1)
     else:
-        json_str = reply  # fallback in case it's not wrapped in ```json ```
+        json_str = reply  # fallback in case it's not wrapped in \`\`\`json \`\`\`
 
     try:
         quiz_data = json.loads(json_str)
@@ -825,7 +694,7 @@ async def update_user_progress(user_id: str, topic: str, is_correct: bool):
         if progress_data:
             progress = UserProgress.parse_raw(progress_data)
         else:
-            progress = UserProgress()
+            progress = UserProgress(user_id=user_id)
         
         # Update progress
         if is_correct:
