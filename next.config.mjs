@@ -11,18 +11,19 @@ const nextConfig = {
     unoptimized: true,
   },
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
     return [
       {
         source: '/textbook/:path*',
-        destination: 'http://localhost:8000/textbook/:path*',
+        destination: `${backendUrl}/textbook/:path*`,
       },
       {
         source: '/auth/:path*',
-        destination: 'http://localhost:8000/auth/:path*',
+        destination: `${backendUrl}/auth/:path*`,
       },
       {
         source: '/progress/:path*',
-        destination: 'http://localhost:8000/progress/:path*',
+        destination: `${backendUrl}/progress/:path*`,
       },
     ]
   },

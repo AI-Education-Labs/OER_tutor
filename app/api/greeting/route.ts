@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get("authorization")?.split(" ")[1] || null
@@ -16,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     try {
       // Try to send the greeting request to the backend API
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers,
         body: JSON.stringify({

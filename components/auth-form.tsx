@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, BookOpen, User, Mail, Lock } from "lucide-react"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
 export default function AuthForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [loginData, setLoginData] = useState({ username: "", password: "" })
@@ -37,7 +39,7 @@ export default function AuthForm() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("http://localhost:8000/auth/token", {
+      const response = await fetch(`${API_BASE_URL}/auth/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -91,7 +93,7 @@ export default function AuthForm() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("http://localhost:8000/auth/register", {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
