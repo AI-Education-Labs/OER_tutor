@@ -16,10 +16,12 @@ class Settings(BaseSettings):
 
     
     class Config:
+
         # Read ONLY from backend/.env to avoid conflicts with project root .env
         env_file = str(Path(__file__).resolve().parent / ".env")
         env_file_encoding = "utf-8"
         case_sensitive = True
+
 
 settings = Settings()
 

@@ -36,7 +36,6 @@ async def store_user_in_redis(user: UserInDB):
 
     user_key = f"user:{user.id}"
     user_data = user.model_dump()
-    print("USSSSSSSEEEEEERRRRR DDDAAAATTTTTAAAA", user_data)
     await redis_client.hset(user_key, mapping=user_data)
     return True
 
