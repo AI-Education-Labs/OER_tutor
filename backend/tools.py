@@ -131,7 +131,7 @@ def stay_on_topic_tool(overall_conversation: str) -> str:
     Checks if the overall conversation is in line with the generated guided learning plan.
     Move the topic back on track if it is not.
     """
-    llm = ChatOpenAI(temperature=0.0, model="gpt-3.5-turbo")
+    llm = ChatOpenAI(temperature=0.0, model="gpt-4o-mini")
     prompt = f"""
     You are a helpful assistant that checks if the overall conversation is in line with the generated guided learning plan.
 

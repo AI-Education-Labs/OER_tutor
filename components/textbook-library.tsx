@@ -27,10 +27,20 @@ export function TextbookLibrary() {
       author: "Paul Peter Urone",
       subject: "Physics",
       cover: "/Physics_cover.png",
-      progress: 65,
+      progress: 0,
       lastAccessed: "2 hours ago",
       starred: true,
     },
+    {
+      id: "2",
+      title: "Research Methods in Psychology",
+      author: "Rajiv S. Jhangiani",
+      subject: "Psychology",
+      cover: "/Psychology_cover.png",
+      progress: 0,
+      lastAccessed: "2 hours ago",
+      starred: true,
+    }
     
   ])
 
