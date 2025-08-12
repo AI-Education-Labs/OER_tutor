@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     LANGCHAIN_API_KEY: Optional[str] = None
 
+    # Qdrant settings
+    QDRANT_KEY: Optional[str] = None
+
+    # Langchain settings
+    LANGSMITH_TRACING_V2: Optional[bool] = True
+    NAME: Optional[str] = "EC2v2"
+
     
     class Config:
 

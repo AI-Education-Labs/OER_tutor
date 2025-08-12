@@ -76,72 +76,154 @@ interface ChapterSelectorProps {
   onSectionSelect?: (chapterId: string, sectionId: string) => void
 }
 
+export function ChapterSelector({ textbookId, onSectionSelect }: ChapterSelectorProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [textbookData, setTextbookData] = useState<TextbookWithProgress | null>(null)
 
-interface ChapterSelectorProps {
-  textbookId: string
-}
-
-export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
   // Change the initial expanded state to start collapsed
   const [expandedChapters, setExpandedChapters] = useState<string[]>([])
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
   const [chapters, setChapters] = useState<Chapter[]>([])
 
-  // On mount/load: fetch chapters for textbook, reset progress to 0 for testing, then fetch progress
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
-
-    const loadChaptersAndProgress = async () => {
-      try {
-        // 1) Fetch chapters list from Next.js API
-        const chaptersResp = await fetch(`/api/chapters/${encodeURIComponent(textbookId)}`)
-        const chaptersData = await chaptersResp.json()
-
-        console.log("chaptersData:", chaptersData)
-        const rawChapters = chaptersData?.chapters ?? []
-        const chaptersArray = Array.isArray(rawChapters)
-          ? rawChapters
-          : typeof rawChapters === "object" && rawChapters !== null
-            ? Object.values(rawChapters)
-            : []
-
-        // Build initial progress from localStorage
-        const key = "readingProgress"
-        let byTextbook: Record<string, number> = {}
-        try {
-          const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null
-          const parsed: Record<string, Record<string, number>> = raw ? JSON.parse(raw) : {}
-          byTextbook = parsed[textbookId] || {}
-        } catch {
-          byTextbook = {}
-        }
-
-        const chapterList = chaptersArray.map((c: any) => {
-          const id = String(c.id ?? c.chapter_id ?? "")
-          const stored = Number(byTextbook[id] ?? 0)
-          return {
-            id,
-            title: c.title || `Chapter ${c.id ?? c.chapter_id ?? ""}`,
-            progress: Math.max(0, Math.min(100, Math.round(stored))),
-          } as Chapter
-        })
-
-        setChapters(chapterList)
-      } catch (e) {
-        // If API fails (e.g., not logged in), fallback: keep current chapters list empty
-        setChapters([])
+  const updateProgress = async (
+    chapterId: string,
+    sectionId: string,
+    progressData: {
+      completion_percentage?: number
+      status?: string
+      time_spent_minutes?: number
+    },
+  ) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       }
-    }
 
+      const response = await fetch(`/api/progress/${textbookId}/${chapterId}/${sectionId}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(progressData),
+      })
+
+      if (response.ok) {
+        // Update local state to reflect progress change
+        setChapters((prev) =>
+          prev.map((chapter) => {
+            if (chapter.id === chapterId && chapter.sections) {
+              const updatedSections = chapter.sections.map((section) => {
+                if (section.id === sectionId) {
+                  return {
+                    ...section,
+                    completed: progressData.status === "completed",
+                    progress: progressData.completion_percentage || section.progress,
+                  }
+                }
+                return section
+              })
+              return { ...chapter, sections: updatedSections }
+            }
+            return chapter
+          }),
+        )
+      }
+    } catch (err) {
+      console.error("Failed to update progress:", err)
+    }
+  }
+
+  const fetchTextbookData = async () => {
+    if (!textbookId) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+
+      const [textbookResp, chaptersResp] = await Promise.all([
+        fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { headers }),
+        fetch(`/api/chapters/${encodeURIComponent(textbookId)}`, { headers }),
+      ])
+
+      if (!textbookResp.ok || !chaptersResp.ok) {
+        throw new Error(`Failed to load textbook data: ${textbookResp.status} ${chaptersResp.status}`)
+      }
+
+      const textbookMetadata = await textbookResp.json()
+      const chaptersData = await chaptersResp.json()
+
+      const rawChapters = chaptersData?.chapters ?? textbookMetadata?.chapters ?? []
+      const chaptersArray = Array.isArray(rawChapters) ? rawChapters : []
+
+      const textbookInfo: TextbookWithProgress = {
+        textbook_id: textbookId,
+        title: textbookMetadata?.title || "Unknown Title",
+        author: textbookMetadata?.author || "Unknown Author",
+        chapters: [],
+        overall_progress: 0,
+      }
+
+      const key = "readingProgress"
+      let byTextbook: Record<string, number> = {}
+      try {
+        const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null
+        const parsed: Record<string, Record<string, number>> = raw ? JSON.parse(raw) : {}
+        byTextbook = parsed[textbookId] || {}
+      } catch {
+        byTextbook = {}
+      }
+
+      const chapterList = chaptersArray.map((c: any) => {
+        const id = String(c.id ?? "")
+        const stored = Number(byTextbook[id] ?? 0)
+
+        const sections: Section[] = (c.sub_chapters || []).map((subChapter: string, index: number) => ({
+          id: `${id}-${index + 1}`,
+          title: subChapter,
+          page: 1, // Default page since not provided in your JSON
+          completed: false,
+          progress: 0,
+        }))
+
+        return {
+          id,
+          title: c.title || `Chapter ${c.id || ""}`,
+          chapter_number: c.id || 1,
+          sections,
+          progress: Math.max(0, Math.min(100, Math.round(stored))),
+        } as Chapter
+      })
+
+      const totalProgress = chapterList.reduce((sum, chapter) => sum + chapter.progress, 0)
+      const overallProgress = chapterList.length > 0 ? totalProgress / chapterList.length : 0
+
+      textbookInfo.chapters = chapterList
+      textbookInfo.overall_progress = overallProgress
+
+      setChapters(chapterList)
+      setTextbookData(textbookInfo)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load textbook data"
+      setError(errorMessage)
+      setChapters([])
+      setTextbookData(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     if (textbookId) {
-      loadChaptersAndProgress()
+      fetchTextbookData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textbookId])
 
-  // Listen for progress updates emitted from the viewer
   useEffect(() => {
     const handler = (evt: Event) => {
       const custom = evt as CustomEvent<{ textbookId: string; chapterId: string; percent: number }>
@@ -151,6 +233,21 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
       setChapters((prev) =>
         prev.map((c) => (c.id === chapterId ? { ...c, progress: Math.max(0, Math.min(100, Math.round(percent))) } : c)),
       )
+
+      setTextbookData((prev) => {
+        if (!prev) return prev
+        const updatedChapters = prev.chapters.map((c) =>
+          c.id === chapterId ? { ...c, progress: Math.max(0, Math.min(100, Math.round(percent))) } : c,
+        )
+        const totalProgress = updatedChapters.reduce((sum, chapter) => sum + chapter.progress, 0)
+        const overallProgress = updatedChapters.length > 0 ? totalProgress / updatedChapters.length : 0
+
+        return {
+          ...prev,
+          chapters: updatedChapters,
+          overall_progress: overallProgress,
+        }
+      })
     }
 
     if (typeof window !== "undefined") {
@@ -163,7 +260,6 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
     }
   }, [textbookId])
 
-  // Fallback: periodically sync from localStorage in case custom events are missed
   useEffect(() => {
     if (typeof window === "undefined") return
     const key = "readingProgress"
@@ -193,10 +289,9 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
   }
 
   const handleSectionClick = async (chapterId: string, sectionId: string) => {
-    // Mark section as accessed/in progress
     await updateProgress(chapterId, sectionId, {
       status: "in_progress",
-      time_spent_minutes: 1, // Minimal time to mark as accessed
+      time_spent_minutes: 1,
     })
 
     if (onSectionSelect) {
@@ -205,7 +300,7 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
   }
 
   const markSectionComplete = async (chapterId: string, sectionId: string, event: React.MouseEvent) => {
-    event.stopPropagation() // Prevent triggering section click
+    event.stopPropagation()
     await updateProgress(chapterId, sectionId, {
       completion_percentage: 100,
       status: "completed",
@@ -242,7 +337,6 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
 
   return (
     <div className="p-1.5 show-scrollbar">
-      {/* Overall progress */}
       <div className="mb-3 p-2 bg-[#2d2d30] rounded">
         <div className="text-xs text-[#cccccc] mb-1">{textbookData.title}</div>
         <div className="text-[10px] text-[#969696] mb-1">by {textbookData.author}</div>
