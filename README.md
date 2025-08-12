@@ -130,7 +130,7 @@ If you encounter issues:
 
 1. Check the terminal where you're running the FastAPI server
 2. Verify that all Python dependencies installed correctly
-3. Make sure you're using Python 3.7+
+3. Make sure you're using Python 3.9+
 
 
 

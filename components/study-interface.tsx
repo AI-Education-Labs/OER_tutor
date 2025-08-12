@@ -354,7 +354,7 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
         </Button>
       </div>
       <div className="max-h-[60vh] overflow-auto">
-        <ChapterSelector />
+        <ChapterSelector textbookId={textbookId} />
       </div>
     </div>
   )
@@ -444,7 +444,7 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
                   </Button>
                 </div>
                 <div className="flex-1 overflow-auto">
-                  <ChapterSelector />
+                  <ChapterSelector textbookId={textbookId} />
                 </div>
               </div>
             )}
@@ -493,8 +493,8 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
                   </Button>
                 )}
               </div>
-              <div className="flex-1 overflow-auto">
-                <PDFViewer />
+              <div className="flex-1 min-h-0">
+                <PDFViewer textbookId={textbookId} />
               </div>
             </div>
 
@@ -580,6 +580,7 @@ export function StudyInterface({ textbookId }: StudyInterfaceProps) {
                         onSplitGroup={(direction) => splitTabGroup(group.id, direction)}
                         onRemoveGroup={() => removeTabGroup(group.id)}
                         isNarrowPanel={isRightPanelNarrow}
+                        textbookId={textbookId}
                         style={{
                           height: `${group.position.height}%`,
                           minHeight: "200px",

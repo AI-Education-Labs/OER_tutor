@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 
-// The FastAPI backend URL - update this to match your backend
-const BACKEND_URL = "http://localhost:8000"
+const BACKEND_URL = process.env.BACKEND_URL
+
+console.log("BACKEND_URL:", BACKEND_URL)
 
 export async function GET() {
   try {
@@ -21,22 +22,6 @@ export async function GET() {
     return NextResponse.json(data)
   } catch (error) {
     console.error("Error fetching textbooks:", error)
-
-    // Return mock data as fallback
-    const mockTextbooks = [
-      {
-        id: "Physics",
-        title: "Physics Textbook",
-        chapters: [
-          { id: 1, title: "Introduction", file: "/api/pdf/Physics/1" },
-          { id: 2, title: "Basic Concepts", file: "/api/pdf/Physics/2" },
-          { id: 3, title: "Advanced Topics", file: "/api/pdf/Physics/3" },
-          { id: 4, title: "Case Studies", file: "/api/pdf/Physics/4" },
-          { id: 5, title: "Practical Applications", file: "/api/pdf/Physics/5" },
-        ],
-      },
-    ]
-
-    return NextResponse.json(mockTextbooks)
+    throw new Error("Failed to fetch textbooks")
   }
 }

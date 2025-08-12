@@ -2,16 +2,18 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { ChevronRight, ChevronDown, Lightbulb, ArrowRight, BookOpen, Plus, Target, Edit3, Save } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ChevronRight, ChevronDown, Lightbulb, ArrowRight, BookOpen, Plus, Target, Edit3, Save, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AiChatPanel } from "@/components/ai-chat-panel"
 import type { ChatContext } from "@/types/chat"
 
 interface TutorPanelProps {
   activeTab: string
+  textbookId?: string
 }
 
 interface DialogueNode {
@@ -45,7 +47,7 @@ interface StudyNote {
   tags: string[]
 }
 
-export function TutorPanel({ activeTab }: TutorPanelProps) {
+export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
   const [userInput, setUserInput] = useState("")
   const [activeTree, setActiveTree] = useState<string>("limits")
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
@@ -623,53 +625,7 @@ export function TutorPanel({ activeTab }: TutorPanelProps) {
   )
 
   const renderQuizTab = () => (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
-        <Card className="bg-[#3e3e42] border-[#3e3e42]">
-          <CardContent className="p-4">
-            <h3 className="text-[#ffffff] text-sm font-medium mb-4">Concept Check: Limits</h3>
-            <p className="text-[#cccccc] mb-4">What is lim[x→2] (x² + 3x - 1)?</p>
-
-            <div className="space-y-2">
-              {["7", "9", "11", "13"].map((option, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  className="w-full justify-start bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] hover:bg-[#3e3e42] hover:text-[#ffffff]"
-                >
-                  {String.fromCharCode(65 + index)}. {option}
-                </Button>
-              ))}
-            </div>
-
-            <div className="mt-4 p-3 bg-[#252526] rounded border-l-4 border-[#dcdcaa]">
-              <div className="flex items-start gap-2">
-                <Lightbulb className="w-4 h-4 text-[#dcdcaa] mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-[#cccccc] min-w-0">
-                  <p className="font-medium mb-1">Thinking Hint:</p>
-                  <div
-                    onMouseEnter={(e) =>
-                      handleElementHover(
-                        e,
-                        "hint-text",
-                        "Remember that for polynomial functions, you can directly substitute the value since polynomials are continuous everywhere.",
-                        ".hint-content",
-                      )
-                    }
-                    onMouseLeave={handleElementLeave}
-                  >
-                    <p className="hint-content line-clamp-3">
-                      Remember that for polynomial functions, you can directly substitute the value since polynomials
-                      are continuous everywhere.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <QuizPanel textbookId={textbookId} />
   )
 
   const renderFlashcardsTab = () => (
@@ -874,5 +830,246 @@ export function TutorPanel({ activeTab }: TutorPanelProps) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">{tabContent[activeTab as keyof typeof tabContent]?.()}</div>
+  )
+}
+
+interface GeneratedQuestion {
+  question: string
+  choices: string[]
+  answer: number
+}
+
+interface QuizPanelProps {
+  textbookId?: string
+}
+
+function QuizPanel({ textbookId }: QuizPanelProps) {
+  const [stage, setStage] = useState<"menu" | "loading" | "quiz" | "summary">("menu")
+  const [subchapters, setSubchapters] = useState<string[]>([])
+  const [selectedSubchapter, setSelectedSubchapter] = useState<string>("")
+  const [contextText, setContextText] = useState<string>("")
+  const [questions, setQuestions] = useState<GeneratedQuestion[]>([])
+  const [answers, setAnswers] = useState<number[]>([])
+
+  // Load subchapters from metadata endpoint and extract full text content as context
+  useEffect(() => {
+    let isCancelled = false
+    const load = async () => {
+      try {
+        if (!textbookId) return
+        // 1) Load metadata for subchapters
+        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        if (metaResp.ok) {
+          const meta = await metaResp.json()
+          // Gather all sub_chapters from chapters array, flatten, unique
+          const subs: string[] = Array.isArray(meta?.chapters)
+            ? meta.chapters.flatMap((c: any) => Array.isArray(c?.sub_chapters) ? c.sub_chapters : [])
+            : []
+          const uniqueSubs = Array.from(new Set(subs.filter((s) => typeof s === "string" && s.trim().length > 0)))
+          setSubchapters(uniqueSubs)
+        }
+
+        // 2) Load chapter1 HTML to provide base context (we can extend to more chapters later)
+        const htmlUrl = `/textbooks/${encodeURIComponent(textbookId)}/chapter1.html`
+        const resp = await fetch(htmlUrl, { cache: "no-store" })
+        if (resp.ok) {
+          const html = await resp.text()
+          if (isCancelled) return
+          const div = document.createElement("div")
+          div.innerHTML = html
+          const textContent = div.textContent || ""
+          setContextText(textContent)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => {
+      isCancelled = true
+    }
+  }, [textbookId])
+
+  const startGeneration = async () => {
+    setStage("loading")
+    try {
+      // Prepare context, hard coded until we have a way to get the context from the backend
+      const context = "Introduction to physics: What is Physics? Physics is a branch of science. The word sciences comes from a Latin word that means having knowledge, and refers the knowledge of how the physical world operates, based on objective evidence determined through observation and experimentation..."
+      const focusHint = selectedSubchapter ? `Focus only on section: ${selectedSubchapter}` : ""
+
+      // Call our Next.js route to proxy to backend generator
+      const resp = await fetch("/api/quiz/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ context, hint: focusHint, num_questions: 5 }),
+      })
+
+      if (!resp.ok) {
+        throw new Error(`Failed to generate quiz (${resp.status})`)
+      }
+
+      const payload = await resp.json()
+      const data: GeneratedQuestion[] = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.quiz)
+          ? payload.quiz
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.raw)
+              ? payload.raw
+              : []
+
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Quiz generation returned no questions")
+      }
+
+      setQuestions(data as GeneratedQuestion[])
+      setAnswers(new Array(data.length).fill(-1))
+      setStage("quiz")
+    } catch {
+      setStage("menu")
+    }
+  }
+
+  const submitQuiz = () => {
+    setStage("summary")
+  }
+
+  const score = questions.reduce((acc, q, idx) => (answers[idx] === q.answer ? acc + 1 : acc), 0)
+
+  if (stage === "menu") {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="p-4 border-b border-[#3e3e42]">
+          <h3 className="text-sm font-medium text-[#ffffff]">Concept Check</h3>
+          <p className="text-xs text-[#969696]">Choose a subchapter to focus your quiz.</p>
+        </div>
+        <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
+          <div>
+            <label className="block text-xs text-[#cccccc] mb-2">Subchapter</label>
+            <Select onValueChange={(v: string) => setSelectedSubchapter(v)}>
+              <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
+                <SelectValue placeholder="Select a subchapter" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
+                {subchapters.length === 0 ? (
+                  <div className="px-2 py-1 text-xs text-[#969696]">No subchapters detected</div>
+                ) : (
+                  subchapters.map((s, i) => (
+                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-[#3e3e42]">
+                      {s}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2">
+            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!contextText}>
+              Generate Quiz
+            </Button>
+          </div>
+          {!contextText && (
+            <div className="text-xs text-[#969696]">Preparing chapter content. Please wait a moment…</div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (stage === "loading") {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex items-center gap-2 text-[#cccccc]">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Generating your quiz…</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (stage === "quiz") {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#3e3e42]" onClick={() => setStage("menu")}>Back</Button>
+          <h3 className="text-sm font-medium text-[#ffffff]">Quiz</h3>
+          {selectedSubchapter && <span className="ml-2 text-xs text-[#969696] truncate">{selectedSubchapter}</span>}
+        </div>
+        <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
+          {questions.map((q, qi) => (
+            <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
+              <CardContent className="p-3">
+                <div className="text-sm text-[#ffffff] mb-3">{qi + 1}. {q.question}</div>
+                <div className="space-y-2">
+                  {q.choices.map((choice, ci) => {
+                    const active = answers[qi] === ci
+                    return (
+                      <Button
+                        key={ci}
+                        variant={active ? "default" : "outline"}
+                        className={`w-full justify-start ${active ? "bg-[#007acc] hover:bg-[#005a9e]" : "bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] hover:bg-[#3e3e42] hover:text-[#ffffff]"}`}
+                        onClick={() => setAnswers((prev) => prev.map((a, idx) => (idx === qi ? ci : a)))}
+                      >
+                        {String.fromCharCode(65 + ci)}. {choice}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="p-3 border-t border-[#3e3e42] flex justify-end">
+          <Button className="bg-[#4ec9b0] hover:bg-[#3a9b85]" onClick={submitQuiz} disabled={answers.some((a) => a < 0)}>
+            Submit
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // summary
+  return (
+    <div className="h-full flex flex-col">
+      <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#3e3e42]" onClick={() => setStage("menu")}>
+          Back
+        </Button>
+        <h3 className="text-sm font-medium text-[#ffffff]">Summary</h3>
+      </div>
+      <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
+        <Card className="bg-[#2d2d30] border-[#3e3e42]">
+          <CardContent className="p-4">
+            <div className="text-[#ffffff] text-sm mb-2">Your Score</div>
+            <div className="text-2xl font-bold text-[#4ec9b0]">{score} / {questions.length}</div>
+          </CardContent>
+        </Card>
+
+        {questions.map((q, qi) => {
+          const user = answers[qi]
+          const correct = q.answer
+          const isCorrect = user === correct
+          return (
+            <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
+              <CardContent className="p-3">
+                <div className="text-sm text-[#ffffff] mb-2">{qi + 1}. {q.question}</div>
+                <div className="grid grid-cols-1 gap-1">
+                  {q.choices.map((c, ci) => (
+                    <div
+                      key={ci}
+                      className={`text-xs px-2 py-1 rounded ${ci === correct ? "bg-[#1e3a2f] text-[#4ec9b0]" : ci === user ? (isCorrect ? "bg-[#1e3a2f] text-[#4ec9b0]" : "bg-[#3a1e1e] text-[#f28b82]") : "text-[#cccccc]"}`}
+                    >
+                      {String.fromCharCode(65 + ci)}. {c}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+    </div>
   )
 }

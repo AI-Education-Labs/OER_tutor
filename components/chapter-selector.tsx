@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown, ChevronRight, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -18,45 +18,114 @@ interface Section {
   completed?: boolean
 }
 
-export function ChapterSelector() {
+interface ChapterSelectorProps {
+  textbookId: string
+}
+
+export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
   // Change the initial expanded state to start collapsed
   const [expandedChapters, setExpandedChapters] = useState<string[]>([])
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
+  const [chapters, setChapters] = useState<Chapter[]>([])
 
-  const chapters: Chapter[] = [
-    {
-      id: "1",
-      title: "What is Physics",
-      progress: 5,
-      sections: [
-        { id: "1.1", title: "Physics: Definitions and Applications", page: 1, completed: true },
-        { id: "1.2", title: "The Scientific Methods", page: 14, completed: false },
-        { id: "1.3", title: "The Language of Physics: Physical Quantities and Units", page: 18, completed: false },
-      ],
-    },
-    {
+  // On mount/load: fetch chapters for textbook, reset progress to 0 for testing, then fetch progress
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
 
-      id: "2",
-      title: "Motion in One Dimension",
-      progress: 0,
-      sections: [
-        { id: "2.1", title: "Relative Motion, Distance, and Displacement", page: 54 },
-        { id: "2.2", title: "Speed and Velocity", page: 62 },
-        { id: "2.3", title: "Position vs. Time Graphs", page: 67 },
-        { id: "2.4", title: "Velocity vs. Time Graphs", page: 72 },
-      ],
-    },
-    {
-      id: "3",
-      title: "Acceleration",
-      progress: 0,
-      sections: [
-        { id: "3.1", title: "Acceleration", page: 93 },
-        { id: "3.2", title: "Representing Acceleration with Equations and Graphs", page: 99 },
-      ],
-    },
-  ]
+    const loadChaptersAndProgress = async () => {
+      try {
+        // 1) Fetch chapters list from Next.js API
+        const chaptersResp = await fetch(`/api/chapters/${encodeURIComponent(textbookId)}`)
+        const chaptersData = await chaptersResp.json()
+
+        console.log("chaptersData:", chaptersData)
+        const rawChapters = chaptersData?.chapters ?? []
+        const chaptersArray = Array.isArray(rawChapters)
+          ? rawChapters
+          : typeof rawChapters === "object" && rawChapters !== null
+            ? Object.values(rawChapters)
+            : []
+
+        // Build initial progress from localStorage
+        const key = "readingProgress"
+        let byTextbook: Record<string, number> = {}
+        try {
+          const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null
+          const parsed: Record<string, Record<string, number>> = raw ? JSON.parse(raw) : {}
+          byTextbook = parsed[textbookId] || {}
+        } catch {
+          byTextbook = {}
+        }
+
+        const chapterList = chaptersArray.map((c: any) => {
+          const id = String(c.id ?? c.chapter_id ?? "")
+          const stored = Number(byTextbook[id] ?? 0)
+          return {
+            id,
+            title: c.title || `Chapter ${c.id ?? c.chapter_id ?? ""}`,
+            progress: Math.max(0, Math.min(100, Math.round(stored))),
+          } as Chapter
+        })
+
+        setChapters(chapterList)
+      } catch (e) {
+        // If API fails (e.g., not logged in), fallback: keep current chapters list empty
+        setChapters([])
+      }
+    }
+
+    if (textbookId) {
+      loadChaptersAndProgress()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textbookId])
+
+  // Listen for progress updates emitted from the viewer
+  useEffect(() => {
+    const handler = (evt: Event) => {
+      const custom = evt as CustomEvent<{ textbookId: string; chapterId: string; percent: number }>
+      if (!custom?.detail) return
+      const { textbookId: tid, chapterId, percent } = custom.detail
+      if (tid !== textbookId) return
+      setChapters((prev) =>
+        prev.map((c) => (c.id === chapterId ? { ...c, progress: Math.max(0, Math.min(100, Math.round(percent))) } : c)),
+      )
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("reading-progress", handler as EventListener)
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("reading-progress", handler as EventListener)
+      }
+    }
+  }, [textbookId])
+
+  // Fallback: periodically sync from localStorage in case custom events are missed
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const key = "readingProgress"
+    const interval = setInterval(() => {
+      try {
+        const raw = window.localStorage.getItem(key)
+        if (!raw) return
+        const parsed: Record<string, Record<string, number>> = JSON.parse(raw)
+        const byTextbook = parsed[textbookId] || {}
+        setChapters((prev) =>
+          prev.map((c) => ({
+            ...c,
+            progress: Math.max(0, Math.min(100, Math.round(Number(byTextbook[c.id] ?? c.progress ?? 0)))),
+          })),
+        )
+      } catch {
+        // ignore parse errors
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [textbookId])
 
   const toggleChapter = (chapterId: string) => {
     setExpandedChapters((prev) =>

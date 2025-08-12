@@ -17,6 +17,7 @@ interface TabGroupProps {
   onRemoveGroup: () => void
   isNarrowPanel?: boolean
   style?: React.CSSProperties
+  textbookId?: string
 }
 
 export function TabGroup({
@@ -26,6 +27,7 @@ export function TabGroup({
   onRemoveGroup,
   isNarrowPanel = true,
   style,
+  textbookId,
 }: TabGroupProps) {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null)
@@ -195,7 +197,7 @@ export function TabGroup({
       {/* Tab content */}
       <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
         <div className="flex-1 overflow-auto pr-1 pb-2">
-          {activeTab && <TutorPanel activeTab={activeTab.content} />}
+          {activeTab && <TutorPanel activeTab={activeTab.content} textbookId={textbookId} />}
         </div>
       </div>
     </div>
