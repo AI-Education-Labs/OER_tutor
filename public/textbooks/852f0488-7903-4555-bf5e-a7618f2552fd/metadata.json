@@ -1,0 +1,16 @@
+{
+  "_id": "852f0488-7903-4555-bf5e-a7618f2552fd",
+  "title": "High School Physics",
+  "filepath": "./data/Physics",
+  "subject": "Physics",
+  "author": "Paul Peter Urone",
+  "cover": "/Physics_cover.png",
+  "created_at": "2025-08-12T12:00:00.000Z",
+  "chapters": [
+    {"id": 1, "title": "What is Physics?", "sub_chapters": ["Physics: Definitions and Applications", "The Scientific Method", "The Language of Physics"], "file": "chapter1.pdf"},
+    {"id": 2, "title": "Vectors", "file": "chapter2.pdf"},
+    {"id": 3, "title": "Motion Along a Straight Line", "file": "chapter3.pdf"},
+    {"id": 4, "title": "Motion in Two and Three Dimensions", "file": "chapter4.pdf"},
+    {"id": 5, "title": "Newton's Laws of Motion", "file": "chapter5.pdf"}
+  ]
+}

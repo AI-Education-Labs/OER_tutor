@@ -1,5 +1,4 @@
 "use client"
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { ChevronDown, ChevronRight, FileText, Loader2 } from "lucide-react"
@@ -77,161 +76,115 @@ interface ChapterSelectorProps {
   onSectionSelect?: (chapterId: string, sectionId: string) => void
 }
 
-export function ChapterSelector({ textbookId, onSectionSelect }: ChapterSelectorProps) {
+
+interface ChapterSelectorProps {
+  textbookId: string
+}
+
+export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
+  // Change the initial expanded state to start collapsed
   const [expandedChapters, setExpandedChapters] = useState<string[]>([])
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
-  const [textbookData, setTextbookData] = useState<TextbookWithProgress | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [chapters, setChapters] = useState<Chapter[]>([])
 
+  // On mount/load: fetch chapters for textbook, reset progress to 0 for testing, then fetch progress
   useEffect(() => {
-    if (!textbookId) {
-      console.log("ChapterSelector: Missing textbookId")
-      setError("Missing textbook ID")
-      setLoading(false)
-      return
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+
+    const loadChaptersAndProgress = async () => {
+      try {
+        // 1) Fetch chapters list from Next.js API
+        const chaptersResp = await fetch(`/api/chapters/${encodeURIComponent(textbookId)}`)
+        const chaptersData = await chaptersResp.json()
+
+        console.log("chaptersData:", chaptersData)
+        const rawChapters = chaptersData?.chapters ?? []
+        const chaptersArray = Array.isArray(rawChapters)
+          ? rawChapters
+          : typeof rawChapters === "object" && rawChapters !== null
+            ? Object.values(rawChapters)
+            : []
+
+        // Build initial progress from localStorage
+        const key = "readingProgress"
+        let byTextbook: Record<string, number> = {}
+        try {
+          const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null
+          const parsed: Record<string, Record<string, number>> = raw ? JSON.parse(raw) : {}
+          byTextbook = parsed[textbookId] || {}
+        } catch {
+          byTextbook = {}
+        }
+
+        const chapterList = chaptersArray.map((c: any) => {
+          const id = String(c.id ?? c.chapter_id ?? "")
+          const stored = Number(byTextbook[id] ?? 0)
+          return {
+            id,
+            title: c.title || `Chapter ${c.id ?? c.chapter_id ?? ""}`,
+            progress: Math.max(0, Math.min(100, Math.round(stored))),
+          } as Chapter
+        })
+
+        setChapters(chapterList)
+      } catch (e) {
+        // If API fails (e.g., not logged in), fallback: keep current chapters list empty
+        setChapters([])
+      }
     }
-    console.log("ChapterSelector: Starting fetch with textbookId:", textbookId)
-    fetchTextbookData()
+
+    if (textbookId) {
+      loadChaptersAndProgress()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textbookId])
 
-  const fetchTextbookData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Get the authentication token
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        throw new Error("Authentication required. Please log in.")
-      }
-
-      console.log(`ChapterSelector: Fetching textbook preview for ID: ${textbookId}`)
-
-      // First, get the textbook structure/preview
-      const textbookResponse = await fetch(`/textbook/get_textbook_preview/${textbookId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      console.log(`ChapterSelector: Textbook response status:`, textbookResponse.status)
-      if (!textbookResponse.ok) {
-        const errorText = await textbookResponse.text()
-        console.error(`ChapterSelector: Textbook fetch failed:`, errorText)
-        throw new Error(`Failed to fetch textbook preview: ${textbookResponse.statusText}`)
-      }
-
-      const textbookPreview: TextbookPreview = await textbookResponse.json()
-      console.log("ChapterSelector: Textbook preview received:", textbookPreview)
-
-      // Then, get the user's progress for this textbook
-      console.log(`ChapterSelector: Fetching progress for textbook: ${textbookId}`)
-      const progressResponse = await fetch(`/progress/${textbookId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
-
-      console.log(`ChapterSelector: Progress response status:`, progressResponse.status)
-      if (!progressResponse.ok) {
-        const errorText = await progressResponse.text()
-        console.error(`ChapterSelector: Progress fetch failed:`, errorText)
-        throw new Error(`Failed to fetch user progress: ${progressResponse.statusText}`)
-      }
-
-      const userProgress: UserProgress = await progressResponse.json()
-      console.log("ChapterSelector: User progress received:", userProgress)
-
-      // Combine textbook structure with user progress
-      const combinedData: TextbookWithProgress = {
-        textbook_id: textbookPreview.textbook_id,
-        title: textbookPreview.title,
-        author: textbookPreview.author,
-        overall_progress: userProgress.progress.completion_percentage,
-        chapters: textbookPreview.chapters.map((chapter) => {
-          const chapterProgress = userProgress.progress.chapters[chapter.chapter_id] || {
-            completion_percentage: 0,
-            sections: {},
-          }
-
-          return {
-            id: chapter.chapter_id,
-            title: chapter.title,
-            chapter_number: chapter.chapter_number,
-            progress: chapterProgress.completion_percentage,
-            sections: chapter.sections.map((section) => {
-              const sectionProgress = chapterProgress.sections[section.section_id] || {
-                completion_percentage: 0,
-                status: "not_started",
-              }
-
-              return {
-                id: section.section_id,
-                title: section.title,
-                page: section.page_start,
-                completed: sectionProgress.status === "completed",
-                progress: sectionProgress.completion_percentage,
-              }
-            }),
-          }
-        }),
-      }
-
-      console.log("ChapterSelector: Combined data created:", combinedData)
-      setTextbookData(combinedData)
-    } catch (err) {
-      console.error("ChapterSelector: Error in fetchTextbookData:", err)
-      setError(err instanceof Error ? err.message : "Failed to load textbook data")
-    } finally {
-      setLoading(false)
+  // Listen for progress updates emitted from the viewer
+  useEffect(() => {
+    const handler = (evt: Event) => {
+      const custom = evt as CustomEvent<{ textbookId: string; chapterId: string; percent: number }>
+      if (!custom?.detail) return
+      const { textbookId: tid, chapterId, percent } = custom.detail
+      if (tid !== textbookId) return
+      setChapters((prev) =>
+        prev.map((c) => (c.id === chapterId ? { ...c, progress: Math.max(0, Math.min(100, Math.round(percent))) } : c)),
+      )
     }
-  }
 
-  const updateProgress = async (chapterId: string, sectionId?: string, progressData?: any) => {
-    try {
-      const token = localStorage.getItem("access_token")
-      if (!token) {
-        console.error("No authentication token available")
-        return
-      }
-
-      let url: string
-      if (sectionId) {
-        // Update subsection progress
-        url = `/progress/${textbookId}/chapter/${chapterId}/subsection/${sectionId}`
-      } else {
-        // Update chapter progress
-        url = `/progress/${textbookId}/chapter/${chapterId}`
-      }
-
-      const response = await fetch(url, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(
-          progressData || {
-            completion_percentage: 100,
-            status: "completed",
-          },
-        ),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to update progress: ${response.statusText}`)
-      }
-
-      // Refresh the data after updating progress
-      await fetchTextbookData()
-    } catch (err) {
-      console.error("Failed to update progress:", err)
+    if (typeof window !== "undefined") {
+      window.addEventListener("reading-progress", handler as EventListener)
     }
-  }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("reading-progress", handler as EventListener)
+      }
+    }
+  }, [textbookId])
+
+  // Fallback: periodically sync from localStorage in case custom events are missed
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const key = "readingProgress"
+    const interval = setInterval(() => {
+      try {
+        const raw = window.localStorage.getItem(key)
+        if (!raw) return
+        const parsed: Record<string, Record<string, number>> = JSON.parse(raw)
+        const byTextbook = parsed[textbookId] || {}
+        setChapters((prev) =>
+          prev.map((c) => ({
+            ...c,
+            progress: Math.max(0, Math.min(100, Math.round(Number(byTextbook[c.id] ?? c.progress ?? 0)))),
+          })),
+        )
+      } catch {
+        // ignore parse errors
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [textbookId])
 
   const toggleChapter = (chapterId: string) => {
     setExpandedChapters((prev) =>

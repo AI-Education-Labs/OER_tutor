@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Search, Plus, BookOpen, Star, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,29 +20,37 @@ interface Textbook {
 
 export function TextbookLibrary() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [myTextbooks, setMyTextbooks] = useState<Textbook[]>([
-    {
-      id: "1",
-      title: "Physics High School",
-      author: "Paul Peter Urone",
-      subject: "Physics",
-      cover: "/Physics_cover.png",
-      progress: 0,
-      lastAccessed: "2 hours ago",
-      starred: true,
-    },
-    {
-      id: "2",
-      title: "Research Methods in Psychology",
-      author: "Rajiv S. Jhangiani",
-      subject: "Psychology",
-      cover: "/Psychology_cover.png",
-      progress: 0,
-      lastAccessed: "2 hours ago",
-      starred: true,
+  const [myTextbooks, setMyTextbooks] = useState<Textbook[]>([])
+
+  // Load available textbooks from API and use the UUID (`_id`) from metadata.json as the id
+  useEffect(() => {
+    const loadTextbooks = async () => {
+      try {
+        const resp = await fetch("/api/textbooks")
+        if (!resp.ok) throw new Error(`Failed to fetch textbooks (${resp.status})`)
+        const data = await resp.json()
+
+        const textbook_list: Textbook[] = []
+
+        for (const t of data) {
+          textbook_list.push({
+            id: String(t.id ?? ""),
+            title: t.title ?? "Untitled",
+            author: t.author ?? "",
+            subject: t.subject ?? "",
+            cover: t.cover ?? "/Physics_cover.png",
+            progress: 0,
+          })
+        }
+
+        setMyTextbooks(textbook_list)
+      } catch (error) {
+        console.error("Error loading textbooks:", error)
+      }
     }
-    
-  ])
+    loadTextbooks()
+  }, [])
+
 
   const searchResults = [
     {
@@ -107,7 +115,7 @@ export function TextbookLibrary() {
                   <CardContent className="p-4">
                     <div className="relative mb-3">
                       <img
-                        src={book.cover || "/Physics_cover.png"}
+                        src={book.cover}
                         alt={book.title}
                         className="w-100 h-32 object-cover rounded group-hover:scale-105 transition-transform"
                       />

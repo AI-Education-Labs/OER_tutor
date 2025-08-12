@@ -568,8 +568,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   </Button>
                 )}
               </div>
-              <div className="flex-1 overflow-auto">
-                <PDFViewer />
+              <div className="flex-1 min-h-0">
+                <PDFViewer textbookId={textbookId} />
               </div>
             </div>
 
@@ -655,6 +655,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                         onSplitGroup={(direction) => splitTabGroup(group.id, direction)}
                         onRemoveGroup={() => removeTabGroup(group.id)}
                         isNarrowPanel={isRightPanelNarrow}
+                        textbookId={textbookId}
                         style={{
                           height: `${group.position.height}%`,
                           minHeight: "200px",

@@ -19,8 +19,14 @@ from backend.redis_client import redis_client
 
 from backend.routes.auth import get_user_by_id
 from backend.routes.auth import router as auth_router
+
+from backend.routes.llm_utils import router as llm_utils_router
+from backend.routes.textbooks import router as textbooks_router
+from backend.routes.files import router as files_router
+from backend.routes.sidebar_modules import router as sidebar_modules_router
 from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.textbook_information import router as textbook_router
+
 
 from openai import OpenAI
 
@@ -51,8 +57,14 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="TextbookAI API")
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+
+app.include_router(llm_utils_router, prefix="/llm", tags=["llm-utils"])
+app.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-modules"])
+app.include_router(textbooks_router, tags=["textbooks"])
+app.include_router(files_router, tags=["files"])
 app.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
 app.include_router(textbook_router, prefix="/textbook", tags=["textbook"])
+
 
 # Add CORS middleware
 app.add_middleware(
@@ -142,16 +154,6 @@ class UserProgress(BaseModel):
     last_answer_time: Optional[datetime] = None
     topics_mastered: List[str] = Field(default_factory=list)
     
-
-class Chapter(BaseModel):
-    id: int
-    title: str
-    file: str
-
-class TextbookInfo(BaseModel):
-    id: str
-    title: str
-    chapters: List[Chapter]
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
@@ -711,112 +713,6 @@ async def update_user_progress(user_id: str, topic: str, is_correct: bool):
     except Exception as e:
         print(f"Error updating progress: {e}")
 
-@app.get("/api/pdf/{textbook}/{chapter}")
-async def get_pdf(textbook: str, chapter: int):
-    """Serve a PDF file for a specific textbook chapter."""
-    # Construct the file path
-    file_path = os.path.join(PDF_DIR, textbook, f"chapter{chapter}.pdf")
-    
-    logger.info(f"Attempting to serve PDF: {file_path}")
-    
-    # Check if the file exists
-    if not os.path.isfile(file_path):
-        logger.error(f"PDF file not found: {file_path}")
-        raise HTTPException(status_code=404, detail=f"PDF file not found: {file_path}")
-    
-    # Return the file
-    return FileResponse(
-        file_path, 
-        media_type="application/pdf",
-        filename=f"{textbook}_chapter{chapter}.pdf"
-    )
-
-@app.get("/api/chapters/{textbook}", response_model=TextbookInfo)
-async def get_chapters(textbook: str, title: Optional[str] = Query(None)):
-    """Get available chapters for a textbook."""
-    textbook_dir = os.path.join(PDF_DIR, textbook)
-    
-    logger.info(f"Looking for chapters in: {textbook_dir}")
-    
-    # Check if the directory exists
-    if not os.path.isdir(textbook_dir):
-        logger.error(f"Textbook directory not found: {textbook_dir}")
-        raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook}")
-    
-    # Find all chapter PDFs
-    chapters = []
-    try:
-        for file in os.listdir(textbook_dir):
-            if file.startswith("chapter") and file.endswith(".pdf"):
-                # Extract chapter number and create chapter object
-                try:
-                    chapter_num = int(file.replace("chapter", "").replace(".pdf", ""))
-                    chapter_title = f"Chapter {chapter_num}"
-                    
-                    # You could read the PDF to extract actual titles if needed
-                    if chapter_num == 1:
-                        chapter_title = "Introduction"
-                    elif chapter_num == 2:
-                        chapter_title = "Basic Concepts"
-                    elif chapter_num == 3:
-                        chapter_title = "Advanced Topics"
-                    elif chapter_num == 4:
-                        chapter_title = "Case Studies"
-                    elif chapter_num == 5:
-                        chapter_title = "Practical Applications"
-                    elif chapter_num == 6:
-                        chapter_title = "Future Directions"
-                    
-                    chapters.append({
-                        "id": chapter_num,
-                        "title": chapter_title,
-                        "file": f"/api/pdf/{textbook}/{chapter_num}"
-                    })
-                except ValueError:
-                    # Skip files that don't match the expected pattern
-                    logger.warning(f"Skipping file with unexpected format: {file}")
-                    continue
-    except Exception as e:
-        logger.error(f"Error reading directory {textbook_dir}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error reading textbook directory: {str(e)}")
-    
-    # Sort chapters by ID
-    chapters.sort(key=lambda x: x["id"])
-    
-    # Use provided title or default
-    textbook_title = title or f"{textbook} Textbook"
-    
-    return {
-        "id": textbook,
-        "title": textbook_title,
-        "chapters": chapters
-    }
-
-@app.get("/api/textbooks", response_model=List[TextbookInfo])
-async def get_textbooks():
-    """Get all available textbooks."""
-    textbooks = []
-    
-    try:
-        # List all directories in the PDF_DIR
-        for item in os.listdir(PDF_DIR):
-            dir_path = os.path.join(PDF_DIR, item)
-            if os.path.isdir(dir_path):
-                # Check if directory contains PDF files
-                has_pdfs = any(file.endswith('.pdf') for file in os.listdir(dir_path))
-                if has_pdfs:
-                    # Get chapters for this textbook
-                    try:
-                        textbook_info = await get_chapters(item, f"{item} Textbook")
-                        textbooks.append(textbook_info)
-                    except HTTPException:
-                        # Skip textbooks that cause errors
-                        continue
-    except Exception as e:
-        logger.error(f"Error listing textbooks: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error listing textbooks: {str(e)}")
-    
-    return textbooks
 
 # For debugging purposes
 @app.get("/api/debug/file-exists")
