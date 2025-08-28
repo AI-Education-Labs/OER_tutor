@@ -26,7 +26,8 @@ export function TextbookLibrary() {
   useEffect(() => {
     const loadTextbooks = async () => {
       try {
-        const resp = await fetch("/api/textbooks")
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const resp = await fetch(`${backendUrl}/api/textbooks`)
         if (!resp.ok) throw new Error(`Failed to fetch textbooks (${resp.status})`)
         const data = await resp.json()
 

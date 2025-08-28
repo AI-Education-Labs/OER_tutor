@@ -92,3 +92,61 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Enhanced PDF.js text layer CSS for proper text selection highlighting */
+.textLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 1;
+  line-height: 1.0;
+  user-select: text;
+  pointer-events: auto;
+}
+
+.textLayer > div {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+  pointer-events: auto;
+}
+
+/* Added ::selection pseudo-elements for visible text selection highlighting */
+.textLayer > div::selection {
+  background: rgba(0, 123, 255, 0.3);
+  color: transparent;
+}
+
+.textLayer > div::-moz-selection {
+  background: rgba(0, 123, 255, 0.3);
+  color: transparent;
+}
+
+.textLayer .highlight {
+  margin: -1px;
+  padding: 1px;
+  background-color: rgba(180, 0, 170, 0.2);
+  border-radius: 4px;
+}
+
+.textLayer .highlight.begin {
+  border-radius: 4px 0px 0px 4px;
+}
+
+.textLayer .highlight.end {
+  border-radius: 0px 4px 4px 0px;
+}
+
+.textLayer .highlight.middle {
+  border-radius: 0px;
+}
+
+.textLayer .highlight.selected {
+  background-color: rgba(0, 100, 0, 0.2);
+}

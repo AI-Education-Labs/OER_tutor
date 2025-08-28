@@ -3,7 +3,18 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { ChevronRight, ChevronDown, Lightbulb, ArrowRight, BookOpen, Plus, Target, Edit3, Save, Loader2 } from "lucide-react"
+import {
+  ChevronRight,
+  ChevronDown,
+  Lightbulb,
+  ArrowRight,
+  BookOpen,
+  Plus,
+  Target,
+  Edit3,
+  Save,
+  Loader2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
@@ -624,9 +635,7 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
     </div>
   )
 
-  const renderQuizTab = () => (
-    <QuizPanel textbookId={textbookId} />
-  )
+  const renderQuizTab = () => <QuizPanel textbookId={textbookId} />
 
   const renderFlashcardsTab = () => (
     <div className="h-full flex flex-col">
@@ -642,7 +651,7 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
           <Button
             size="sm"
             variant="outline"
-            className="border-[#3e3e42] text-[#cccccc] hover:text-[#ffffff] w-full sm:w-auto"
+            className="border-[#3e3e42] text-[#cccccc] hover:text-[#ffffff] w-full sm:w-auto bg-transparent"
           >
             Previous
           </Button>
@@ -660,7 +669,11 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
       <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[#ffffff] text-sm font-medium">Study Notes</h3>
-          <Button size="sm" variant="outline" className="border-[#3e3e42] text-[#cccccc] text-xs hover:text-[#ffffff]">
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-[#3e3e42] text-[#cccccc] text-xs hover:text-[#ffffff] bg-transparent"
+          >
             <Plus className="w-3 h-3 mr-1" />
             New Note
           </Button>
@@ -720,7 +733,7 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-[#3e3e42] text-[#cccccc] hover:text-[#ffffff]"
+                      className="border-[#3e3e42] text-[#cccccc] hover:text-[#ffffff] bg-transparent"
                       onClick={cancelEditing}
                     >
                       Cancel
@@ -825,7 +838,6 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
     concepts: renderKeyConceptsTab,
     practice: renderQuizTab,
     progress: () => <div>Progress</div>,
-    
   }
 
   return (
@@ -863,7 +875,7 @@ function QuizPanel({ textbookId }: QuizPanelProps) {
           const meta = await metaResp.json()
           // Gather all sub_chapters from chapters array, flatten, unique
           const subs: string[] = Array.isArray(meta?.chapters)
-            ? meta.chapters.flatMap((c: any) => Array.isArray(c?.sub_chapters) ? c.sub_chapters : [])
+            ? meta.chapters.flatMap((c: any) => (Array.isArray(c?.sub_chapters) ? c.sub_chapters : []))
             : []
           const uniqueSubs = Array.from(new Set(subs.filter((s) => typeof s === "string" && s.trim().length > 0)))
           setSubchapters(uniqueSubs)
@@ -894,7 +906,8 @@ function QuizPanel({ textbookId }: QuizPanelProps) {
     setStage("loading")
     try {
       // Prepare context, hard coded until we have a way to get the context from the backend
-      const context = "Introduction to physics: What is Physics? Physics is a branch of science. The word sciences comes from a Latin word that means having knowledge, and refers the knowledge of how the physical world operates, based on objective evidence determined through observation and experimentation..."
+      const context =
+        "Introduction to physics: What is Physics? Physics is a branch of science. The word sciences comes from a Latin word that means having knowledge, and refers the knowledge of how the physical world operates, based on objective evidence determined through observation and experimentation..."
       const focusHint = selectedSubchapter ? `Focus only on section: ${selectedSubchapter}` : ""
 
       // Call our Next.js route to proxy to backend generator
@@ -993,7 +1006,9 @@ function QuizPanel({ textbookId }: QuizPanelProps) {
     return (
       <div className="h-full flex flex-col">
         <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#3e3e42]" onClick={() => setStage("menu")}>Back</Button>
+          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#3e3e42]" onClick={() => setStage("menu")}>
+            Back
+          </Button>
           <h3 className="text-sm font-medium text-[#ffffff]">Quiz</h3>
           {selectedSubchapter && <span className="ml-2 text-xs text-[#969696] truncate">{selectedSubchapter}</span>}
         </div>
@@ -1001,7 +1016,9 @@ function QuizPanel({ textbookId }: QuizPanelProps) {
           {questions.map((q, qi) => (
             <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
               <CardContent className="p-3">
-                <div className="text-sm text-[#ffffff] mb-3">{qi + 1}. {q.question}</div>
+                <div className="text-sm text-[#ffffff] mb-3">
+                  {qi + 1}. {q.question}
+                </div>
                 <div className="space-y-2">
                   {q.choices.map((choice, ci) => {
                     const active = answers[qi] === ci
@@ -1022,7 +1039,11 @@ function QuizPanel({ textbookId }: QuizPanelProps) {
           ))}
         </div>
         <div className="p-3 border-t border-[#3e3e42] flex justify-end">
-          <Button className="bg-[#4ec9b0] hover:bg-[#3a9b85]" onClick={submitQuiz} disabled={answers.some((a) => a < 0)}>
+          <Button
+            className="bg-[#4ec9b0] hover:bg-[#3a9b85]"
+            onClick={submitQuiz}
+            disabled={answers.some((a) => a < 0)}
+          >
             Submit
           </Button>
         </div>
@@ -1043,7 +1064,9 @@ function QuizPanel({ textbookId }: QuizPanelProps) {
         <Card className="bg-[#2d2d30] border-[#3e3e42]">
           <CardContent className="p-4">
             <div className="text-[#ffffff] text-sm mb-2">Your Score</div>
-            <div className="text-2xl font-bold text-[#4ec9b0]">{score} / {questions.length}</div>
+            <div className="text-2xl font-bold text-[#4ec9b0]">
+              {score} / {questions.length}
+            </div>
           </CardContent>
         </Card>
 
@@ -1054,7 +1077,9 @@ function QuizPanel({ textbookId }: QuizPanelProps) {
           return (
             <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
               <CardContent className="p-3">
-                <div className="text-sm text-[#ffffff] mb-2">{qi + 1}. {q.question}</div>
+                <div className="text-sm text-[#ffffff] mb-2">
+                  {qi + 1}. {q.question}
+                </div>
                 <div className="grid grid-cols-1 gap-1">
                   {q.choices.map((c, ci) => (
                     <div
