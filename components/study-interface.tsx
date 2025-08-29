@@ -55,6 +55,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
 
+  // Textbook metadata and progress state
+  const [textbookData, setTextbookData] = useState<any>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [currentProgress, setCurrentProgress] = useState(0)
+  const [currentSection, setCurrentSection] = useState<string>("")
+  const [currentChapterTitle, setCurrentChapterTitle] = useState<string>("")
+  const [totalPages, setTotalPages] = useState(0)
+  const [targetPage, setTargetPage] = useState<number | undefined>(undefined)
+
   // Flash animation states
   const [chaptersFlashing, setChaptersFlashing] = useState(false)
   const [toolsFlashing, setToolsFlashing] = useState(false)
@@ -63,6 +72,52 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   const [mobileActivePanel, setMobileActivePanel] = useState<"chapters" | "pdf" | "tools">("pdf")
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
   const [mobileChaptersOpen, setMobileChaptersOpen] = useState(false)
+
+  const [selectedChapterId, setSelectedChapterId] = useState<string | undefined>(undefined)
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
+  const [rightPanelWidth, setRightPanelWidth] = useState(400)
+  const [showHelpTab, setShowHelpTab] = useState(false)
+  const [isRightPanelNarrow, setIsRightPanelNarrow] = useState(false)
+
+  // Fetch textbook metadata on component mount
+  useEffect(() => {
+    const fetchTextbookData = async () => {
+      if (!textbookId) return
+
+      try {
+        console.log("[v0] Fetching textbook data for ID:", textbookId)
+
+        const response = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`)
+        console.log("[v0] Fetch response status:", response.status)
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log("[v0] Raw textbook data received:", data)
+          console.log("[v0] Chapters in data:", data.chapters)
+          console.log("[v0] Data structure keys:", Object.keys(data))
+          setTextbookData(data)
+        } else {
+          const errorText = await response.text()
+          console.error("[v0] Failed to fetch textbook data - response not ok:", response.status)
+          console.error("[v0] Error response body:", errorText)
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch textbook data:", error)
+        if (error instanceof Error) {
+          console.error("[v0] Error details:", {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+          })
+        } else {
+          console.error("[v0] Unknown error type:", error)
+        }
+      }
+    }
+
+    fetchTextbookData()
+  }, [textbookId])
 
   // Get user authentication on component mount
   useEffect(() => {
@@ -76,18 +131,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       isLoggedIn: !!token,
     })
   }, [])
-
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
-  const [rightPanelWidth, setRightPanelWidth] = useState(208)
-  const [showHelpTab, setShowHelpTab] = useState(false)
-
-  // Track right panel width for responsive behavior
-  const [isRightPanelNarrow, setIsRightPanelNarrow] = useState(true)
-
-  useEffect(() => {
-    setIsRightPanelNarrow(rightPanelWidth < 300)
-  }, [rightPanelWidth])
 
   // Flash animation effect for chapters
   const handleChaptersFlash = () => {
@@ -328,43 +371,95 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     }
   }
 
-  // Show authentication required message if not logged in
-  if (authLoading) {
-    return (
-      <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg mb-2">Loading...</div>
-          <div className="text-sm text-[#969696]">Checking authentication</div>
-        </div>
-      </div>
-    )
+  const handleChapterSelect = (chapterId: string) => {
+    console.log("[v0] Chapter selected:", chapterId)
+    setSelectedChapterId(chapterId)
+    setCurrentPage(1)
+    setCurrentProgress(0)
+    setCurrentSection("")
+    setTargetPage(undefined)
   }
 
-  if (!isLoggedIn) {
-    return (
-      <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl mb-4">Authentication Required</div>
-          <div className="text-sm text-[#969696] mb-6">
-            You need to be logged in to access the study interface and track your progress.
-          </div>
-          <Link href="/auth/login">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e] text-white">Sign In</Button>
-          </Link>
-        </div>
-      </div>
-    )
+  const handleSectionSelect = (chapterId: string, sectionId: string, pageOffset?: number) => {
+    console.log("[v0] Section selected:", { chapterId, sectionId, pageOffset })
+
+    // If this is a different chapter, load it first
+    if (chapterId !== selectedChapterId) {
+      setSelectedChapterId(chapterId)
+      setCurrentProgress(0)
+    }
+
+    // Set target page for navigation (add 1 since pageOffset is 0-based but pages are 1-based)
+    if (pageOffset !== undefined) {
+      setTargetPage(pageOffset + 1)
+    }
+
+    let sectionTitle = String(sectionId)
+
+    if (textbookData && textbookData.chapters) {
+      const chapter = textbookData.chapters.find((ch: any) => ch.id.toString() === chapterId.toString())
+      if (chapter && chapter.sub_chapters) {
+        const section = chapter.sub_chapters.find((sub: any, index: number) => {
+          // Handle both old format (strings) and new format (objects with title/pageOffset)
+          if (typeof sub === "string") {
+            return `${chapterId}-${index + 1}` === sectionId
+          } else if (sub && typeof sub === "object" && sub.title) {
+            return `${chapterId}-${index + 1}` === sectionId
+          }
+          return false
+        })
+
+        if (section) {
+          sectionTitle = typeof section === "string" ? section : section.title
+        }
+      }
+    }
+
+    setCurrentSection(sectionTitle)
   }
 
-  if (!textbookId) {
-    return (
-      <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl mb-4">No Textbook Selected</div>
-          <div className="text-sm text-[#969696]">Please select a textbook to continue.</div>
-        </div>
-      </div>
-    )
+  const handlePageChange = (page: number, total: number) => {
+    setCurrentPage(page)
+    setTotalPages(total)
+  }
+
+  const handleChapterLoad = (chapterTitle: string, total: number) => {
+    setCurrentChapterTitle(chapterTitle)
+    setTotalPages(total)
+  }
+
+  const handleProgressChange = (progress: number) => {
+    setCurrentProgress(progress)
+  }
+
+  const getCurrentChapterInfo = () => {
+    if (!textbookData || !selectedChapterId) {
+      return {
+        chapterTitle: "No Chapter Selected",
+        chapterNumber: 0,
+        totalChapters: textbookData?.chapters?.length || 0,
+        sectionTitle: "",
+      }
+    }
+
+    const chapterIndex = textbookData.chapters.findIndex((ch: any) => ch.id.toString() === selectedChapterId.toString())
+    const chapter = textbookData.chapters[chapterIndex]
+
+    if (!chapter) {
+      return {
+        chapterTitle: "Chapter Not Found",
+        chapterNumber: 0,
+        totalChapters: textbookData.chapters.length,
+        sectionTitle: "",
+      }
+    }
+
+    return {
+      chapterTitle: currentChapterTitle || chapter.title,
+      chapterNumber: chapter.id,
+      totalChapters: textbookData.chapters.length,
+      sectionTitle: currentSection || chapter.sub_chapters?.[0]?.title || "",
+    }
   }
 
   // Mobile bottom drawer for tools
@@ -429,7 +524,11 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
         </Button>
       </div>
       <div className="max-h-[60vh] overflow-auto">
-        <ChapterSelector textbookId={textbookId} />
+        <ChapterSelector
+          textbookId={textbookId}
+          onChapterSelect={handleChapterSelect}
+          onSectionSelect={handleSectionSelect}
+        />
       </div>
     </div>
   )
@@ -519,7 +618,11 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   </Button>
                 </div>
                 <div className="flex-1 overflow-auto">
-                  <ChapterSelector textbookId={textbookId} />
+                  <ChapterSelector
+                    textbookId={textbookId}
+                    onChapterSelect={handleChapterSelect}
+                    onSectionSelect={handleSectionSelect}
+                  />
                 </div>
               </div>
             )}
@@ -546,14 +649,37 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                     </Button>
                   )}
 
-                  {/* Breadcrumb Navigation */}
-                  <div className="flex items-center gap-1 text-sm min-w-0">
-                    <span className="text-[#cccccc] hover:text-[#ffffff] cursor-pointer transition-colors truncate">
-                      Chapter 1: What is Physics?
-                    </span>
-                    <ChevronRight className="w-3 h-3 text-[#969696] flex-shrink-0" />
-                    <span className="text-[#007acc] font-medium truncate">Physics: Definitions and Applications</span>
-                    <span className="text-[#969696] ml-2 flex-shrink-0 hidden sm:inline">• Page 5</span>
+                 {/* Breadcrumb Navigation */}
+                  <div className="flex items-center gap-1 text-sm flex-1 min-w-0 overflow-hidden">
+                    {(() => {
+                      const chapterInfo = getCurrentChapterInfo()
+                      return (
+                        <>
+                          <span
+                            className="truncate block flex-1 text-[#cccccc] hover:text-[#ffffff] cursor-pointer transition-colors"
+                            title={`Chapter ${chapterInfo.chapterNumber}: ${chapterInfo.chapterTitle}`}
+                          >
+                            Chapter {chapterInfo.chapterNumber}: {chapterInfo.chapterTitle}
+                          </span>
+
+                          {chapterInfo.sectionTitle && (
+                            <>
+                              <ChevronRight className="w-3 h-3 text-[#969696] flex-shrink-0" />
+                              <span
+                                className="truncate block flex-1 text-[#007acc] font-medium"
+                                title={chapterInfo.sectionTitle}
+                              >
+                                {chapterInfo.sectionTitle}
+                              </span>
+                            </>
+                          )}
+
+                          <span className="text-[#969696] ml-2 flex-shrink-0 hidden sm:inline">
+                            • Page {currentPage}
+                          </span>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
                 {rightPanelCollapsed && (
@@ -568,8 +694,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   </Button>
                 )}
               </div>
-              <div className="flex-1 min-h-0">
-                <PDFViewer textbookId={textbookId} />
+              <div id="pdf-root" className="flex-1 min-h-0 min-w-0 overflow-hidden">
+                <PDFViewer
+                  textbookId={textbookId}
+                  selectedChapterId={selectedChapterId}
+                  targetPage={targetPage}
+                  onPageChange={handlePageChange}
+                  onChapterLoad={handleChapterLoad}
+                  onProgressChange={handleProgressChange}
+                />
               </div>
             </div>
 
@@ -589,7 +722,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
                     const handleMouseMove = (e: MouseEvent) => {
                       const deltaX = startX - e.clientX
-                      const newWidth = Math.max(208, Math.min(800, startWidth + deltaX))
+                      const newWidth = Math.max(200, Math.min(700, startWidth + deltaX))
                       setRightPanelWidth(newWidth)
                     }
 
@@ -671,7 +804,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
         {/* Desktop Status bar */}
         <div className="hidden md:flex h-6 bg-[#007acc] text-white text-xs items-center px-4 flex-shrink-0">
-          <span>Chapter 1 of 23 • Page 5 • 0% Complete</span>
+          {(() => {
+            const chapterInfo = getCurrentChapterInfo()
+            return (
+              <span>
+                Chapter {chapterInfo.chapterNumber} of {chapterInfo.totalChapters} • Page {currentPage} of {totalPages}{" "}
+                • {currentProgress}% Complete
+              </span>
+            )
+          })()}
           <div className="ml-auto flex items-center gap-4">
             <span>Learning Mode: Socratic</span>
             <span>Study Time: 0h 0m</span>
@@ -680,7 +821,14 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
         {/* Mobile Status bar */}
         <div className="md:hidden h-8 bg-[#007acc] text-white text-xs flex items-center justify-center px-4 flex-shrink-0">
-          <span>Ch 1 • Page 5 • 0%</span>
+          {(() => {
+            const chapterInfo = getCurrentChapterInfo()
+            return (
+              <span>
+                Ch {chapterInfo.chapterNumber} • Page {currentPage} of {totalPages} • {currentProgress}%
+              </span>
+            )
+          })()}
         </div>
 
         {/* Mobile Drawers */}

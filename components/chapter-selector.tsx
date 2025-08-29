@@ -9,6 +9,7 @@ interface Section {
   id: string
   title: string
   page: number
+  pageOffset?: number // Added pageOffset to Section interface
   completed?: boolean
   progress?: number
 }
@@ -73,75 +74,161 @@ interface TextbookWithProgress {
 
 interface ChapterSelectorProps {
   textbookId: string
-  onSectionSelect?: (chapterId: string, sectionId: string) => void
+  onSectionSelect?: (chapterId: string, sectionId: string, pageOffset?: number) => void
+  onChapterSelect?: (chapterId: string) => void // Added onChapterSelect callback for PDF viewer integration
 }
 
+export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }: ChapterSelectorProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [textbookData, setTextbookData] = useState<TextbookWithProgress | null>(null)
 
-interface ChapterSelectorProps {
-  textbookId: string
-}
-
-export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
   // Change the initial expanded state to start collapsed
   const [expandedChapters, setExpandedChapters] = useState<string[]>([])
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
   const [chapters, setChapters] = useState<Chapter[]>([])
 
-  // On mount/load: fetch chapters for textbook, reset progress to 0 for testing, then fetch progress
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+  const updateProgress = async (
+    chapterId: string,
+    sectionId: string,
+    progressData: {
+      completion_percentage?: number
+      status?: string
+      time_spent_minutes?: number
+    },
+  ) => {
+    try {
+      // Update local state to reflect progress change
+      setChapters((prev) =>
+        prev.map((chapter) => {
+          if (chapter.id === chapterId && chapter.sections) {
+            const updatedSections = chapter.sections.map((section) => {
+              if (section.id === sectionId) {
+                return {
+                  ...section,
+                  completed: progressData.status === "completed",
+                  progress: progressData.completion_percentage || section.progress,
+                }
+              }
+              return section
+            })
+            return { ...chapter, sections: updatedSections }
+          }
+          return chapter
+        }),
+      )
+    } catch (err) {
+      console.error("Failed to update progress:", err)
+    }
+  }
 
-    const loadChaptersAndProgress = async () => {
+  const fetchTextbookData = async () => {
+    if (!textbookId) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+
+      const [textbookResp, chaptersResp] = await Promise.all([
+        fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { headers }),
+        fetch(`/api/chapters/${encodeURIComponent(textbookId)}`, { headers }),
+      ])
+
+      if (!textbookResp.ok || !chaptersResp.ok) {
+        throw new Error(`Failed to load textbook data: ${textbookResp.status} ${chaptersResp.status}`)
+      }
+
+      const textbookMetadata = await textbookResp.json()
+      const chaptersData = await chaptersResp.json()
+
+      const rawChapters = chaptersData?.chapters ?? textbookMetadata?.chapters ?? []
+      const chaptersArray = Array.isArray(rawChapters) ? rawChapters : []
+
+      const textbookInfo: TextbookWithProgress = {
+        textbook_id: textbookId,
+        title: textbookMetadata?.title || "Unknown Title",
+        author: textbookMetadata?.author || "Unknown Author",
+        chapters: [],
+        overall_progress: 0,
+      }
+
+      const key = "readingProgress"
+      let byTextbook: Record<string, number> = {}
       try {
-        // 1) Fetch chapters list from Next.js API
-        const chaptersResp = await fetch(`/api/chapters/${encodeURIComponent(textbookId)}`)
-        const chaptersData = await chaptersResp.json()
+        const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null
+        const parsed: Record<string, Record<string, number>> = raw ? JSON.parse(raw) : {}
+        byTextbook = parsed[textbookId] || {}
+      } catch {
+        byTextbook = {}
+      }
 
-        console.log("chaptersData:", chaptersData)
-        const rawChapters = chaptersData?.chapters ?? []
-        const chaptersArray = Array.isArray(rawChapters)
-          ? rawChapters
-          : typeof rawChapters === "object" && rawChapters !== null
-            ? Object.values(rawChapters)
-            : []
+      const chapterList = chaptersArray.map((c: any) => {
+        const id = String(c.id ?? "")
+        const stored = Number(byTextbook[id] ?? 0)
 
-        // Build initial progress from localStorage
-        const key = "readingProgress"
-        let byTextbook: Record<string, number> = {}
-        try {
-          const raw = typeof window !== "undefined" ? window.localStorage.getItem(key) : null
-          const parsed: Record<string, Record<string, number>> = raw ? JSON.parse(raw) : {}
-          byTextbook = parsed[textbookId] || {}
-        } catch {
-          byTextbook = {}
-        }
+        const sections: Section[] = (c.sub_chapters || []).map((subChapter: any, index: number) => {
+          let title: string
+          let pageOffset = 0
 
-        const chapterList = chaptersArray.map((c: any) => {
-          const id = String(c.id ?? c.chapter_id ?? "")
-          const stored = Number(byTextbook[id] ?? 0)
+          if (typeof subChapter === "string") {
+            title = subChapter
+            pageOffset = 0
+          } else if (typeof subChapter === "object" && subChapter !== null) {
+            title = String(subChapter.title || `Section ${index + 1}`)
+            pageOffset = Number(subChapter.pageOffset || 0)
+          } else {
+            title = `Section ${index + 1}`
+            pageOffset = 0
+          }
+
           return {
-            id,
-            title: c.title || `Chapter ${c.id ?? c.chapter_id ?? ""}`,
-            progress: Math.max(0, Math.min(100, Math.round(stored))),
-          } as Chapter
+            id: `${id}-${index + 1}`,
+            title,
+            page: 1, // Default page since not provided in your JSON
+            pageOffset, // Use actual pageOffset from metadata
+            completed: false,
+            progress: 0,
+          }
         })
 
-        setChapters(chapterList)
-      } catch (e) {
-        // If API fails (e.g., not logged in), fallback: keep current chapters list empty
-        setChapters([])
-      }
-    }
+        return {
+          id,
+          title: c.title || `Chapter ${c.id || ""}`,
+          chapter_number: c.id || 1,
+          sections,
+          progress: Math.max(0, Math.min(100, Math.round(stored))),
+        } as Chapter
+      })
 
+      const totalProgress = chapterList.reduce((sum, chapter) => sum + chapter.progress, 0)
+      const overallProgress = chapterList.length > 0 ? totalProgress / chapterList.length : 0
+
+      textbookInfo.chapters = chapterList
+      textbookInfo.overall_progress = overallProgress
+
+      setChapters(chapterList)
+      setTextbookData(textbookInfo)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load textbook data"
+      setError(errorMessage)
+      setChapters([])
+      setTextbookData(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     if (textbookId) {
-      loadChaptersAndProgress()
+      fetchTextbookData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textbookId])
 
-  // Listen for progress updates emitted from the viewer
   useEffect(() => {
     const handler = (evt: Event) => {
       const custom = evt as CustomEvent<{ textbookId: string; chapterId: string; percent: number }>
@@ -151,6 +238,21 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
       setChapters((prev) =>
         prev.map((c) => (c.id === chapterId ? { ...c, progress: Math.max(0, Math.min(100, Math.round(percent))) } : c)),
       )
+
+      setTextbookData((prev) => {
+        if (!prev) return prev
+        const updatedChapters = prev.chapters.map((c) =>
+          c.id === chapterId ? { ...c, progress: Math.max(0, Math.min(100, Math.round(percent))) } : c,
+        )
+        const totalProgress = updatedChapters.reduce((sum, chapter) => sum + chapter.progress, 0)
+        const overallProgress = updatedChapters.length > 0 ? totalProgress / updatedChapters.length : 0
+
+        return {
+          ...prev,
+          chapters: updatedChapters,
+          overall_progress: overallProgress,
+        }
+      })
     }
 
     if (typeof window !== "undefined") {
@@ -163,7 +265,6 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
     }
   }, [textbookId])
 
-  // Fallback: periodically sync from localStorage in case custom events are missed
   useEffect(() => {
     if (typeof window === "undefined") return
     const key = "readingProgress"
@@ -192,21 +293,34 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
     )
   }
 
-  const handleSectionClick = async (chapterId: string, sectionId: string) => {
-    // Mark section as accessed/in progress
-    await updateProgress(chapterId, sectionId, {
+  const handleChapterClick = (chapterId: string) => {
+    // Toggle the dropdown
+    toggleChapter(chapterId)
+
+    // Load the PDF for this chapter
+    if (onChapterSelect) {
+      onChapterSelect(chapterId)
+    }
+  }
+
+  const handleSectionClick = async (chapterId: string, sectionId: string, pageOffset?: number) => {
+    const sectionNumber = sectionId.split("-").pop() || sectionId
+
+    await updateProgress(chapterId, sectionNumber, {
       status: "in_progress",
-      time_spent_minutes: 1, // Minimal time to mark as accessed
+      time_spent_minutes: 1,
     })
 
     if (onSectionSelect) {
-      onSectionSelect(chapterId, sectionId)
+      onSectionSelect(chapterId, sectionId, pageOffset)
     }
   }
 
   const markSectionComplete = async (chapterId: string, sectionId: string, event: React.MouseEvent) => {
-    event.stopPropagation() // Prevent triggering section click
-    await updateProgress(chapterId, sectionId, {
+    event.stopPropagation()
+    const sectionNumber = sectionId.split("-").pop() || sectionId
+
+    await updateProgress(chapterId, sectionNumber, {
       completion_percentage: 100,
       status: "completed",
     })
@@ -242,7 +356,6 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
 
   return (
     <div className="p-1.5 show-scrollbar">
-      {/* Overall progress */}
       <div className="mb-3 p-2 bg-[#2d2d30] rounded">
         <div className="text-xs text-[#cccccc] mb-1">{textbookData.title}</div>
         <div className="text-[10px] text-[#969696] mb-1">by {textbookData.author}</div>
@@ -262,7 +375,7 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
           <Button
             variant="ghost"
             className="w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative"
-            onClick={() => toggleChapter(chapter.id)}
+            onClick={() => handleChapterClick(chapter.id)}
             onMouseEnter={() => setHoveredChapter(chapter.id)}
             onMouseLeave={() => setHoveredChapter(null)}
           >
@@ -295,46 +408,50 @@ export function ChapterSelector({ textbookId }: ChapterSelectorProps) {
 
           {expandedChapters.includes(chapter.id) && chapter.sections && (
             <div className="ml-4 mt-0.5">
-              {chapter.sections.map((section) => (
-                <div
-                  key={section.id}
-                  className="w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative group cursor-pointer rounded"
-                  onMouseEnter={() => setHoveredSection(section.id)}
-                  onMouseLeave={() => setHoveredSection(null)}
-                  onClick={() => handleSectionClick(chapter.id, section.id)}
-                >
-                  <div className="flex items-center gap-1.5 w-full">
-                    <FileText className="w-2.5 h-2.5 text-[#969696] flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className={`text-[11px] text-[#cccccc] leading-tight transition-all duration-200 ${
-                          hoveredSection === section.id ? "whitespace-normal" : "truncate"
-                        }`}
-                      >
-                        {section.title}
+              {chapter.sections.map((section, index) => {
+                const pageOffset = section.pageOffset || 0
+
+                return (
+                  <div
+                    key={section.id}
+                    className="w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative group cursor-pointer rounded"
+                    onMouseEnter={() => setHoveredSection(section.id)}
+                    onMouseLeave={() => setHoveredSection(null)}
+                    onClick={() => handleSectionClick(chapter.id, section.id, pageOffset)}
+                  >
+                    <div className="flex items-center gap-1.5 w-full">
+                      <FileText className="w-2.5 h-2.5 text-[#969696] flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className={`text-[11px] text-[#cccccc] leading-tight transition-all duration-200 ${
+                            hoveredSection === section.id ? "whitespace-normal" : "truncate"
+                          }`}
+                        >
+                          {section.title}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className="text-[10px] text-[#969696]">Page {section.page}</div>
+                          {section.progress !== undefined && section.progress > 0 && (
+                            <div className="text-[10px] text-[#007acc]">{Math.round(section.progress)}%</div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <div className="text-[10px] text-[#969696]">Page {section.page}</div>
-                        {section.progress !== undefined && section.progress > 0 && (
-                          <div className="text-[10px] text-[#007acc]">{Math.round(section.progress)}%</div>
+                      <div className="flex items-center gap-1">
+                        {section.completed ? (
+                          <div className="w-1.5 h-1.5 bg-[#4ec9b0] rounded-full flex-shrink-0" />
+                        ) : (
+                          <div
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto cursor-pointer"
+                            onClick={(e) => markSectionComplete(chapter.id, section.id, e)}
+                          >
+                            <div className="w-1.5 h-1.5 border border-[#969696] rounded-full" />
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      {section.completed ? (
-                        <div className="w-1.5 h-1.5 bg-[#4ec9b0] rounded-full flex-shrink-0" />
-                      ) : (
-                        <div
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto cursor-pointer"
-                          onClick={(e) => markSectionComplete(chapter.id, section.id, e)}
-                        >
-                          <div className="w-1.5 h-1.5 border border-[#969696] rounded-full" />
-                        </div>
-                      )}
-                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

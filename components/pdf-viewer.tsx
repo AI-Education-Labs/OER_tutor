@@ -1,273 +1,537 @@
-"use client";
-import { useEffect, useRef, useState } from "react";
-import * as pdfjsLib from "pdfjs-dist";
+"use client"
 
-type ChapterItem = {
-  id: number;
-  title: string;
-  file: string; 
-};
+import type React from "react"
+import { useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Upload } from "lucide-react"
 
-interface PDFViewerProps {
-  textbookId: string;
+// PDF.js types
+interface PDFDocumentProxy {
+  numPages: number
+  getPage(pageNumber: number): Promise<PDFPageProxy>
 }
 
-export function PDFViewer({ textbookId }: PDFViewerProps) {
-  const [htmlContent, setHtmlContent] = useState<string | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedText, setSelectedText] = useState("");
-  const [showActions, setShowActions] = useState(false);
-  const [actionPosition, setActionPosition] = useState({ x: 0, y: 0 });
-  const [currentChapterId, setCurrentChapterId] = useState<number | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+interface PDFPageProxy {
+  getViewport(params: { scale: number; rotation?: number }): PDFPageViewport
+  render(params: { canvasContext: CanvasRenderingContext2D; viewport: PDFPageViewport }): PDFRenderTask
+  getTextContent(): Promise<TextContent>
+}
 
-  // Load chapters for textbook, then load first chapter content
+interface PDFPageViewport {
+  width: number
+  height: number
+  transform: number[]
+}
+
+interface PDFRenderTask {
+  promise: Promise<void>
+}
+
+interface TextContent {
+  items: TextItem[]
+}
+
+interface TextItem {
+  str: string
+  dir: string
+  width: number
+  height: number
+  transform: number[]
+  fontName: string
+}
+
+// Global PDF.js object
+declare global {
+  interface Window {
+    pdfjsLib: any
+  }
+}
+
+interface PDFViewerProps {
+  textbookId?: string
+  selectedChapterId?: string // Added selectedChapterId prop for dynamic chapter loading
+  targetPage?: number // Add targetPage prop for navigation
+  onPageChange?: (currentPage: number, totalPages: number) => void
+  onChapterLoad?: (chapterTitle: string, totalPages: number) => void
+  onProgressChange?: (progress: number) => void
+}
+
+export function PDFViewer({
+  textbookId,
+  selectedChapterId,
+  targetPage, // Accept targetPage prop
+  onPageChange,
+  onChapterLoad,
+  onProgressChange,
+}: PDFViewerProps = {}) {
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null)
+  const [totalPages, setTotalPages] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pdfUrl, setPdfUrl] = useState("")
+  const [selectedText, setSelectedText] = useState("")
+  const [showActions, setShowActions] = useState(false)
+  const [actionPosition, setActionPosition] = useState({ x: 0, y: 0 })
+  const [currentChapterId, setCurrentChapterId] = useState<number | null>(null)
+  const [pdfJsLoaded, setPdfJsLoaded] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const pagesContainerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    let isCancelled = false;
+    const loadPDFJS = async () => {
+      if (typeof window !== "undefined" && !window.pdfjsLib) {
+        const cssLink = document.createElement("link")
+        cssLink.rel = "stylesheet"
+        cssLink.href = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.css"
+        document.head.appendChild(cssLink)
 
-    const loadFirstChapter = async () => {
-      setIsLoading(true);
-      setError(null);
-      setHtmlContent(null);
-      setPdfUrl(null);
-
-      try {
-        // 1) Fetch chapters for the textbook
-        const resp = await fetch(`/api/chapters/${encodeURIComponent(textbookId)}`);
-        if (!resp.ok) throw new Error(`Failed to fetch chapters (${resp.status})`);
-        const data = await resp.json();
-        const rawChapters = data?.chapters ?? [];
-        const chaptersArray = Array.isArray(rawChapters)
-          ? rawChapters
-          : typeof rawChapters === "object" && rawChapters !== null
-            ? Object.values(rawChapters)
-            : [];
-        const chapters: ChapterItem[] = chaptersArray.map((c: any) => ({
-          id: Number(c.id ?? c.chapter_id ?? c.key ?? 0),
-          title: String(c.title ?? `Chapter ${c.id ?? c.chapter_id ?? ""}`),
-          file: String(c.file ?? ""),
-        }));
-
-        if (chapters.length === 0) throw new Error("No chapters found for this textbook");
-
-        // 2) Pick first chapter by smallest id
-        const first = [...chapters].sort((a, b) => a.id - b.id)[0];
-        setCurrentChapterId(first.id);
-
-        // 3) Try to load HTML version
-        const htmlPath = `/textbooks/${encodeURIComponent(textbookId)}/chapter${first.id}.html`;
-        try {
-          const htmlResp = await fetch(htmlPath, { cache: "no-store" });
-          if (htmlResp.ok) {
-            const html = await htmlResp.text();
-            if (!isCancelled) setHtmlContent(html);
-          } else {
-            // Fall back to PDF via API
-            if (!isCancelled) setPdfUrl(`/api/pdf/${encodeURIComponent(textbookId)}/${first.id}`);
-          }
-        } catch {
-          if (!isCancelled) setPdfUrl(`/api/pdf/${encodeURIComponent(textbookId)}/${first.id}`);
+        const script = document.createElement("script")
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+        script.onload = () => {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
+          console.log("[v0] PDF.js loaded successfully")
+          setPdfJsLoaded(true)
         }
-      } catch (err) {
-        if (!isCancelled) setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        if (!isCancelled) setIsLoading(false);
+        script.onerror = () => {
+          console.error("[v0] Failed to load PDF.js")
+          setError("Failed to load PDF.js library. Please refresh the page.")
+        }
+        document.head.appendChild(script)
+      } else if (window.pdfjsLib) {
+        setPdfJsLoaded(true)
       }
-    };
+    }
+    loadPDFJS()
+  }, [])
 
-    if (textbookId) loadFirstChapter();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [textbookId]);
-
-  // Persist scroll-based reading progress to localStorage (per textbook/chapter)
   useEffect(() => {
-    if (!currentChapterId) return;
+    if (textbookId && selectedChapterId && pdfJsLoaded) {
+      loadChapterPDF(textbookId, selectedChapterId)
+    }
+  }, [textbookId, selectedChapterId, pdfJsLoaded])
 
-    // Identify the element that actually scrolls. Try in this order:
-    // 1) Known inner container from pdf2htmlEX: #page-container inside our viewer
-    // 2) A scrollable descendant of our viewer (first match)
-    // 3) Our own viewer container
-    // 4) A scrollable ancestor (fallback)
-    const findScrollableDescendant = (root: HTMLElement | null): HTMLElement | null => {
-      if (!root) return null;
-      const pageContainer = root.querySelector<HTMLElement>("#page-container");
-      const candidateList: HTMLElement[] = [];
-      if (pageContainer) candidateList.push(pageContainer);
-      // Add immediate children that look scrollable
-      candidateList.push(...Array.from(root.querySelectorAll<HTMLElement>("div, section, article")));
-      for (const el of candidateList) {
-        const style = window.getComputedStyle(el);
-        const overflowY = style.overflowY;
-        const isScrollable = (overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight;
-        if (isScrollable) return el;
-      }
-      return null;
-    };
+  useEffect(() => {
+    if (!currentChapterId || !textbookId) return
 
-    const findScrollableAncestor = (node: HTMLElement | null): HTMLElement | null => {
-      let el: HTMLElement | null = node;
-      while (el && el !== document.body) {
-        const style = window.getComputedStyle(el);
-        const overflowY = style.overflowY;
-        const isScrollable = (overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight;
-        if (isScrollable) return el;
-        el = el.parentElement;
-      }
-      return (document.scrollingElement as HTMLElement) || (document.documentElement as HTMLElement);
-    };
+    const container = scrollContainerRef.current
+    if (!container) return
 
-    const preferred = scrollContainerRef.current;
-    const container = findScrollableDescendant(preferred) || preferred || findScrollableAncestor(preferred);
-    if (!container) return;
-
-    let ticking = false;
+    let ticking = false
 
     const updateProgress = () => {
-      ticking = false;
-      const maxScrollable = container.scrollHeight - container.clientHeight;
-      if (maxScrollable <= 0) return;
-      const rawPercent = (container.scrollTop / maxScrollable) * 100;
-      const clampedPercent = Math.max(0, Math.min(100, Math.round(rawPercent)));
+      ticking = false
+      const maxScrollable = container.scrollHeight - container.clientHeight
+      if (maxScrollable <= 0) return
+      const rawPercent = (container.scrollTop / maxScrollable) * 100
+      const clampedPercent = Math.max(0, Math.min(100, Math.round(rawPercent)))
+
+      const newCurrentPage = Math.min(
+        Math.max(1, Math.ceil((container.scrollTop / maxScrollable) * totalPages)),
+        totalPages,
+      )
+
+      if (newCurrentPage !== currentPage) {
+        setCurrentPage(newCurrentPage)
+        onPageChange?.(newCurrentPage, totalPages)
+      }
+
+      onProgressChange?.(clampedPercent)
 
       try {
-        const key = "readingProgress";
-        const existing = typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
-        const parsed: Record<string, Record<string, number>> = existing ? JSON.parse(existing) : {};
-        const byTextbook = parsed[textbookId] || {};
-        const currentStored = Number(byTextbook[String(currentChapterId)] || 0);
-        const next = Math.max(currentStored, clampedPercent);
+        const key = "readingProgress"
+        const existing = typeof window !== "undefined" ? window.localStorage.getItem(key) : null
+        const parsed: Record<string, Record<string, number>> = existing ? JSON.parse(existing) : {}
+        const byTextbook = parsed[textbookId] || {}
+        const currentStored = Number(byTextbook[String(currentChapterId)] || 0)
+        const next = Math.max(currentStored, clampedPercent)
         if (next !== currentStored) {
-          byTextbook[String(currentChapterId)] = next;
-          parsed[textbookId] = byTextbook;
-          window.localStorage.setItem(key, JSON.stringify(parsed));
-          // Notify listeners within this tab
+          byTextbook[String(currentChapterId)] = next
+          parsed[textbookId] = byTextbook
+          window.localStorage.setItem(key, JSON.stringify(parsed))
           window.dispatchEvent(
             new CustomEvent("reading-progress", {
               detail: { textbookId, chapterId: String(currentChapterId), percent: next },
-            })
-          );
+            }),
+          )
         }
       } catch {
         // ignore localStorage errors
       }
-    };
+    }
 
     const onScroll = () => {
       if (!ticking) {
-        ticking = true;
-        window.requestAnimationFrame(updateProgress);
+        ticking = true
+        window.requestAnimationFrame(updateProgress)
       }
-    };
+    }
 
-    container.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", updateProgress);
-    // Kick once in case we're already scrolled
-    updateProgress();
+    container.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", updateProgress)
+    updateProgress()
 
     return () => {
-      container.removeEventListener("scroll", onScroll as EventListener);
-      window.removeEventListener("resize", updateProgress);
-    };
-  }, [textbookId, currentChapterId, htmlContent, pdfUrl]);
+      container.removeEventListener("scroll", onScroll as EventListener)
+      window.removeEventListener("resize", updateProgress)
+    }
+  }, [textbookId, currentChapterId, pdfDoc, currentPage, totalPages, onPageChange, onProgressChange])
+
+  const scrollToPage = (pageNumber: number) => {
+    if (!pagesContainerRef.current || !totalPages || pageNumber < 1 || pageNumber > totalPages) {
+      return
+    }
+
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    // Calculate scroll position based on page number
+    const pageHeight = container.scrollHeight / totalPages
+    const targetScrollTop = (pageNumber - 1) * pageHeight
+
+    container.scrollTo({
+      top: targetScrollTop,
+      behavior: "smooth",
+    })
+
+    setCurrentPage(pageNumber)
+    onPageChange?.(pageNumber, totalPages)
+  }
+
+  useEffect(() => {
+    if (targetPage && pdfDoc && totalPages > 0) {
+      scrollToPage(targetPage)
+    }
+  }, [targetPage, pdfDoc, totalPages])
 
   const handleTextSelection = (e: React.MouseEvent<HTMLDivElement>) => {
-    const selection = window.getSelection();
+    const selection = window.getSelection()
     if (selection && selection.toString().trim()) {
-      const text = selection.toString().trim();
-      setSelectedText(text);
+      const text = selection.toString().trim()
+      setSelectedText(text)
 
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
 
       setActionPosition({
         x: rect.left + rect.width / 2,
         y: rect.bottom + 10,
-      });
-      setShowActions(true);
+      })
+      setShowActions(true)
     }
-  };
+  }
 
   const handleDocumentClick = (e: MouseEvent) => {
     if (!(e.target as Element).closest(".action-popup")) {
-      setShowActions(false);
+      setShowActions(false)
     }
-  };
-
-  useEffect(() => {
-    document.addEventListener("click", handleDocumentClick);
-    return () => document.removeEventListener("click", handleDocumentClick);
-  }, []);
-
-  const handleAsk = () => {
-    console.log("Ask about:", selectedText);
-    setShowActions(false);
-  };
-
-  const handleAddToNotes = () => {
-    console.log("Add to notes:", selectedText);
-    setShowActions(false);
-  };
-
-  const handleHighlight = () => {
-    console.log("Highlight:", selectedText);
-    setShowActions(false);
-  };
-
-  if (error) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-red-400 text-center">
-          <div className="mb-2">Error: {error}</div>
-          <div className="text-sm text-gray-400">Make sure chapters are available for this textbook and metadata.json is set</div>
-        </div>
-      </div>
-    );
   }
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-white">Loading content...</div>
-      </div>
-    );
+  useEffect(() => {
+    document.addEventListener("click", handleDocumentClick)
+    return () => document.removeEventListener("click", handleDocumentClick)
+  }, [])
+
+  const handleAsk = () => {
+    console.log("Ask about:", selectedText)
+    setShowActions(false)
+  }
+
+  const handleAddToNotes = () => {
+    console.log("Add to notes:", selectedText)
+    setShowActions(false)
+  }
+
+  const handleHighlight = () => {
+    console.log("Highlight:", selectedText)
+    setShowActions(false)
+  }
+
+  const loadPDF = async (url: string) => {
+    if (!pdfJsLoaded || !window.pdfjsLib) {
+      setError("PDF.js library is still loading. Please wait a moment and try again.")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const loadingTask = window.pdfjsLib.getDocument(url)
+      const pdf = await loadingTask.promise
+      setPdfDoc(pdf)
+      setTotalPages(pdf.numPages)
+      console.log("[v0] PDF loaded successfully:", pdf.numPages, "pages")
+    } catch (err) {
+      console.error("[v0] Error loading PDF:", err)
+      setError("Failed to load PDF. Please check the URL and try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file && file.type === "application/pdf") {
+      const fileUrl = URL.createObjectURL(file)
+      loadPDF(fileUrl)
+    } else {
+      setError("Please select a valid PDF file.")
+    }
+  }
+
+  const renderAllPages = async () => {
+    if (!pdfDoc || !pagesContainerRef.current) return
+
+    const container = pagesContainerRef.current
+    container.innerHTML = ""
+
+    try {
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const page = await pdfDoc.getPage(pageNum)
+        const viewport = page.getViewport({ scale: 1.5 })
+
+        const pageContainer = document.createElement("div")
+        pageContainer.className = "relative mb-4"
+        pageContainer.style.display = "inline-block"
+
+        pageContainer.addEventListener("mouseup", (e) => {
+          handleTextSelection(e as any)
+        })
+
+        const canvas = document.createElement("canvas")
+        const context = canvas.getContext("2d")!
+
+        const devicePixelRatio = window.devicePixelRatio || 1
+        canvas.width = viewport.width * devicePixelRatio
+        canvas.height = viewport.height * devicePixelRatio
+        canvas.style.width = "100%"   // allow flex shrink
+        canvas.style.height = "auto"  // maintain aspect
+        canvas.className = "block border"
+
+        context.scale(devicePixelRatio, devicePixelRatio)
+
+        const textLayerDiv = document.createElement("div")
+        textLayerDiv.className = "textLayer"
+        textLayerDiv.style.setProperty("--scale-factor", "1.5")
+        textLayerDiv.style.width = `${viewport.width}px`
+        textLayerDiv.style.height = `${viewport.height}px`
+        textLayerDiv.style.position = "absolute"
+        textLayerDiv.style.left = "0"
+        textLayerDiv.style.top = "0"
+        textLayerDiv.style.overflow = "hidden"
+        textLayerDiv.style.lineHeight = "1.0"
+        textLayerDiv.style.pointerEvents = "auto"
+        textLayerDiv.style.color = "transparent"
+        textLayerDiv.style.userSelect = "text"
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        }
+
+        await page.render(renderContext).promise
+
+        const textContent = await page.getTextContent()
+
+        if (window.pdfjsLib.renderTextLayer) {
+          try {
+            window.pdfjsLib.renderTextLayer({
+              textContentSource: textContent,
+              container: textLayerDiv,
+              viewport,
+              textDivs: [],
+            })
+          } catch (textLayerError) {
+            console.error("[v0] Error with renderTextLayer for page", pageNum, textLayerError)
+            renderTextLayerManually(textContent, textLayerDiv, viewport)
+          }
+        } else {
+          renderTextLayerManually(textContent, textLayerDiv, viewport)
+        }
+
+        pageContainer.appendChild(canvas)
+        pageContainer.appendChild(textLayerDiv)
+
+        const pageLabel = document.createElement("div")
+        pageLabel.textContent = `Page ${pageNum}`
+        pageLabel.className = "text-sm text-muted-foreground text-center mt-2"
+        pageContainer.appendChild(pageLabel)
+
+        container.appendChild(pageContainer)
+      }
+
+      console.log("[v0] All pages rendered successfully")
+    } catch (err) {
+      console.error("[v0] Error rendering pages:", err)
+      setError("Failed to render pages.")
+    }
+  }
+
+  const renderTextLayerManually = (textContent: TextContent, container: HTMLDivElement, viewport: PDFPageViewport) => {
+    console.log("[v0] Using manual text layer rendering")
+
+    container.style.transform = ""
+    container.style.transformOrigin = ""
+
+    textContent.items.forEach((item: TextItem) => {
+      const textDiv = document.createElement("div")
+      textDiv.textContent = item.str
+      textDiv.style.position = "absolute"
+      textDiv.style.whiteSpace = "pre"
+      textDiv.style.color = "transparent"
+      textDiv.style.userSelect = "text"
+      textDiv.style.cursor = "text"
+      textDiv.style.pointerEvents = "auto"
+      textDiv.style.background = "transparent"
+
+      const tx = item.transform[4]
+      const ty = item.transform[5]
+      const scaleY = Math.abs(item.transform[3])
+
+      textDiv.style.left = `${tx}px`
+      textDiv.style.top = `${viewport.height - ty - scaleY}px`
+      textDiv.style.fontSize = `${scaleY}px`
+      textDiv.style.fontFamily = "sans-serif"
+      textDiv.style.transformOrigin = "left bottom"
+
+      container.appendChild(textDiv)
+    })
+  }
+
+  useEffect(() => {
+    if (pdfDoc) {
+      renderAllPages()
+    }
+  }, [pdfDoc])
+
+  const loadChapterPDF = async (textbookId: string, chapterId: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      console.log("[v0] Backend URL:", backendUrl)
+
+      const fullUrl = `${backendUrl}/api/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`
+      console.log("[v0] Fetching PDF from:", fullUrl)
+
+      const response = await fetch(fullUrl)
+
+      if (!response.ok) {
+        throw new Error(`Failed to get chapter PDF: ${response.status}`)
+      }
+
+      const data = await response.json()
+      const pdfUrl = data.pdf_url
+
+      setCurrentChapterId(Number.parseInt(chapterId))
+
+      await loadPDF(pdfUrl)
+
+      onChapterLoad?.(data.chapter_title, totalPages)
+
+      console.log("[v0] Loaded chapter PDF:", data.chapter_title)
+    } catch (err) {
+      console.error("[v0] Error loading chapter PDF:", err)
+      setError(`Failed to load chapter ${chapterId}. Please try again.`)
+      setLoading(false)
+    }
   }
 
   return (
-    <div ref={scrollContainerRef} className="h-full overflow-auto bg-white p-4 relative">
-      {/* Inject custom styles to override pdf2htmlEX defaults */}
-      <style>
-        {`
-          .pf {
-            box-shadow: none !important;
-            border: none !important;
-          }
-          #page-container {
-            background-color: white !important;
-            background-image: none !important;
-          }
-        `}
-      </style>
+    <div className="w-full max-w-6xl mx-auto space-y-4 h-full flex flex-col">
+      {!textbookId && (
+        <Card>
+          <CardHeader>
+            <CardTitle>PDF Controls</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="Enter PDF URL..."
+                value={pdfUrl}
+                onChange={(e) => setPdfUrl(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={() => loadPDF(pdfUrl)} disabled={loading || !pdfUrl || !pdfJsLoaded}>
+                Load PDF
+              </Button>
+            </div>
 
-      {htmlContent && (
-        <div
-          className="max-w-4xl mx-auto prose prose-sm"
-          style={{ userSelect: "text", cursor: "text" }}
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-          onMouseUp={handleTextSelection}
-        />
+            <div className="flex gap-2">
+              <Input type="file" accept=".pdf" onChange={handleFileUpload} ref={fileInputRef} className="flex-1" />
+              <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={!pdfJsLoaded}>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload PDF
+              </Button>
+            </div>
+
+            {pdfDoc && (
+              <div className="text-center">
+                <span className="text-sm text-muted-foreground">Total pages: {totalPages}</span>
+              </div>
+            )}
+
+            {!pdfJsLoaded && (
+              <div className="text-center">
+                <span className="text-sm text-muted-foreground">Loading PDF.js library...</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      {!htmlContent && pdfUrl && (
-        <iframe
-          src={pdfUrl}
-          className="w-full h-full min-h-[80vh]"
-          title="Chapter PDF"
-        />
+      {textbookId && !pdfJsLoaded && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center">Loading PDF.js library...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {loading && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center">Loading PDF...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {pdfDoc && (
+        <>
+          {textbookId ? (
+            <div
+              ref={scrollContainerRef}
+              className="overflow-auto h-full border bg-white p-4 relative"
+              style={{ userSelect: "text", cursor: "text" }}
+            >
+              <div ref={pagesContainerRef} className="space-y-4" />
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <div ref={scrollContainerRef} className="overflow-auto max-h-[80vh] border rounded-lg">
+                  <div ref={pagesContainerRef} className="p-4 space-y-4" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {showActions && (
@@ -300,5 +564,5 @@ export function PDFViewer({ textbookId }: PDFViewerProps) {
         </div>
       )}
     </div>
-  );
+  )
 }

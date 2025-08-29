@@ -1,6 +1,12 @@
 import { StudyInterface } from "@/components/study-interface"
 
-export default async function StudyPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+interface StudyPageProps {
+  params: Promise<{ id: string }> | { id: string }
+}
+
+export default async function StudyPage({ params }: StudyPageProps) {
+  const resolved = await params
+  const { id } = resolved
+
   return <StudyInterface textbookId={id} />
 }
