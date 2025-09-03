@@ -2,7 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { writeFile, mkdir, readFile } from "fs/promises"
 import { existsSync } from "fs"
 import path from "path"
-import { v4 as uuidv4 } from "uuid"
+//import { v4 as uuidv4 } from "uuid"
+
+//change required for building on Amplify
+const id = crypto.randomUUID();
 
 const METADATA_PATH = path.join(process.cwd(), "data", "books.json")
 
