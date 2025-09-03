@@ -21,10 +21,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AiChatPanel } from "@/components/ai-chat-panel"
 import type { ChatContext } from "@/types/chat"
+import { QuizPanel } from "@/components/quiz-panel"
+import { FlashcardPanel } from "@/components/flashcard-panel"
+import { KeyConceptsPanel } from "@/components/key-concepts-panel"
 
 interface TutorPanelProps {
   activeTab: string
   textbookId?: string
+  selectedChapterId?: string
 }
 
 interface DialogueNode {
@@ -58,7 +62,7 @@ interface StudyNote {
   tags: string[]
 }
 
-export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
+export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPanelProps) {
   const [userInput, setUserInput] = useState("")
   const [activeTree, setActiveTree] = useState<string>("limits")
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
@@ -635,34 +639,9 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
     </div>
   )
 
-  const renderQuizTab = () => <QuizPanel textbookId={textbookId} />
+  const renderQuizTab = () => <QuizPanel textbookId={textbookId} selectedChapterId={selectedChapterId} />
 
-  const renderFlashcardsTab = () => (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-auto p-4 show-scrollbar">
-        <Card className="bg-[#3e3e42] border-[#3e3e42] h-64">
-          <CardContent className="p-6 flex flex-col justify-center items-center h-full text-center">
-            <h3 className="text-[#ffffff] text-lg mb-4">What is a derivative?</h3>
-            <p className="text-[#969696] text-sm">Click to reveal answer</p>
-          </CardContent>
-        </Card>
-
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-[#3e3e42] text-[#cccccc] hover:text-[#ffffff] w-full sm:w-auto bg-transparent"
-          >
-            Previous
-          </Button>
-          <div className="text-sm text-[#cccccc] py-1">Card 3 of 12</div>
-          <Button size="sm" className="bg-[#007acc] hover:bg-[#005a9e] w-full sm:w-auto">
-            Next
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
+  const renderFlashcardsTab = () => <FlashcardPanel textbookId={textbookId} selectedChapterId={selectedChapterId} />
 
   const renderNotesTab = () => (
     <div className="h-full flex flex-col relative">
@@ -776,57 +755,7 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
   )
 
   const renderKeyConceptsTab = () => (
-    <div className="h-full flex flex-col relative">
-      <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
-        <h3 className="text-[#ffffff] text-sm font-medium">Key Concepts</h3>
-
-        {keyConcepts.map((concept) => (
-          <Card key={concept.id} className="bg-[#2d2d30] border-[#3e3e42]">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[#ffffff] text-sm font-medium mb-1">{concept.title}</h4>
-                  <p className="text-xs text-[#969696] mb-2">{concept.description}</p>
-                  <div className="text-xs text-[#969696]">Last reviewed: {concept.lastReviewed}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-[#4ec9b0]">{concept.mastery}%</div>
-                  <div className="text-xs text-[#969696]">Mastery</div>
-                </div>
-              </div>
-
-              <div className="mb-3">
-                <div className="w-full bg-[#3e3e42] rounded-full h-2">
-                  <div
-                    className="bg-[#4ec9b0] h-2 rounded-full transition-all"
-                    style={{ width: `${concept.mastery}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs bg-[#3e3e42] border-[#4e4e52] hover:bg-[#4e4e52] flex-1"
-                >
-                  <BookOpen className="w-3 h-3 mr-1" />
-                  Review concept
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs bg-[#3e3e42] border-[#4e4e52] hover:bg-[#4e4e52] flex-1"
-                >
-                  <Target className="w-3 h-3 mr-1" />
-                  Practice
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+    <KeyConceptsPanel textbookId={textbookId} />
   )
 
   const tabContent = {
@@ -842,259 +771,5 @@ export function TutorPanel({ activeTab, textbookId }: TutorPanelProps) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">{tabContent[activeTab as keyof typeof tabContent]?.()}</div>
-  )
-}
-
-interface GeneratedQuestion {
-  question: string
-  choices: string[]
-  answer: number
-}
-
-interface QuizPanelProps {
-  textbookId?: string
-}
-
-function QuizPanel({ textbookId }: QuizPanelProps) {
-  const [stage, setStage] = useState<"menu" | "loading" | "quiz" | "summary">("menu")
-  const [subchapters, setSubchapters] = useState<string[]>([])
-  const [selectedSubchapter, setSelectedSubchapter] = useState<string>("")
-  const [contextText, setContextText] = useState<string>("")
-  const [questions, setQuestions] = useState<GeneratedQuestion[]>([])
-  const [answers, setAnswers] = useState<number[]>([])
-
-  // Load subchapters from metadata endpoint and extract full text content as context
-  useEffect(() => {
-    let isCancelled = false
-    const load = async () => {
-      try {
-        if (!textbookId) return
-        // 1) Load metadata for subchapters
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
-        if (metaResp.ok) {
-          const meta = await metaResp.json()
-          // Gather all sub_chapters from chapters array, flatten, unique
-          const subs: string[] = Array.isArray(meta?.chapters)
-            ? meta.chapters.flatMap((c: any) => (Array.isArray(c?.sub_chapters) ? c.sub_chapters : []))
-            : []
-          const uniqueSubs = Array.from(new Set(subs.filter((s) => typeof s === "string" && s.trim().length > 0)))
-          setSubchapters(uniqueSubs)
-        }
-
-        // 2) Load chapter1 HTML to provide base context (we can extend to more chapters later)
-        const htmlUrl = `/textbooks/${encodeURIComponent(textbookId)}/chapter1.html`
-        const resp = await fetch(htmlUrl, { cache: "no-store" })
-        if (resp.ok) {
-          const html = await resp.text()
-          if (isCancelled) return
-          const div = document.createElement("div")
-          div.innerHTML = html
-          const textContent = div.textContent || ""
-          setContextText(textContent)
-        }
-      } catch {
-        // ignore
-      }
-    }
-    load()
-    return () => {
-      isCancelled = true
-    }
-  }, [textbookId])
-
-  const startGeneration = async () => {
-    setStage("loading")
-    try {
-      // Prepare context, hard coded until we have a way to get the context from the backend
-      const context =
-        "Introduction to physics: What is Physics? Physics is a branch of science. The word sciences comes from a Latin word that means having knowledge, and refers the knowledge of how the physical world operates, based on objective evidence determined through observation and experimentation..."
-      const focusHint = selectedSubchapter ? `Focus only on section: ${selectedSubchapter}` : ""
-
-      // Call our Next.js route to proxy to backend generator
-      const resp = await fetch("/api/quiz/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context, hint: focusHint, num_questions: 5 }),
-      })
-
-      if (!resp.ok) {
-        throw new Error(`Failed to generate quiz (${resp.status})`)
-      }
-
-      const payload = await resp.json()
-      const data: GeneratedQuestion[] = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.quiz)
-          ? payload.quiz
-          : Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload?.raw)
-              ? payload.raw
-              : []
-
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("Quiz generation returned no questions")
-      }
-
-      setQuestions(data as GeneratedQuestion[])
-      setAnswers(new Array(data.length).fill(-1))
-      setStage("quiz")
-    } catch {
-      setStage("menu")
-    }
-  }
-
-  const submitQuiz = () => {
-    setStage("summary")
-  }
-
-  const score = questions.reduce((acc, q, idx) => (answers[idx] === q.answer ? acc + 1 : acc), 0)
-
-  if (stage === "menu") {
-    return (
-      <div className="h-full flex flex-col">
-        <div className="p-4 border-b border-[#3e3e42]">
-          <h3 className="text-sm font-medium text-[#ffffff]">Concept Check</h3>
-          <p className="text-xs text-[#969696]">Choose a subchapter to focus your quiz.</p>
-        </div>
-        <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
-          <div>
-            <label className="block text-xs text-[#cccccc] mb-2">Subchapter</label>
-            <Select onValueChange={(v: string) => setSelectedSubchapter(v)}>
-              <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
-                <SelectValue placeholder="Select a subchapter" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
-                {subchapters.length === 0 ? (
-                  <div className="px-2 py-1 text-xs text-[#969696]">No subchapters detected</div>
-                ) : (
-                  subchapters.map((s, i) => (
-                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-[#3e3e42]">
-                      {s}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex gap-2">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!contextText}>
-              Generate Quiz
-            </Button>
-          </div>
-          {!contextText && (
-            <div className="text-xs text-[#969696]">Preparing chapter content. Please wait a moment…</div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  if (stage === "loading") {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[#cccccc]">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Generating your quiz…</span>
-        </div>
-      </div>
-    )
-  }
-
-  if (stage === "quiz") {
-    return (
-      <div className="h-full flex flex-col">
-        <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#3e3e42]" onClick={() => setStage("menu")}>
-            Back
-          </Button>
-          <h3 className="text-sm font-medium text-[#ffffff]">Quiz</h3>
-          {selectedSubchapter && <span className="ml-2 text-xs text-[#969696] truncate">{selectedSubchapter}</span>}
-        </div>
-        <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
-          {questions.map((q, qi) => (
-            <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
-              <CardContent className="p-3">
-                <div className="text-sm text-[#ffffff] mb-3">
-                  {qi + 1}. {q.question}
-                </div>
-                <div className="space-y-2">
-                  {q.choices.map((choice, ci) => {
-                    const active = answers[qi] === ci
-                    return (
-                      <Button
-                        key={ci}
-                        variant={active ? "default" : "outline"}
-                        className={`w-full justify-start ${active ? "bg-[#007acc] hover:bg-[#005a9e]" : "bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] hover:bg-[#3e3e42] hover:text-[#ffffff]"}`}
-                        onClick={() => setAnswers((prev) => prev.map((a, idx) => (idx === qi ? ci : a)))}
-                      >
-                        {String.fromCharCode(65 + ci)}. {choice}
-                      </Button>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="p-3 border-t border-[#3e3e42] flex justify-end">
-          <Button
-            className="bg-[#4ec9b0] hover:bg-[#3a9b85]"
-            onClick={submitQuiz}
-            disabled={answers.some((a) => a < 0)}
-          >
-            Submit
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  // summary
-  return (
-    <div className="h-full flex flex-col">
-      <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#3e3e42]" onClick={() => setStage("menu")}>
-          Back
-        </Button>
-        <h3 className="text-sm font-medium text-[#ffffff]">Summary</h3>
-      </div>
-      <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
-        <Card className="bg-[#2d2d30] border-[#3e3e42]">
-          <CardContent className="p-4">
-            <div className="text-[#ffffff] text-sm mb-2">Your Score</div>
-            <div className="text-2xl font-bold text-[#4ec9b0]">
-              {score} / {questions.length}
-            </div>
-          </CardContent>
-        </Card>
-
-        {questions.map((q, qi) => {
-          const user = answers[qi]
-          const correct = q.answer
-          const isCorrect = user === correct
-          return (
-            <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
-              <CardContent className="p-3">
-                <div className="text-sm text-[#ffffff] mb-2">
-                  {qi + 1}. {q.question}
-                </div>
-                <div className="grid grid-cols-1 gap-1">
-                  {q.choices.map((c, ci) => (
-                    <div
-                      key={ci}
-                      className={`text-xs px-2 py-1 rounded ${ci === correct ? "bg-[#1e3a2f] text-[#4ec9b0]" : ci === user ? (isCorrect ? "bg-[#1e3a2f] text-[#4ec9b0]" : "bg-[#3a1e1e] text-[#f28b82]") : "text-[#cccccc]"}`}
-                    >
-                      {String.fromCharCode(65 + ci)}. {c}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-    </div>
   )
 }

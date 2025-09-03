@@ -1,0 +1,374 @@
+CHAPTER  IX 
+FACTORIAL DESIGNS 
+In Chapter 1 w e brie> y descri bed a stud y conduc ted by Simone Schnall and her c olleagues, in which the y 
+found tha t washing one ’s hands le ads pe ople to vie w mor al transgr essions as less wr ong ( Schnall, Ben ton, 
+& Harvey, 2008 )1. In a dif ferent but r elated stud y, Schnall and her c olleagues in vestiga ted whe ther f eeling 
+physically disguste d causes pe ople to mak e harsher mor al judgmen ts (Schnall, H aidt, Clor e, & J ordan, 2008 )2. 
+In this e xperimen t, the y manipula ted par ticipan ts’ feelings o f disgust b y testing them in ei ther a cle an room 
+or a messy r oom tha t containe d dir ty dishes, an o ver>o wing w astebask et, and a che wed-up pen. The y also 
+used a self -repor t questionnair e to me asur e the amoun t of attention tha t people pa y to their o wn bodil y 
+sensa tions. The y called this “ private bod y consciousness. ” The y me asur ed their primar y dependen t variable, 
+the harshness o f people ’s mor al judgmen ts, b y descri bing dif ferent beha viors ( e.g., e ating one ’s dead dog, 
+failing to r eturn a f ound w allet) and ha ving par ticipan ts rate the mor al ac ceptabili ty of each one on a sc ale 
+of 1 to 7 . Finally, the r esearchers ask ed par ticipan ts to r ate their curr ent level of disgust and other emotions. 
+The primar y results o f this stud y were tha t par ticipan ts in the messy r oom w ere, in fac t, mor e disguste d and 
+made harsher mor al judgmen ts than par ticipan ts in the cle an room—but onl y if the y scored relatively hig h 
+in priv ate bod y consciousness. 
+The r esearch designs w e have consider ed so far ha ve been simple— focusing on a question about one v ariable 
+or about a r elationship be tween two variables. B ut in man y ways, the c omple x design o f this e xperimen t 
+under taken b y Schnall and her c olleagues is mor e typical of research in psy cholog y. Fortuna tely, we ha ve 
+already covered the basic elemen ts of such designs in pr evious chapters. I n this chapter , we look closel y 
+at ho w and wh y researchers use factorial designs , which ar e experimen ts tha t include mor e than one 
+independen t variable. 
+Notes 
+1. Schnall, S., Ben ton, J ., & H arvey, S. (2008 ). With a cle an conscienc e: Cle anliness r educes the se verity of mor al 
+judgmen ts. Psychological Science, 19 (12), 1219- 1222. doi: 10 .1111/j.146 7-9280 .2008. 02227 .x 
+2. Schnall, S., H aidt, J., Clor e, G. L., & J ordan, A. H. (2008 ). Disgust as embodie d mor al judgmen t. Personality and Social 
+Psychology Bulletin, 34 , 1096– 1109. 
+Factorial Designs   |  22141.  Setting U p a F actorial Experiment 
+Learnin g Objectives 
+1. Explain wh y researchers o ften include multiple independen t variables in their studies. 
+2. De=ne fac torial design, and use a fac torial design table to r epresen t and in terpr et simple fac torial 
+designs. 
+ 
+Just as i t is c ommon f or studies in psy cholog y to include multiple le vels o f a sing le independen t variable 
+(plac ebo, ne w drug, old drug), i t is also c ommon f or them to include multiple independen t variables. Schnall 
+and her c olleagues studie d the ef fect of both disgust and priv ate bod y consciousness in the same stud y. 
+Researchers’ inclusion o f multiple independen t variables in one e xperimen t is fur ther illustr ated by the 
+following ac tual ti tles fr om v arious pr ofessional journals: 
+• The Ef fects of Tempor al Dela y and Orien tation on H aptic Obje ct Recogni tion 
+• Opening Close d Minds: The Combine d Effects of Intergroup Con tact and N eed for Closur e on 
+Prejudic e 
+• Effects of Expe ctancies and Coping on P ain-I nduc ed Intentions to S mok e 
+• The Ef fect of Age and Divide d Attention on S pontane ous R ecogni tion 
+• The Ef fects of Reduced Food S ize and P ackag e Size on the Consumption Beha vior o f Restrained and 
+Unrestrained Ea ters 
+Just as including multiple le vels o f a sing le independen t variable allo ws one to answ er mor e sophistic ated 
+research questions, so too does including multiple independen t variables in the same e xperimen t. For 
+example, inste ad o f conduc ting one stud y on the ef fect of disgust on mor al judgmen t and another on 
+the ef fect of priv ate bod y consciousness on mor al judgmen t, Schnall and c olleagues w ere able to c onduc t 
+one stud y tha t addr esse d both questions. B ut including multiple independen t variables also allo ws the 
+researcher to answ er questions about whe ther the ef fect of one independen t variable depends on the 
+level of another . This is r eferred to as an in teraction be tween the independen t variables. Schnall and her 
+colleagues, f or example, obser ved an in teraction be tween disgust and priv ate bod y consciousness be cause 
+the ef fect of disgust depende d on whe ther par ticipan ts were hig h or lo w in priv ate bod y consciousness. As 
+we will se e, interactions ar e often among the most in teresting r esults in psy cholog ical research. 
+Setting Up a F actorial Experimen t  |  223Factorial D esigns 
+Overview 
+By far the most c ommon appr oach to including multiple independen t variables ( which ar e often c alled 
+factors) in an e xperimen t is the fac torial design. I n a factorial  design , each le vel of one independen t 
+variable is c ombine d wi th each le vel of the others to pr oduc e all possi ble c ombina tions. Each c ombina tion, 
+then, be comes a c ondi tion in the e xperimen t. Imag ine, f or example, an e xperimen t on the ef fect of cell 
+phone use (y es vs. no ) and time o f da y (day vs. nig ht) on driving abili ty. This is sho wn in 
+the factorial  design  table in Figure 9.1. The c olumns o f the table r epresen t cell phone use, and the r ows 
+represen t time o f day. The f our c ells o f the table r epresen t the f our possi ble c ombina tions or c ondi tions: 
+using a c ell phone during the da y, not using a c ell phone during the da y, using a c ell phone a t nig ht, and 
+not using a c ell phone a t nig ht. This par ticular design is r eferred to as a 2 × 2 ( read “t wo-by-two”) fac torial 
+design be cause i t combines t wo variables, e ach o f which has t wo levels. 
+If one o f the independen t variables had a thir d level (e.g., using a handheld c ell phone, using a hands-fr ee cell 
+phone, and not using a c ell phone ), then i t would be a 3 × 2 fac torial design, and ther e would be six distinc t 
+condi tions. N otice tha t the number o f possi ble c ondi tions is the pr oduc t of the numbers o f levels. A 2 × 2 
+factorial design has f our c ondi tions, a 3 × 2 fac torial design has six c ondi tions, a 4 × 5 fac torial design w ould 
+have 20 c ondi tions, and so on. Also notic e tha t each number in the nota tion r epresen ts one fac tor, one 
+independen t variable. So b y looking a t how man y numbers ar e in the nota tion, y ou can de termine ho w man y 
+independen t variables ther e are in the e xperimen t. 2 x 2, 3 x 3, and 2 x 3 designs all ha ve two numbers in 
+the nota tion and ther efore all ha ve two independen t variables. The numeric al value o f each o f the numbers 
+represen ts the number o f levels o f each independen t variable. A 2 me ans tha t the independen t variable has 
+two levels, a 3 me ans tha t the independen t variable has thr ee levels, a 4 me ans i t has f our le vels, e tc. T o 
+illustr ate a 3 x 3 design has t wo independen t variables, e ach wi th thr ee levels, while a 2 x 2 x 2 design has 
+three independen t variables, e ach wi th two levels. 
+224  |  Setting Up a F actorial Experimen tFigure 9.1 Factorial Design T able R epresenting a 2 × 2 F actorial 
+Design 
+In principle, fac torial designs c an include an y number o f independen t variables wi th an y number o f levels. 
+For example, an e xperimen t could include the t ype o f psy chother apy (cogni tive vs. beha vioral), the length o f 
+the psy chother apy (2 w eeks vs. 2 mon ths), and the se x of the psy chother apist ( female vs. male ). This w ould 
+be a 2 × 2 × 2 fac torial design and w ould ha ve eig ht condi tions.  Figure 9.2 sho ws one w ay to r epresen t this 
+design. I n pr actice, it is unusual f or ther e to be mor e than thr ee independen t variables wi th mor e than 
+two or thr ee levels e ach. This is f or at least t wo reasons: F or one, the number o f condi tions c an quickl y 
+become unmanag eable. F or example, adding a f ourth independen t variable wi th thr ee levels (e.g., ther apist 
+experienc e: low vs. me dium vs. hig h) to the curr ent example w ould mak e it a 2 × 2 × 2 × 3 fac torial design 
+with 24 distinc t condi tions. Se cond, the number o f par ticipan ts required to popula te all o f these c ondi tions 
+(while main taining a r easonable abili ty to de tect a real under lying ef fect) can render the design unf easible 
+(for mor e inf orma tion, se e the discussion about the impor tanc e of ade quate sta tistic al po wer in Chapter 13 ). 
+As a r esult, in the r emainder o f this se ction, w e will f ocus on designs wi th two independen t variables. The 
+gener al principles discusse d her e extend in a str aightforward way to mor e comple x fac torial designs. 
+Setting Up a F actorial Experimen t  |  225Figure 9.2 Factorial Design T able R epresenting a 2 × 2 × 2 F actorial 
+Design 
+Assigning P articipants to Conditions 
+Recall tha t in a simple be tween-subje cts design, e ach par ticipan t is teste d in onl y one c ondi tion. I n a simple 
+within-subje cts design, e ach par ticipan t is teste d in all c ondi tions. I n a fac torial e xperimen t, the de cision 
+to tak e the be tween-subje cts or wi thin-subje cts appr oach must be made separ ately for each independen t 
+variable. I n a betw een-subjects  factorial  design , all o f the independen t variables ar e manipula ted be tween 
+subje cts. For example, all par ticipan ts could be teste d either while using a c ell phone  or while not using a 
+cell phone and ei ther during the da y or during the nig ht. This w ould me an tha t each par ticipan t would be 
+teste d in one and onl y one c ondi tion. I n a within-subje cts factorial  design, all o f the independen t variables 
+are manipula ted wi thin subje cts. All par ticipan ts could be teste d both while using a c ell phone and while 
+not using a c ell phone and both during the da y and during the nig ht. This w ould me an tha t each par ticipan t 
+would ne ed to be teste d in all f our c ondi tions. The ad vantages and disad vantages of these t wo appr oaches 
+are the same as those discusse d in Chapter 5. The be tween-subje cts design is c onceptuall y simpler , avoids 
+order/carryover ef fects, and minimiz es the time and ef fort of each par ticipan t. The wi thin-subje cts design 
+is mor e ef=cien t for the r esearcher and c ontrols e xtraneous par ticipan t variables. 
+Since fac torial designs ha ve mor e than one independen t variable, i t is also possi ble to manipula te one 
+independen t variable be tween subje cts and another wi thin subje cts. This is c alled a mixed factorial  design . 
+For example, a r esearcher mig ht choose to tr eat cell phone use as a wi thin-subje cts fac tor b y testing the 
+same par ticipan ts both while using a c ell phone and while not using a c ell phone ( while c ounterbalancing 
+226  |  Setting Up a F actorial Experimen tthe or der o f these t wo condi tions ). But the y mig ht choose to tr eat time o f day as a be tween-subje cts fac tor 
+by testing e ach par ticipan t either during the da y or during the nig ht (per haps be cause this onl y requires 
+them to c ome in f or testing onc e). Thus e ach par ticipan t in this mix ed design w ould be teste d in t wo of the 
+four c ondi tions. 
+Regar dless o f whe ther the design is be tween subje cts, wi thin subje cts, or mix ed, the ac tual assignmen t of 
+participan ts to c ondi tions or or ders o f condi tions is t ypically done r andoml y. 
+Non-Manipulate d Independent V ariables 
+In man y fac torial designs, one o f the independen t variables is a non-manipula ted independen t variab le. 
+The r esearcher me asur es it but does not manipula te it. The stud y by Schnall and c olleagues is a g ood 
+example. One independen t variable w as disgust, which the r esearchers manipula ted by testing par ticipan ts 
+in a cle an room or a messy r oom. The other w as priv ate bod y consciousness, a par ticipan t variable which 
+the r esearchers simpl y me asur ed. Another e xample is a stud y by Halle B rown and c olleagues in which 
+participan ts were expose d to se veral words tha t the y were later ask ed to r ecall (B rown, K osslyn, Delama ter, 
+Fama, & Barsky , 1999 )1. The manipula ted independen t variable w as the t ype o f word. Some w ere nega tive 
+health-r elated words (e.g., tumor,  coronar y), and others w ere not he alth r elated (e.g., election,  geometr y). 
+The non-manipula ted independen t variable w as whe ther par ticipan ts were hig h or lo w in h ypochondriasis 
+(excessiv e concern wi th or dinar y bodil y symptoms ). The r esult o f this stud y was tha t the par ticipan ts hig h 
+in hypochondriasis w ere better than those lo w in h ypochondriasis a t recalling the he alth-r elated words, but 
+they were no be tter a t recalling the non-he alth-r elated words. 
+Such studies ar e extremel y common, and ther e are several poin ts w orth making about them. F irst, non-
+manipula ted independen t variables ar e usuall y par ticipan t variables (priv ate bod y consciousness, 
+hypochondriasis, self -este em, g ender , and so on ), and as such, the y are by de=ni tion be tween-subje cts 
+factors. F or e xample, pe ople ar e either lo w in h ypochondriasis or hig h in h ypochondriasis; the y cannot 
+be teste d in both o f these c ondi tions. Se cond, such studies ar e gener ally consider ed to be e xperimen ts 
+as long as a t least one independen t variable is manipula ted, regar dless o f how man y non-manipula ted 
+independen t variables ar e include d. Thir d, it is impor tant to r emember tha t causal c onclusions c an onl y be 
+drawn about the manipula ted independen t variable. F or example, Schnall and her c olleagues w ere justi=e d 
+in concluding tha t disgust af fected the harshness o f their par ticipan ts’ mor al judgmen ts be cause the y 
+manipula ted tha t variable and r andoml y assigne d par ticipan ts to the cle an or messy r oom. B ut the y would 
+not ha ve been justi=e d in c oncluding tha t par ticipan ts’ priv ate bod y consciousness af fected the harshness o f 
+their par ticipan ts’ mor al judgmen ts be cause the y did not manipula te tha t variable. I t could be, f or example, 
+that having a stric t mor al code and a heig htene d awareness o f one ’s bod y are both c aused by some thir d 
+variable ( e.g., neur oticism ). Thus i t is impor tant to be a ware of which v ariables in a stud y are manipula ted 
+and which ar e not. 
+Setting Up a F actorial Experimen t  |  227Non-Experimental Studies W ith F actorial D esigns 
+Thus far w e ha ve se en tha t fac torial e xperimen ts can include manipula ted independen t variables or a 
+combina tion o f manipula ted and non-manipula ted independen t variables. B ut fac torial designs c an also 
+include  only non-manipula ted independen t variables, in which c ase the y are no long er experimen ts but ar e 
+inste ad non-e xperimen tal in na ture. Consider a h ypothe tical stud y in which a r esearcher simpl y me asur es 
+both the moods and the self -este em o f several par ticipan ts—c ategorizing them as ha ving ei ther a posi tive 
+or nega tive mood and as being ei ther hig h or lo w in self -este em—along wi th their willingness to ha ve 
+unpr otected sexual in tercourse. This c an be c onceptualiz ed as a 2 × 2 fac torial design wi th mood (posi tive vs. 
+nega tive) and self -este em (hig h vs. lo w) as non-manipula ted be tween-subje cts fac tors. W illingness to ha ve 
+unpr otected sex is the dependen t variable. 
+Again, be cause nei ther independen t variable in this e xample w as manipula ted, it is a non-e xperimen tal stud y 
+rather than an e xperimen t. (The similar stud y by Mac Donald and Mar tineau [2002]2 was an e xperimen t 
+because the y manipula ted their par ticipan ts’ moods.) This is impor tant because, as al ways, one must be 
+cautious about inf erring c ausali ty from non-e xperimen tal studies be cause o f the dir ectionali ty and thir d-
+variable pr oblems. F or example, an ef fect of par ticipan ts’ moods on their willingness to ha ve unpr otected 
+sex mig ht be c aused by any other v ariable tha t happens to be c orrelated with their moods. 
+Notes 
+1. Brown, H. D ., Kosslyn, S. M., Delama ter, B., F ama, A., & Barsky , A. J . (1999 ). Perceptual and memor y biases f or he alth-
+related inf orma tion in h ypochondriac al individuals. Journal of Psychosomatic R esear ch, 47 , 67–78. 
+2. MacDonald, T . K., & Mar tineau, A. M. (200 2). Self -este em, mood, and in tentions to use c ondoms: W hen does lo w self -
+esteem le ad to risky he alth beha viors? Journal of Experimental Social Psychology, 38 , 299– 306. 
+228  |  Setting Up a F actorial Experimen t42.  Interpr eting the R esults of a F actorial 
+Experiment 
+Learnin g Objectives 
+1. Distinguish be tween main ef fects and in teractions, and r ecogniz e and g ive examples o f each. 
+2. Sketch and in terpr et bar gr aphs and line gr aphs sho wing the r esults o f studies wi th simple fac torial 
+designs. 
+3. Distinguish be tween main ef fects and simple ef fects, and r ecogniz e when an anal ysis o f simple ef fects is 
+required. 
+Graphing the R esults of F actorial Experiments 
+The r esults o f fac torial e xperimen ts wi th two independen t variables c an be gr aphe d by represen ting one 
+independen t variable on the  x-axis and r epresen ting the other b y using dif ferent colored bars or lines. 
+(The  y-axis is al ways reser ved for the dependen t variable.)  Figure 9.3 sho ws r esults f or two hypothe tical 
+factorial e xperimen ts. The top panel sho ws the r esults o f a 2 × 2 design. Time o f day (day vs. nig ht) is 
+represen ted by dif ferent loc ations on the  x-axis, and c ell phone use ( no vs. y es) is r epresen ted by dif ferent-
+colored bars. (I t would also be possi ble to r epresen t cell phone use on the  x-axis and time o f day as 
+different-colored bars. The choic e comes do wn to which w ay se ems to c ommunic ate the r esults most 
+clearly.) The bot tom panel o f Figure 9.3 sho ws the r esults o f a 4 × 2 design in which one o f the v ariables 
+is quan titative. This v ariable, psy chother apy length, is r epresen ted along the  x-axis, and the other v ariable 
+(psychother apy type) is r epresen ted by dif ferently forma tted lines. This is a line gr aph r ather than a bar 
+graph be cause the v ariable on the  x-axis is quan titative with a small number o f distinc t levels. Line gr aphs 
+are also appr opria te when r epresen ting me asur emen ts made o ver a time in terval (also r eferred to as time 
+series inf orma tion) on the x-axis. 
+Interpr eting the R esults o f a Factorial Experimen t  |  229Figure 9.3 Two W ays to Plot the R esults of a F actorial Experiment W ith Two 
+Independent V ariables 
+Main Effe cts 
+In fac torial designs, ther e are thr ee kinds o f results tha t are of interest: main ef fects, in teraction ef fects, and 
+simple ef fects. A main  effect is the ef fect of one independen t variable on the dependen t variable—a veraging 
+across the le vels o f the other independen t variable. Thus ther e is one main ef fect to c onsider f or e ach 
+independen t variable in the stud y. The top panel o f Figure 9.3 sho ws a main ef fect of cell phone use be cause 
+driving perf ormanc e was be tter, on a verage, when par ticipan ts were not using c ell phones than when the y 
+were. The blue bars ar e, on a verage, hig her than the r ed bars. I t also sho ws a main ef fect of time o f day 
+because driving perf ormanc e was be tter during the da y than during the nig ht—both when par ticipan ts were 
+using c ell phones and when the y were not. Main ef fects ar e independen t of each other in the sense tha t 
+whether or not ther e is a main ef fect of one independen t variable sa ys nothing about whe ther or not ther e 
+is a main ef fect of the other . The bot tom panel o f Figure 9.3, for example, sho ws a cle ar main ef fect of 
+psychother apy length. The long er the psy chother apy, the be tter it worked. 
+230  |  Interpr eting the R esults o f a Factorial Experimen tInter actions 
+Ther e is an  interaction  effect (or just “in teraction”) when the ef fect of one independen t variable depends on 
+the le vel of another . Althoug h this mig ht seem c omplic ated, you alr eady have an in tuitive understanding o f 
+interactions. As an e veryday example, assume y our friend asks y ou to g o to a mo vie wi th another friend. Y our 
+response to her is, “w ell it depends on which mo vie y ou ar e going to se e and who else is c oming. ” You really 
+want to se e the big blockbuster summer hi t but ha ve little in terest in se eing the che esy r oman tic c ome dy. 
+In other w ords, ther e is a main ef fect of type o f mo vie on y our de cision. I f your de cision to g o to se e either 
+of these mo vies fur ther depends on who she is bring ing wi th her then ther e is an in teraction. F or instanc e, 
+if you will g o to se e the che esy r oman tic c ome dy if she brings her hot friend y ou w ant to g et to kno w be tter, 
+but y ou will not g o to this mo vie if she brings an yone else, then ther e is an in teraction. Drug in teractions 
+are another g ood illustr ation o f everyday interactions. Man y older men tak e Viagar a to assist them in the 
+bedroom, and man y men tak e nitrates to tr eat ang ina or chest pain. So e ach o f these drugs is bene=cial on 
+its own ( there are main ef fects of each on older men ’s well-being). B ut the c ombina tion o f these t wo drugs 
+can be le thal. I n other w ords, ther e is a v ery impor tant interaction be tween V iagar a and he art me dication 
+that older men ne ed to be a ware of to pr event their un timel y demise. 
+Let’s no w consider some e xamples o f interactions fr om r esearch. I t probabl y would not surprise y ou to 
+hear tha t the ef fect of receiving psy chother apy is str onger among pe ople who ar e hig hly motiv ated to 
+chang e than among pe ople who ar e not motiv ated to chang e. This is an in teraction be cause the ef fect of 
+one independen t variable ( whether or not one r eceives psy chother apy) depends on the le vel of another 
+(motiv ation to chang e). Schnall and her c olleagues also demonstr ated an in teraction be cause the ef fect 
+of whe ther the r oom w as cle an or messy on par ticipan ts’ mor al judgmen ts depende d on whe ther the 
+participan ts w ere lo w or hig h in priv ate bod y consciousness. I f the y w ere hig h in priv ate bod y 
+consciousness, then those in the messy r oom made harsher judgmen ts. If the y were low in priv ate bod y 
+consciousness, then whe ther the r oom w as cle an or messy did not ma tter. 
+In man y studies, the primar y research question is about an in teraction. The stud y by Brown and her 
+colleagues w as inspir ed by the ide a tha t people wi th hypochondriasis ar e espe cially attentive to an y nega tive 
+health-r elated inf orma tion. This le d to the h ypothesis tha t people hig h in h ypochondriasis w ould r ecall 
+nega tive he alth-r elated words mor e accurately than pe ople lo w in h ypochondriasis but r ecall non-he alth-
+related words about the same as pe ople lo w in h ypochondriasis. And o f course, this is e xactly wha t happene d 
+in this stud y. 
+Types of Inter actions 
+The ef fect of one independen t variable c an depend on the le vel of the other in se veral dif ferent ways. F irst, 
+there can be spreading in teractions . Examples o f spr eading in teractions ar e sho wn in the top t wo panels 
+of Figure 9.4. In the top panel, independen t variable “B” has an ef fect at level 1 o f independen t variable “ A” 
+(there is a dif ference in the heig ht of the blue and r ed bars on the lef t side o f the gr aph) but no ef fect at 
+level 2 o f independen t variable “ A.” (there is no dif ference in the heig ht of the blue and r ed bars on the rig ht 
+Interpr eting the R esults o f a Factorial Experimen t  |  231side o f the gr aph). This is much lik e the stud y of Schnall and her c olleagues wher e ther e was an ef fect of 
+disgust f or those hig h in priv ate bod y consciousness but not f or those lo w in priv ate bod y consciousness. I n 
+the middle panel, independen t variable “B” has a str onger ef fect at level 1 o f independen t variable “ A” than 
+at level 2 ( there is a lar ger dif ference in the heig ht of the blue and r ed bars on the lef t side o f the gr aph and 
+a smaller dif ference in the heig ht of the blue and r ed bars on the rig ht side o f the gr aph). This is lik e the 
+hypothe tical driving e xample wher e ther e was a str ong ef fect of using a c ell phone a t nig ht and a w eaker 
+effect of using a c ell phone during the da y. So to summariz e, for spr eading in teractions ther e is an ef fect of 
+one independen t variable a t one le vel of the other independen t variable and ther e is ei ther a w eak ef fect or 
+no ef fect of tha t independen t variable a t the other le vel of the other independen t variable. 
+The se cond t ype o f interaction tha t can be f ound is a cross-o ver in teraction . A cross-o ver in teraction is 
+depic ted in the bot tom panel o f Figure 9.4, independen t variable “B” again has an ef fect at both le vels 
+of independen t variable “ A,” but the ef fects ar e in opposi te dir ections. Another e xample o f a cr osso ver 
+interaction c omes fr om a stud y by Ka thy Gilliland on the ef fect of caffeine on the v erbal test sc ores o f 
+introverts and e xtraverts (Gilliland, 1980 )1. Introverts perf orm be tter than e xtraverts when the y ha ve not 
+ingested an y caffeine. B ut e xtraverts perf orm be tter than in troverts when the y ha ve ing ested 4 mg o f 
+caffeine per kilogr am o f bod y weight. 
+232  |  Interpr eting the R esults o f a Factorial Experimen tFigure 9.4 Bar Gr aphs Showing Thr ee Types of I nteractions. I n the top panel, 
+one independent variable has an eff ect at one level of the second independent 
+variable but not at the other . In the middle panel, one independent variable 
+has a str onger eff ect at one level of the second independent variable than at 
+the other . In the bottom panel, one independent variable has the opposite 
+effect at one level of the second independent variable than at the other . 
+Figure 9.5 sho ws e xamples o f these same kinds o f interactions when one o f the independen t variables is 
+Interpr eting the R esults o f a Factorial Experimen t  |  233quan titative and the r esults ar e plot ted in a line gr aph. N ote tha t the top t wo =gur es depic t the t wo kinds 
+of spr eading in teractions tha t can be f ound while the bot tom =gur e depic ts a cr osso ver in teraction ( the t wo 
+lines li terally “cross o ver” e ach other ). 
+234  |  Interpr eting the R esults o f a Factorial Experimen tFigure 9.5 Line Gr aphs Showing Diff erent Types of I nteractions. I n the top 
+panel, one independent variable has an eff ect at one level of the second 
+independent variable but not at the other . In the middle panel, one 
+independent variable has a str onger eff ect at one level of the second 
+independent variable than at the other . In the bottom panel, one 
+independent variable has the opposite eff ect at one level of the second 
+Interpr eting the R esults o f a Factorial Experimen t  |  235independent variable than at the other . [Image description ] 
+ 
+Simple Effe cts 
+When r esearchers =nd an in teraction i t sugg ests tha t the main ef fects ma y be a bi t misle ading. Think o f 
+the e xample o f a cr osso ver in teraction wher e introverts w ere found to perf orm be tter on a test o f verbal 
+test perf ormanc e than e xtraverts when the y had not ing ested an y caffeine, but e xtraverts w ere found to 
+perform be tter than in troverts when the y had ing ested 4 mg o f caffeine per kilogr am o f bod y weight. To 
+examine the main ef fect of caffeine c onsumption, the r esearchers w ould ha ve averaged acr oss in troversion 
+and e xtraversion and simpl y look ed at whe ther o verall those who ing ested caffeine had be tter or w orse 
+verbal memor y test perf ormanc e. Be cause the posi tive effect of caffeine on e xtraverts w ould be wipe d 
+out b y the nega tive effects of caffeine on the in troverts, no main ef fect of caffeine c onsumption w ould 
+have been found. S imilar ly, to e xamine the main ef fect of personali ty, the r esearchers w ould ha ve averaged 
+across the le vels o f the c affeine v ariable to look a t the ef fects of personali ty (introversion vs. e xtraversion ) 
+independen t of caffeine. I n this c ase, the posi tive effects extraversion in the c affeine c ondi tion w ould be 
+wipe d out b y the nega tive effects of extraversion in the no c affeine c ondi tion. Does the absenc e of any main 
+effects me an tha t ther e is no ef fect of caffeine and no ef fect of personali ty? N o of course not. The pr esenc e 
+of the in teraction indic ates tha t the stor y is mor e complic ated, tha t the ef fects of caffeine on v erbal test 
+performanc e depend on personali ty. This is wher e simple ef fects come in to pla y. Simple eff ects are a w ay 
+of breaking do wn the in teraction to =gur e out pr ecisel y wha t is g oing on. An in teraction simpl y inf orms us 
+that the ef fects of at least one independen t variable depend on the le vel of another independen t variable. 
+Whene ver an in teraction is de tected, researchers ne ed to c onduc t addi tional anal yses to de termine wher e 
+that interaction is c oming fr om. Of c ourse one ma y be able to visualiz e and in terpr et the in teraction on 
+a graph but a simple ef fects anal ysis pr ovides r esearchers wi th a mor e sophistic ated me ans o f breaking 
+down the in teraction. S peci=cally, a simple ef fects anal ysis allo ws r esearchers to de termine the ef fects of 
+each independen t variable a t each le vel of the other independen t variable. So while the r esearchers w ould 
+average acr oss the t wo levels o f the personali ty variable to e xamine the ef fects of caffeine on v erbal test 
+performanc e in a main ef fects anal ysis, f or a simple ef fects anal ysis the r esearchers w ould e xamine the 
+effects of caffeine in in troverts and then e xamine the ef fects of caffeine in e xtraverts. As w e saw pr eviousl y, 
+the r esearchers also e xamine d the ef fects of personali ty in the no c affeine c ondi tion and f ound tha t in this 
+condi tion in troverts perf orme d be tter than e xtraverts. F inally, the y examine d the ef fects of personali ty in 
+the c affeine c ondi tion and f ound tha t extraverts perf orme d be tter than in troverts in this c ondi tion. F or a 2 
+x 2 design lik e this, ther e will be t wo main ef fects the r esearchers c an explor e and f our simple ef fects. 
+Schnall and c olleagues f ound a main ef fect of disgust on mor al judgmen ts (those in a messy r oom made 
+harsher mor al judgmen ts). H owever, the y also disc overed an in teraction be tween priv ate bod y 
+consciousness and disgust. I n other w ords, the ef fect of disgust depende d on priv ate bod y consciousness. 
+The pr esenc e of this in teraction sugg ests the main ef fect ma y be a bi t misle ading. Tha t is, i t is not en tirely 
+236  |  Interpr eting the R esults o f a Factorial Experimen taccurate to sa y tha t those in a messy r oom made harsher mor al judgmen ts be cause this w as onl y true f or 
+half o f the par ticipan ts. U sing simple ef fects anal yses, the y were able to fur ther demonstr ate tha t for pe ople 
+high in priv ate bod y consciousness, ther e was an ef fect of disgust on mor al judgmen ts. Further, the y found 
+that for those lo w in priv ate bod y consciousness ther e was no ef fect of disgust on mor al judgmen ts. B y 
+examining the ef fect of disgust a t each le vel of bod y consciousness using simple ef fects anal yses, Schnall 
+and c olleagues w ere able to be tter understand the na ture of the in teraction. 
+As descri bed previousl y, Brown and c olleagues f ound an in teraction be tween type o f words (he alth r elated 
+or not he alth r elated) and h ypochondriasis (hig h or lo w) on w ord recall. T o break do wn this in teraction using 
+simple ef fects anal yses the y examine d the ef fect of hypochondriasis a t each le vel of word type. S peci=cally, 
+they examine d the ef fect of hypochondriasis on r ecall of health-r elated words and then the y subse quen tly 
+examine d the ef fect of hypochondriasis on r ecall of non-he alth r elated words. The y found tha t people hig h 
+in hypochondriasis w ere able to r ecall mor e he alth-r elated words than pe ople lo w in h ypochondriasis. I n 
+contrast, ther e was no ef fect of hypochondriasis on the r ecall of non-he alth r elated words. 
+Once again e xamining  simple ef fects pr ovides a me ans of breaking do wn the in teraction and ther efore it is 
+only necessar y to c onduc t these anal yses when an in teraction is pr esen t. When ther e is no in teraction then 
+the main ef fects will tell the c omple te and ac curate stor y. To summariz e, rather than a veraging acr oss the 
+levels o f the other independen t variable, as is done in a main ef fects anal ysis, simple ef fects anal yses ar e 
+used to e xamine the ef fects of each independen t variable a t each le vel of the other independen t variable( s). 
+So a r esearcher using a 2×2 design wi th four c ondi tions w ould ne ed to look a t 2 main ef fects and 4 simple 
+effects. A r esearcher using a 2×3 design wi th six c ondi tions w ould  need to look a t 2 main ef fects and 5 simple 
+effects, while a r esearcher using a 3×3 design wi th nine c ondi tions w ould ne ed to look a t 2 main ef fects 
+and 6 simple ef fects. As y ou c an se e, while the number o f main ef fects depends simpl y on the number o f 
+independen t variables include d (one main ef fect can be e xplor ed for each independen t variable ), the number 
+of simple ef fects anal yses depends on the number o f levels o f the independen t variables (be cause a separ ate 
+analysis o f each independen t variable  is conduc ted at each le vel of the other independen t variable ). 
+Imag e Descriptions 
+Figur e 9.5 imag e description:  Three panels, e ach sho wing a dif ferent line gr aph pa ttern. I n the top panel, 
+one line r emains c onstan t while the other g oes up. I n the middle panel, both lines g o up but a t dif ferent 
+rates. I n the bot tom panel, one line g oes do wn and the other g oes up so the y cross. [Return to F igure 9.5] 
+Notes 
+1. Gilliland, K. (1980 ). The in teractive effect of introversion-e xtraversion wi th caffeine induc ed arousal on v erbal 
+performanc e. Journal of R esear ch in P ersonality, 14 , 482 –492. 
+Interpr eting the R esults o f a Factorial Experimen t  |  23743.  Key Takeaways and Exer cises 
+Key Takeaways 
+• Researchers o ften include multiple independen t variables in their e xperimen ts. The most c ommon 
+appr oach is the fac torial design, in which e ach le vel of one independen t variable is c ombine d with each 
+level of the others to cr eate all possi ble c ondi tions. 
+• Each independen t variable c an be manipula ted be tween-subje cts or wi thin-subje cts. 
+• Non-manipula ted independen t variables (g ender ) can be include d in fac torial designs, ho wever, the y limi t 
+the c ausal c onclusions tha t can be made about the ef fects of the non-manipula ted variable on the 
+dependen t variable. 
+• In a fac torial design, the main ef fect of an independen t variable is i ts overall ef fect averaged acr oss all 
+other independen t variables. Ther e is one main ef fect for each independen t variable. 
+• Ther e is an in teraction be tween two independen t variables when the ef fect of one depends on the le vel 
+of the other . Some o f the most in teresting r esearch questions and r esults in psy cholog y are spe ci=cally 
+about in teractions. 
+• A simple ef fects anal ysis pr ovides a me ans f or researchers to br eak do wn in teractions b y examining the 
+effect of each independen t variable a t each le vel of the other independen t variable. 
+Exercises 
+• Practice: Return to the =v e article ti tles pr esen ted at the beg inning o f this se ction. F or each one, iden tify 
+the independen t variables and the dependen t variable. 
+• Practice: Cr eate a fac torial design table f or an e xperimen t on the ef fects of room temper ature and noise 
+level on perf ormanc e on the M CAT. Be sur e to indic ate whe ther e ach independen t variable will be 
+manipula ted be tween-subje cts or wi thin-subje cts and e xplain wh y. 
+• Practice: Sk etch 8 dif ferent bar gr aphs to depic t each o f the f ollowing possi ble r esults in a 2 x 2 fac torial 
+experimen t: 
+◦ No main ef fect of A; no main ef fect of B; no in teraction 
+◦ Main ef fect of A; no main ef fect of B; no in teraction 
+◦ No main ef fect of A; main ef fect of B; no in teraction 
+◦ Main ef fect of A; main ef fect of B; no in teraction 
+◦ Main ef fect of A; main ef fect of B; in teraction 
+◦ Main ef fect of A; no main ef fect of B; in teraction 
+◦ No main ef fect of A; main ef fect of B; in teraction 
+◦ No main ef fect of A; no main ef fect of B; in teraction 
+238  |  Key Takeaways and Ex ercises

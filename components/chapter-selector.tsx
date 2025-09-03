@@ -391,17 +391,16 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
                     hoveredChapter === chapter.id ? "whitespace-normal" : "truncate"
                   }`}
                 >
-                  {chapter.chapter_number}. {chapter.title}
+                  {chapter.title}
                 </div>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <div className="w-12 bg-[#3e3e42] rounded-full h-0.5">
-                    <div
-                      className="bg-[#007acc] h-0.5 rounded-full transition-all duration-300"
-                      style={{ width: `${chapter.progress}%` }}
-                    />
+                {chapter.progress !== undefined && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className="w-12 bg-[#3e3e42] rounded-full h-0.5">
+                      <div className="bg-[#007acc] h-0.5 rounded-full" style={{ width: `${chapter.progress}%` }} />
+                    </div>
+                    <span className="text-[10px] text-[#969696] flex-shrink-0">{chapter.progress}%</span>
                   </div>
-                  <span className="text-[10px] text-[#969696] flex-shrink-0">{Math.round(chapter.progress)}%</span>
-                </div>
+                )}
               </div>
             </div>
           </Button>
