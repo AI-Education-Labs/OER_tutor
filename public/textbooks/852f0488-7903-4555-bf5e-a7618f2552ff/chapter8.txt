@@ -1,0 +1,320 @@
+CHAPTER  VIII 
+QUASI-EXPERIMENT AL RESEAR CH 
+The pr e=x quasi  means “ resembling. ” Thus quasi-e xperimen tal r esearch is r esearch tha t resembles 
+experimen tal r esearch but is not true e xperimen tal r esearch. R ecall wi th a true be tween-gr oups 
+experimen t, random assignmen t to c ondi tions is use d to ensur e the gr oups ar e equivalent and wi th a 
+true wi thin-subje cts design c ounterbalancing is use d to guar d against or der ef fects. Quasi-e xperimen ts ar e 
+missing one o f these saf eguar ds. Althoug h an independen t variable is manipula ted, either a c ontrol gr oup is 
+missing or par ticipan ts ar e not r andoml y assigne d to c ondi tions ( Cook & Campbell, 19 79)1. 
+Because the independen t variable is manipula ted bef ore the dependen t variable is me asur ed, quasi-
+experimen tal r esearch elimina tes the dir ectionali ty problem associa ted wi th non-e xperimen tal r esearch. 
+But be cause ei ther c ounterbalancing te chniques ar e not use d or par ticipan ts ar e not r andoml y assigne d 
+to condi tions—making i t likely tha t ther e are other dif ferences be tween c ondi tions—quasi-e xperimen tal 
+research does not elimina te the pr oblem o f confounding v ariables. I n terms o f internal v alidity, ther efore, 
+quasi-e xperimen ts ar e gener ally some wher e between non-e xperimen tal studies and true e xperimen ts. 
+Quasi-e xperimen ts ar e most lik ely to be c onduc ted in =eld se ttings in which r andom assignmen t is dif =cult 
+or impossi ble. The y are often c onduc ted to e valuate the ef fectiveness o f a tr eatmen t—per haps a t ype o f 
+psychother apy or an e ducational in tervention. Ther e are man y dif ferent kinds o f quasi-e xperimen ts, but w e 
+will discuss just a f ew of the most c ommon ones in this chapter . 
+Notes 
+1. Cook, T . D., & Campbell, D . T. (1979). Quasi-e xperimentation: Design & anal ysis issues in 5eld settings . Boston, MA: 
+Houghton Mif >in. 
+Quasi- Experimen tal R esearch  |  20738.  One-Gr oup D esigns 
+Learnin g Objectives 
+1. Explain wha t quasi-e xperimen tal research is and distinguish i t cle arly from both e xperimen tal and 
+correlational r esearch. 
+2. Descri be thr ee dif ferent types o f one-gr oup quasi-e xperimen tal designs. 
+3. Identify the thr eats to in ternal v alidity associa ted with each o f these designs.  
+One-Gr oup P osttest Only D esign 
+In a one-gr oup posttest onl y design , a tr eatmen t is implemen ted (or an independen t variable is 
+manipula ted) and then a dependen t variable is me asur ed onc e after the tr eatmen t is implemen ted. Imag ine, 
+for e xample, a r esearcher who is in terested in the ef fectiveness o f an an ti-drug e ducation pr ogram on 
+elemen tary school studen ts’ attitudes to ward illegal drugs. The r esearcher c ould implemen t the an ti-drug 
+program, and then imme diately after the pr ogram ends, the r esearcher c ould me asur e studen ts’ attitudes 
+toward illegal drugs. 
+This is the w eakest t ype o f quasi-e xperimen tal design. A major limi tation to this design is the lack o f a 
+control or c omparison gr oup. Ther e is no w ay to de termine wha t the a ttitudes o f these studen ts would ha ve 
+been if the y hadn ’t comple ted the an ti-drug pr ogram. Despi te this major limi tation, r esults fr om this design 
+are frequen tly repor ted in the me dia and ar e often misin terpr eted by the g ener al popula tion. F or instanc e, 
+advertisers mig ht claim tha t 80% o f women notic ed their skin look ed brig ht after using B rand X cle anser f or 
+a mon th. If ther e is no c omparison gr oup, then this sta tistic me ans li ttle to nothing. 
+One-Gr oup P retest-P osttest D esign 
+In a one-gr oup pretest -posttest  design , the dependen t variable is me asur ed onc e bef ore the tr eatmen t 
+is implemen ted and onc e after i t is implemen ted. Le t’s return to the e xample o f a r esearcher who is 
+interested in the ef fectiveness o f an an ti-drug e ducation pr ogram on elemen tary school studen ts’ attitudes 
+toward illegal drugs. The r esearcher c ould me asur e the a ttitudes o f studen ts at a par ticular elemen tary 
+school during one w eek, implemen t the an ti-drug pr ogram during the ne xt w eek, and =nall y, measur e their 
+attitudes again the f ollowing w eek. The pr etest-post test design is much lik e a wi thin-subje cts experimen t in 
+which e ach par ticipan t is teste d =rst under the c ontrol condi tion and then under the tr eatmen t condi tion. 
+It is unlik e a wi thin-subje cts experimen t, ho wever, in tha t the or der o f condi tions is not c ounterbalanc ed 
+One-Gr oup Designs   |  209because i t typically is not possi ble f or a par ticipan t to be teste d in the tr eatmen t condi tion =rst and then in 
+an “untreated” control condi tion. 
+If the a verage post test sc ore is be tter than the a verage pretest sc ore (e.g., a ttitudes to ward illegal drugs 
+are mor e nega tive after the an ti-drug e ducational pr ogram), then i t mak es sense to c onclude tha t the 
+treatmen t mig ht be r esponsi ble f or the impr ovemen t. Unf ortuna tely, one o ften c annot c onclude this wi th 
+a hig h degr ee of certainty because ther e ma y be other e xplana tions f or wh y the post test sc ores ma y have 
+chang ed. These alterna tive explana tions pose thr eats to in ternal v alidity. 
+One alterna tive explana tion g oes under the name o f histor y. Other things mig ht have happene d be tween 
+the pr etest and the post test that caused a chang e from pr etest to post test. P erhaps an an ti-drug pr ogram 
+aired on tele vision and man y of the studen ts watche d it, or per haps a c elebri ty die d of a drug o verdose and 
+man y of the studen ts he ard about i t. 
+Another alterna tive explana tion g oes under the name o f maturation. Participan ts mig ht have chang ed 
+between the pr etest and the post test in w ays tha t the y were going to an yway be cause the y are growing 
+and le arning. I f it were a y ear long an ti-drug pr ogram, par ticipan ts mig ht become less impulsiv e or be tter 
+reasoners and this mig ht be r esponsi ble f or the chang e in their a ttitudes to ward illegal drugs. 
+Another thr eat to the in ternal v alidity of one-gr oup pr etest-post test designs is  testing , which r efers to 
+when the ac t of me asuring the dependen t variable during the pr etest af fects par ticipan ts’ responses a t 
+post test. F or instanc e, comple ting the me asur e of attitudes to wards illegal drugs ma y ha ve had an ef fect 
+on those a ttitudes. S impl y comple ting this me asur e ma y have inspir ed fur ther thinking and c onversations 
+about illegal drugs tha t then pr oduc ed a chang e in post test sc ores. 
+Similar ly, instrumen tation can be a thr eat to the in ternal v alidity of studies using this design. 
+Instrumen tation r efers to when the basic char acteristics o f the me asuring instrumen t chang e over 
+time.  When human obser vers ar e use d to me asur e beha vior, the y ma y over time gain skill, be come fa tigue d, 
+or chang e the standar ds on which obser vations ar e base d. So par ticipan ts ma y have tak en the me asur e of 
+attitudes to ward illegal drugs v ery seriousl y during the pr etest when i t was no vel but then the y ma y have 
+become bor ed with the me asur e at post test and be en less c areful in c onsidering their r esponses. 
+Another alterna tive explana tion f or a chang e in the dependen t variable in a pr etest-post test design 
+is regression  to the mean . This r efers to the sta tistic al fac t tha t an individual who sc ores extremel y hig h 
+or extremel y low on a v ariable on one oc casion will tend to sc ore less e xtremel y on the ne xt oc casion. F or 
+example, a bo wler wi th a long-term a verage of 150 who suddenl y bo wls a 220 will almost c ertainl y score 
+lower in the ne xt game. H er sc ore will “ regress” to ward her me an sc ore of 150 . Regression to the me an can 
+be a pr oblem when par ticipan ts ar e sele cted for fur ther stud y because  of their e xtreme sc ores. Imag ine, f or 
+example, tha t onl y studen ts who sc ored espe cially hig h on the test o f attitudes to ward illegal drugs ( those 
+with extremel y favorable a ttitudes to ward drugs ) were given the an ti-drug pr ogram and then w ere reteste d. 
+Regression to the me an all but guar antees tha t their sc ores will be lo wer at the post test e ven if the tr aining 
+program has no ef fect. 
+A closel y r elated c oncept—and an e xtremel y impor tant one in psy cholog ical 
+research—is  spon taneous  remission . This is the tendenc y for man y me dical and psy cholog ical pr oblems to 
+impr ove over time wi thout an y form o f treatmen t. The c ommon c old is a g ood e xample. I f one w ere to 
+210  |  One-Gr oup Designsmeasur e symptom se verity in 100 c ommon c old suf ferers toda y, give them a bo wl of chick en soup e very day, 
+and then me asur e their symptom se verity again in a w eek, the y would pr obabl y be much impr oved. This 
+does not me an tha t the chick en soup w as responsi ble f or the impr ovemen t, ho wever, because the y would 
+have been much impr oved without an y treatmen t at all. The same is true o f man y psy cholog ical pr oblems. A 
+group o f severely depr esse d pe ople toda y is lik ely to be less depr esse d on a verage in 6 mon ths. I n reviewing 
+the r esults o f several studies o f treatmen ts for depr ession, r esearchers Michael P osternak and I van Miller 
+found tha t par ticipan ts in w aitlist c ontrol condi tions impr oved an a verage of 10 to 15% bef ore the y received 
+any treatmen t at all (P osternak & Miller , 2001)1. Thus one must g ener ally be v ery cautious about inf erring 
+causali ty from pr etest-post test designs. 
+A common appr oach to ruling out the thr eats to in ternal v alidity descri bed abo ve is b y revisiting the 
+research design to include a c ontrol gr oup, one tha t does not r eceive the tr eatmen t effect. A c ontrol gr oup 
+would be subje ct to the same thr eats from histor y, ma turation, testing, instrumen tation, r egression to the 
+mean, and spon tane ous r emission and so w ould allo w the r esearcher to me asur e the ac tual ef fect of the 
+treatmen t (if an y). Of c ourse, including a c ontrol gr oup w ould me an tha t this is no long er a one-gr oup 
+design. 
+ 
+Does Psych otherapy W ork? 
+Early studies on the ef fectiveness o f psy chother apy tende d to use pr etest-post test designs. I n a classic 1952 
+article, r esearcher H ans E ysenck summariz ed the r esults o f 24 such studies sho wing tha t about t wo thir ds of 
+patients impr oved be tween the pr etest and the post test (E ysenck, 1952)2. But Eysenck also c ompar ed these 
+results wi th ar chival da ta from sta te hospi tal and insur ance compan y records sho wing tha t similar pa tients 
+recovered at about the same r ate without  receiving psy chother apy. This par allel sugg ested to E ysenck tha t the 
+impr ovemen t tha t patients sho wed in the pr etest-post test studies mig ht be no mor e than spon tane ous 
+remission. N ote tha t Eysenck did not c onclude tha t psy chother apy was inef fective. He mer ely conclude d tha t 
+there was no e videnc e tha t it was, and he wr ote o f “the ne cessity of proper ly planne d and e xecute d 
+experimen tal studies in to this impor tant =eld” (p. 32 3). You c an read the en tire article her e: 
+http://psychclassics. yorku.ca/Eysenck/psy chother apy.htm 
+Fortuna tely, man y other r esearchers took up E ysenck’ s challeng e, and b y 1980 hundr eds of experimen ts had 
+been conduc ted in which par ticipan ts were randoml y assigne d to tr eatmen t and c ontrol condi tions, and the 
+results w ere summariz ed in a classic book b y Mar y Lee Smith, Gene Glass, and Thomas Miller ( Smith, Glass, & 
+Miller , 1980 )3. They found tha t overall psy chother apy was qui te ef fective, wi th about 80% o f treatmen t 
+participan ts impr oving mor e than the a verage control par ticipan t. Subse quen t research has f ocuse d mor e on 
+the c ondi tions under which dif ferent types o f psy chother apy are mor e or less ef fective. 
+One-Gr oup Designs   |  211Interrupte d Time Series D esign 
+A varian t of the pr etest-post test design is the  interrupted  time-series  desig n. A time series is a se t of 
+measur emen ts tak en a t intervals o ver a period o f time. F or e xample, a manufac turing c ompan y mig ht 
+measur e its workers’ pr oduc tivity each w eek for a y ear. In an in terrupte d time series-design, a time series 
+like this one is “in terrupte d” b y a tr eatmen t. In one classic e xample, the tr eatmen t was the r eduction 
+of the w ork shif ts in a fac tory from 10 hours to 8 hours ( Cook & Campbell, 19 79)4. Because pr oduc tivity 
+increased rather quickl y after the shor tening o f the w ork shif ts, and be cause i t remaine d ele vated for 
+man y mon ths af terward, the r esearcher c onclude d tha t the shor tening o f the shif ts caused the incr ease 
+in pr oduc tivity. Notice tha t the in terrupte d time-series design is lik e a pr etest-post test design in tha t it 
+includes me asur emen ts of the dependen t variable both bef ore and af ter the tr eatmen t. It is unlik e the 
+pretest-post test design, ho wever, in tha t it includes multiple pr etest and post test me asur emen ts. 
+Figure 8.1  shows da ta fr om a h ypothe tical in terrupte d time-series stud y. The dependen t variable is the 
+number o f studen t absenc es per w eek in a r esearch me thods c ourse. The tr eatmen t is tha t the instruc tor 
+begins publicl y taking a ttendanc e each da y so tha t studen ts kno w tha t the instruc tor is a ware of who is 
+presen t and who is absen t. The top panel o f Figure 8.1  shows ho w the da ta mig ht look if this tr eatmen t 
+worked. Ther e is a c onsisten tly hig h number o f absenc es bef ore the tr eatmen t, and ther e is an imme diate 
+and sustaine d dr op in absenc es af ter the tr eatmen t. The bot tom panel o f Figure 8.1  shows ho w the da ta 
+might look if this tr eatmen t did not w ork. On a verage, the number o f absenc es af ter the tr eatmen t is about 
+the same as the number bef ore. This =gur e also illustr ates an ad vantage of the in terrupte d time-series 
+design o ver a simpler pr etest-post test design. I f ther e had be en onl y one me asur emen t of absenc es bef ore 
+the tr eatmen t at Week 7 and one af terward at Week 8, then i t would ha ve look ed as thoug h the tr eatmen t 
+were responsi ble for the r eduction. The multiple me asur emen ts both bef ore and af ter the tr eatmen t sugg est 
+that the r eduction be tween W eeks 7 and 8 is nothing mor e than normal w eek-to-w eek variation. 
+ 
+212  |  One-Gr oup DesignsFigure 8.1 A H ypothetical I nterrupted T ime- Series Design. The top panel shows data that suggest that the 
+treatment caused a r eduction in absences. The bottom panel shows data that suggest that it did not. [Image 
+description ] 
+Imag e Descriptions 
+Figur e 8.1 imag e description:  Two line gr aphs char ting the number o f absenc es per w eek over 14 w eeks. The 
+=rst 7 w eeks ar e wi thout tr eatmen t and the last 7 w eeks ar e wi th tr eatmen t. In the =rst line gr aph, ther e 
+are between 4 to 8 absenc es each w eek. Af ter the tr eatmen t, the absenc es dr op to 0 to 3 e ach w eek, which 
+sugg ests the tr eatmen t worked. In the se cond line gr aph, ther e is no notic eable chang e in the number o f 
+absenc es per w eek af ter the tr eatmen t, which sugg ests the tr eatmen t did not w ork. [Return to F igure 8.1] 
+One-Gr oup Designs   |  213Notes 
+1. Posternak, M. A., & Miller , I. (2001). Un treated shor t-term c ourse o f major depr ession: A me ta-anal ysis o f studies using 
+outc omes fr om studies using w ait-list c ontrol gr oups. Journal of A ffective Disor ders, 66 , 139– 146. 
+2. Eysenck, H. J . (1952). The ef fects of psy chother apy: An e valuation. Journal of Consulting Psychology, 16 , 319– 324. 
+3. Smith, M. L., Glass, G . V., & Miller , T. I. (1980 ). The bene5ts of psychother apy. Baltimor e, MD: J ohns H opkins Univ ersity 
+Press. 
+4. Cook, T . D., & Campbell, D . T. (1979). Quasi-e xperimentation: Design & anal ysis issues in 5eld settings . Boston, MA: 
+Houghton Mif >in. 
+214  |  One-Gr oup Designs39.  Non-Equiv alent Gr oups D esigns 
+Learnin g Objectives 
+1. Descri be the dif ferent types o f none quivalent groups quasi-e xperimen tal designs. 
+2. Identify some o f the thr eats to in ternal v alidity associa ted with each o f these designs.  
+ 
+Recall tha t when par ticipan ts in a be tween-subje cts experimen t are randoml y assigne d to c ondi tions, 
+the r esulting gr oups ar e lik ely to be qui te similar . In fac t, researchers c onsider them to be e quivalent. 
+When par ticipan ts ar e not r andoml y assigne d to c ondi tions, ho wever, the r esulting gr oups ar e lik ely to 
+be dissimilar in some w ays. F or this r eason, r esearchers c onsider them to be none quivalent. 
+A nonequi valen t groups  design , then, is a be tween-subje cts design in which par ticipan ts ha ve not be en 
+randoml y assigne d to c ondi tions. Ther e are several types o f none quivalent groups designs w e will c onsider . 
+Posttest Only None quivalent Gr oups D esign 
+The =rst none quivalent groups design w e will c onsider is the posttest onl y nonequi valen t groups design . In 
+this design, par ticipan ts in one gr oup ar e expose d to a tr eatmen t, a none quivalent group is not e xpose d to 
+the tr eatmen t, and then the t wo groups ar e compar ed. Imag ine, f or example, a r esearcher who w ants to 
+evaluate a ne w me thod o f teaching fr actions to thir d graders. One w ay would be to c onduc t a stud y with a 
+treatmen t group c onsisting o f one class o f thir d-gr ade studen ts and a c ontrol gr oup c onsisting o f another 
+class o f thir d-gr ade studen ts. This design w ould be a none quivalent groups design be cause the studen ts 
+are not r andoml y assigne d to classes b y the r esearcher , which me ans ther e could be impor tant differences 
+between them. F or example, the par ents of hig her achie ving or mor e motiv ated studen ts mig ht have be en 
+more lik ely to r equest tha t their childr en be assigne d to Ms. W illiams’ s class. Or the principal mig ht have 
+assigne d the “tr oublemak ers” to Mr . Jones’ s class be cause he is a str onger disciplinarian. Of c ourse, the 
+teachers’ st yles, and e ven the classr oom en vironmen ts mig ht be v ery dif ferent and mig ht cause dif ferent 
+levels o f achie vemen t or motiv ation among the studen ts. If at the end o f the stud y ther e was a dif ference in 
+the t wo classes’ kno wledge of fractions, i t mig ht have been c aused by the dif ference between the te aching 
+methods—but i t mig ht have been caused by any of these c onfounding v ariables. 
+Of course, r esearchers using a post test onl y none quivalent groups design c an tak e steps to ensur e tha t their 
+groups ar e as similar as possi ble. I n the pr esen t example, the r esearcher c ould tr y to sele ct two classes a t 
+the same school, wher e the studen ts in the t wo classes ha ve similar sc ores on a standar dized ma th test 
+and the te achers ar e the same se x, ar e close in ag e, and ha ve similar te aching st yles. T aking such steps 
+Non-Equiv alent Groups Designs   |  215would incr ease the in ternal v alidity of the stud y be cause i t would elimina te some o f the most impor tant 
+confounding v ariables. B ut wi thout true r andom assignmen t of the studen ts to c ondi tions, ther e remains 
+the possi bility of other impor tant confounding v ariables tha t the r esearcher w as not able to c ontrol. 
+Pretest-P osttest None quivalent Gr oups D esign 
+Another w ay to impr ove upon the post test onl y none quivalent groups design is to add a pr etest. I n 
+the pretest -posttest nonequi valen t groups design  there is a tr eatmen t group tha t is g iven a pr etest, 
+receives a tr eatmen t, and then is g iven a post test. B ut at the same time ther e is a none quivalent control 
+group tha t is g iven a pr etest, does  not receive the tr eatmen t, and then is g iven a post test. The question, 
+then, is not simpl y whe ther par ticipan ts who r eceive the tr eatmen t impr ove, but whe ther the y 
+impr ove more than par ticipan ts who do not r eceive the tr eatmen t. 
+Imag ine, f or example, tha t studen ts in one school ar e given a pr etest on their a ttitudes to ward drugs, then 
+are expose d to an an ti-drug pr ogram, and =nall y, are given a post test. S tuden ts in a similar school ar e given 
+the pr etest, not e xpose d to an an ti-drug pr ogram, and =nall y, are given a post test. Again, if studen ts in 
+the tr eatmen t condi tion be come mor e nega tive toward drugs, this chang e in a ttitude c ould be an ef fect 
+of the tr eatmen t, but i t could also be a ma tter o f histor y or ma turation. I f it really is an ef fect of the 
+treatmen t, then studen ts in the tr eatmen t condi tion should be come mor e nega tive than studen ts in the 
+control condi tion. B ut if i t is a ma tter o f histor y (e.g., ne ws o f a c elebri ty drug o verdose ) or ma turation 
+(e.g., impr oved reasoning), then studen ts in the t wo condi tions w ould be lik ely to sho w similar amoun ts of 
+chang e. This t ype o f design does not c omple tely elimina te the possi bility of confounding v ariables, ho wever. 
+Some thing c ould oc cur a t one o f the schools but not the other ( e.g., a studen t drug o verdose ), so studen ts at 
+the =rst school w ould be af fected by it while studen ts at the other school w ould not. 
+Returning to the e xample o f evaluating a ne w me asur e of teaching thir d gr aders, this stud y could be 
+impr oved by adding a pr etest o f studen ts’ kno wledge of fractions. The chang es in sc ores fr om pr etest 
+to post test would then be e valuated and c ompar ed acr oss c ondi tions to de termine whe ther one gr oup 
+demonstr ated a bigg er impr ovemen t in kno wledge of fractions than another . Of c ourse, the te achers’ st yles, 
+and e ven the classr oom en vironmen ts mig ht still be v ery dif ferent and mig ht cause dif ferent levels o f 
+achie vemen t or motiv ation among the studen ts tha t are independen t of the te aching in tervention. Onc e 
+again, dif ferential histor y also r epresen ts a poten tial thr eat to in ternal v alidity.  If asbestos is f ound in one 
+of the schools c ausing i t to be shut do wn f or a mon th then this in terruption in te aching c ould pr oduc e a 
+difference acr oss gr oups on post test sc ores. 
+If par ticipan ts in this kind o f design ar e randoml y assigne d to c ondi tions, i t becomes a true be tween-gr oups 
+experimen t rather than a quasi-e xperimen t. In fac t, it is the kind o f experimen t tha t Eysenck c alled for—and 
+that has no w be en conduc ted man y times—to demonstr ate the ef fectiveness o f psy chother apy. 
+216  |  Non-Equiv alent Groups DesignsInterrupte d Time-Series D esign with None quivalent Gr oups 
+One w ay to impr ove upon the in terrupte d time-series design is to add a c ontrol gr oup. The
+interrupted  time-series  design wi th nonequi valen t gr oups involves taking  a se t of me asur emen ts at 
+intervals o ver a period o f time both bef ore and af ter an in tervention o f interest in t wo or mor e none quivalent 
+groups. Onc e again c onsider the manufac turing c ompan y tha t me asur es its workers’ pr oduc tivity each w eek 
+for a y ear bef ore and af ter r educing w ork shif ts from 10 hours to 8 hours. This design c ould be impr oved 
+by loc ating another manufac turing c ompan y who does not plan  to chang e their shif t length and using them 
+as a none quivalent control gr oup. I f produc tivity increased rather quickl y after the shor tening o f the w ork 
+shifts in the tr eatmen t group but pr oduc tivity remaine d consisten t in the c ontrol gr oup,  then this pr ovides 
+better e videnc e for the ef fectiveness o f the tr eatmen t. 
+Similar ly, in the e xample o f examining the ef fects of taking a ttendanc e on studen t absenc es in a r esearch 
+methods c ourse, the design c ould be impr oved by using studen ts in another se ction o f the r esearch 
+methods c ourse as a c ontrol gr oup. I f a consisten tly hig her number o f absenc es w as found in the tr eatmen t 
+group bef ore the in tervention, f ollowed by a sustaine d dr op in absenc es af ter the tr eatmen t, while the 
+none quivalent control gr oup sho wed consisten tly hig h absenc es acr oss the semester then this w ould 
+provide superior e videnc e for the ef fectiveness o f the tr eatmen t in r educing absenc es. 
+Pretest-P osttest D esign  With Switching R eplic ation 
+Some o f these none quivalent control gr oup designs c an be fur ther impr oved by adding a swi tching 
+replic ation. U sing a pretest -posttest design wi th swi tching r eplication design , none quivalent groups 
+are administer ed a pr etest o f the dependen t variable, then  one gr oup r eceives a tr eatmen t while a 
+none quivalent control gr oup does not r eceive a tr eatmen t, the dependen t variable is assesse d again, and 
+then the tr eatmen t is adde d to the c ontrol gr oup, and =nall y the dependen t variable is assesse d one last 
+time. 
+As a c oncr ete example, le t’s say we wanted to in troduc e an e xercise in tervention f or the tr eatmen t of 
+depr ession. W e recruit one gr oup o f patients experiencing depr ession and a none quivalent control gr oup o f 
+studen ts experiencing depr ession. W e =rst me asur e depr ession le vels in both gr oups, and then w e introduc e 
+the e xercise in tervention to the pa tients experiencing depr ession, but w e hold o ff on in troducing the 
+treatmen t to the studen ts. W e then me asur e depr ession le vels in both gr oups. I f the tr eatmen t is ef fective 
+we should se e a r eduction in the depr ession le vels o f the pa tients (who r eceived the tr eatmen t) but not in 
+the studen ts (who ha ve not y et received the tr eatmen t). Finally, while the gr oup o f patients continues to 
+engag e in the tr eatmen t, we would in troduc e the tr eatmen t to the studen ts wi th depr ession. N ow and onl y 
+now should w e see the studen ts’ le vels o f depr ession de crease. 
+One o f the str engths o f this design is tha t it includes a built in r eplic ation. I n the e xample g iven, w e would 
+get evidenc e for the ef =cacy of the tr eatmen t in t wo dif ferent samples (pa tients and studen ts). Another 
+strength o f this design is tha t it provides mor e control over histor y effects. It becomes r ather unlik ely tha t 
+some outside e vent would perf ectly coincide wi th the in troduc tion o f the tr eatmen t in the =rst gr oup and 
+Non-Equiv alent Groups Designs   |  217with the dela yed introduc tion o f the tr eatmen t in the se cond gr oup. F or instanc e, if a chang e in the w eather 
+occurr ed when w e =rst in troduc ed the tr eatmen t to the pa tients, and this e xplaine d their r eductions in 
+depr ession the se cond time tha t depr ession w as me asur ed, then w e would se e depr ession le vels de crease 
+in both the gr oups. S imilar ly, the swi tching r eplic ation helps to c ontrol for ma turation and instrumen tation. 
+Both gr oups w ould be e xpected to sho w the same r ates o f spon tane ous r emission o f depr ession and if the 
+instrumen t for assessing depr ession happene d to chang e at some poin t in the stud y the chang e would be 
+consisten t acr oss both o f the gr oups. Of c ourse, demand char acteristics, plac ebo ef fects, and e xperimen ter 
+expectanc y effects can still be pr oblems. B ut the y can be c ontrolled for using some o f the me thods descri bed 
+in Chapter 5. 
+Switching R eplic ation with T reatment R emov al Design 
+In a basic pr etest-post test design wi th swi tching r eplic ation, the =rst gr oup r eceives a tr eatmen t and the 
+second gr oup r eceives the same tr eatmen t a li ttle bi t later on ( while the ini tial gr oup c ontinues to r eceive 
+the tr eatmen t). In contrast, in a switching r eplication wi th tr eatmen t remo val design , the tr eatmen t is 
+remo ved from the =rst gr oup when i t is adde d to the se cond gr oup. Onc e again, le t’s assume w e =rst 
+measur e the depr ession le vels o f patients wi th depr ession and studen ts wi th depr ession. Then w e introduc e 
+the e xercise in tervention to onl y the pa tients. Af ter the y ha ve be en e xpose d to the e xercise in tervention 
+for a w eek w e assess depr ession le vels again in both gr oups. I f the in tervention is ef fective then w e should 
+see depr ession le vels de crease in the pa tient group but not the studen t group (be cause the studen ts 
+haven’t received the tr eatmen t yet). Next, w e would r emo ve the tr eatmen t from the gr oup o f patients 
+with depr ession. So w e would tell them to stop e xercising. A t the same time, w e would tell the studen t 
+group to star t exercising. Af ter a w eek of the studen ts exercising and the pa tients not e xercising, w e would 
+reassess depr ession le vels. N ow if the in tervention is ef fective we should se e tha t the depr ession le vels ha ve 
+decreased in the studen t group but tha t the y have incr eased in the pa tient group (be cause the y are no long er 
+exercising). 
+Demonstr ating a tr eatmen t effect in t wo groups stagg ered over time and demonstr ating the r eversal o f the 
+treatmen t effect after the tr eatmen t has be en remo ved can pr ovide str ong e videnc e for the ef =cacy of the 
+treatmen t. In addi tion to pr oviding e videnc e for the r eplic ability of the =ndings, this design c an also pr ovide 
+evidenc e for whe ther the tr eatmen t continues to sho w effects af ter it has be en wi thdr awn. 
+218  |  Non-Equiv alent Groups Designs40.  Key Takeaways and Exer cises 
+Key Takeaways 
+• Quasi-e xperimen tal research in volves the manipula tion o f an independen t variable wi thout the r andom 
+assignmen t of par ticipan ts to c ondi tions or c ounterbalancing o f orders o f condi tions. 
+• Ther e are thr ee types o f quasi-e xperimen tal designs tha t are within-subje cts in na ture. These ar e the 
+one-gr oup post test onl y design, the one-gr oup pr etest-post test design, and the in terrupte d time-series 
+design. 
+• Ther e are =ve types o f quasi-e xperimen tal designs tha t are between-subje cts in na ture. These ar e the 
+post test onl y design wi th none quivalent groups, the pr etest-post test design wi th none quivalent groups, 
+the in terrupte d time-series design wi th none quivalent groups, the pr etest-post test design wi th 
+switching r eplic ation, and the swi tching r eplic ation wi th tr eatmen t remo val design. 
+• Quasi-e xperimen tal research elimina tes the dir ectionali ty problem be cause i t involves the manipula tion 
+of the independen t variable. H owever, it does not elimina te the pr oblem o f confounding v ariables, 
+because i t does not in volve random assignmen t to c ondi tions or c ounterbalancing. F or these r easons, 
+quasi-e xperimen tal research is g ener ally hig her in in ternal v alidity than non-e xperimen tal studies but 
+lower than true e xperimen ts. 
+• Of all o f the quasi-e xperimen tal designs, those tha t include a swi tching r eplic ation ar e hig hest in in ternal 
+validity. 
+Exercises 
+• Practice: Imag ine tha t two professors de cide to test the ef fect of giving dail y quiz zes on studen t 
+performanc e in a sta tistics c ourse. The y decide tha t Professor A will g ive quiz zes but Pr ofessor B will not. 
+They will then c ompar e the perf ormanc e of studen ts in their t wo sections on a c ommon =nal e xam. List 
+=ve other v ariables tha t mig ht differ be tween the t wo sections tha t could af fect the r esults. 
+• Discussion: I mag ine tha t a gr oup o f obese childr en is r ecruited for a stud y in which their w eight is 
+measur ed, then the y par ticipa te for 3 mon ths in a pr ogram tha t enc ourages them to be mor e active, and 
+=nall y their w eight is me asur ed again. Explain ho w each o f the f ollowing mig ht affect the r esults: 
+◦ regression to the me an 
+◦ spon tane ous r emission 
+◦ histor y 
+◦ maturation 
+Key Takeaways and Ex ercises   |  219

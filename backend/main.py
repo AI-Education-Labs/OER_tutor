@@ -110,26 +110,9 @@ class TokenData(BaseModel):
 class ChatMessage(BaseModel):
     message: str
 
-class QuizOption(BaseModel):
-    id: str
-    text: str
-    isCorrect: bool
-
-class Quiz(BaseModel):
-    question: str
-    options: List[QuizOption]
-    explanation: Optional[str] = None
-
 class ChatResponse(BaseModel):
     response: Optional[str] = None
     saved: bool = False
-    isQuiz: bool = False
-    quiz: Optional[Quiz] = None
-
-class QuizAnswer(BaseModel):
-    messageId: str
-    optionId: str
-    isCorrect: bool
 
 class SubchapterProgress(BaseModel):
     completed: bool = False
@@ -493,39 +476,6 @@ async def update_conversation_summary(user_id: str, user_message: str, ai_respon
     except Exception as e:
         print(f"Error updating conversation summary: {e}")
 
-@app.get("/chat/quiz/{session_id}")
-async def get_latest_quiz(
-    session_id: str,
-    current_user: Optional[User] = Depends(get_current_active_user)
-):
-    """
-    Get the latest quiz generated for a session.
-    """
-    # Verify the user has access to this session
-    if current_user and current_user.id != session_id and session_id != "anonymous":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this quiz"
-        )
-    
-    # Get the latest quiz from Redis
-    quiz_key = f"quiz:{session_id}:latest"
-    quiz_json = await redis_client.get(quiz_key)
-    
-    if not quiz_json:
-        return {"quiz": None}
-    
-    try:
-        quiz_data = json.loads(quiz_json)
-        quiz = Quiz(**quiz_data)
-        
-        # Clear the quiz from Redis after retrieving it
-        await redis_client.delete(quiz_key)
-        
-        return {"quiz": quiz.dict()}
-    except Exception as e:
-        print(f"Error parsing quiz data: {e}")
-        return {"quiz": None}
 
 @app.get("/chat/history")
 async def get_chat_history(current_user: User = Depends(get_current_active_user)):
@@ -553,72 +503,6 @@ async def get_chat_history(current_user: User = Depends(get_current_active_user)
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving chat history: {str(e)}",
         )
-    
-@app.post("/quiz/answer")
-async def submit_quiz_answer(
-    answer: QuizAnswer,
-    current_user: User = Depends(get_current_active_user)
-):
-    """
-    Records a user's answer to a quiz question and updates their progress.
-    Requires authentication.
-    """
-    if current_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required to save quiz answers",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    try:
-        # Get current progress from Redis or create new
-        progress_key = f"user:{current_user.id}:progress"
-        progress_data = await redis_client.get(progress_key)
-        
-        if progress_data:
-            progress = UserProgress.parse_raw(progress_data)
-        else:
-            progress = UserProgress(user_id=current_user.id)
-        
-        # Update progress
-        progress.total_answers += 1
-        if answer.isCorrect:
-            progress.correct_answers += 1
-            progress.streak += 1
-            progress.xp += 10  # Base XP for correct answer
-            
-            # Bonus XP for streak
-            if progress.streak >= 5:
-                progress.xp += 5
-            if progress.streak >= 10:
-                progress.xp += 10
-                
-            # Level up logic
-            if progress.xp >= progress.level * 100:
-                progress.level += 1
-        else:
-            progress.streak = 0
-        
-        progress.last_answer_time = datetime.now()
-        
-        # Save updated progress to Redis
-        await redis_client.set(progress_key, progress.json())
-        
-        # Also save this specific answer
-        answer_key = f"user:{current_user.id}:answers:{answer.messageId}"
-        await redis_client.set(answer_key, json.dumps({
-            "optionId": answer.optionId,
-            "isCorrect": answer.isCorrect,
-            "timestamp": datetime.now().isoformat()
-        }))
-        
-        return {
-            "success": True,
-            "progress": progress.dict(),
-            "message": "Answer recorded successfully"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to record answer: {str(e)}")
 
 @app.get("/user/progress")
 async def get_user_progress(current_user: User = Depends(get_current_active_user)):
@@ -644,45 +528,6 @@ async def get_user_progress(current_user: User = Depends(get_current_active_user
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve progress: {str(e)}")
     
-
-# More helper functions
-def generate_quiz_for_topic(topic: str, graph, session_id, previous_messages) -> Quiz:
-    """
-    Generates a quiz for the given topic.
-    Replace this with your actual quiz generation logic.
-    """
-
-    json_format = '{"question": "question", "options": [{"id": "1", "text": "First possible answer", "isCorrect": false}, {"id": "2", "text": "Second possible answer", "isCorrect": true}, {"id": "3", "text": "Third possible answer", "isCorrect": false}, {"id": "4", "text": "Fourth possible answer", "isCorrect": false}], "explanation": ""}'
-    message = f"Based on this text from the user, text:'{topic}', generate a multipe choice quiz in the json format {json_format}. Use the textbook to generate this quiz and only return the json quiz object. If the text field is not relevant to generate a quiz, use previous messages from the user"
-    previous_messages.append(HumanMessage(content=message))
-    reply = ""
-    for event in graph.stream(
-        {"messages": previous_messages},
-        {"configurable": {"thread_id": session_id}}
-    ):
-        for value in event.values():
-            reply = value["messages"][-1].content
-
-        # Extract the JSON string
-    json_match = re.search(r'\`\`\`json\s*({.*?})\s*\`\`\`', reply, re.DOTALL)
-    if json_match:
-        json_str = json_match.group(1)
-    else:
-        json_str = reply  # fallback in case it's not wrapped in \`\`\`json \`\`\`
-
-    try:
-        quiz_data = json.loads(json_str)
-        quiz = Quiz(
-            question=quiz_data["question"],
-            options=[
-                QuizOption(id=opt["id"], text=opt["text"], isCorrect=opt["isCorrect"])
-                for opt in quiz_data["options"]
-            ],
-            explanation=quiz_data["explanation"]
-        )
-        return quiz
-    except Exception as e:
-        print(f"Failed to parse or construct quiz: {e}")
 
 async def update_user_progress(user_id: str, topic: str, is_correct: bool):
     """

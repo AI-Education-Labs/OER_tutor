@@ -18,6 +18,7 @@ interface TabGroupProps {
   isNarrowPanel?: boolean
   style?: React.CSSProperties
   textbookId?: string
+  selectedChapterId?: string
 }
 
 export function TabGroup({
@@ -28,6 +29,7 @@ export function TabGroup({
   isNarrowPanel = true,
   style,
   textbookId,
+  selectedChapterId,
 }: TabGroupProps) {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null)
@@ -113,11 +115,11 @@ export function TabGroup({
           {group.tabs.map((tab, index) => (
             <div
               key={tab.id}
-              className={`relative flex items-center border-r border-[#3e3e42] cursor-pointer transition-all duration-200 group ${
+              className={`relative flex items-center border-r border-[#3e3e42] transition-all duration-200 group ${
                 group.activeTab === tab.id
                   ? "bg-[#1e1e1e] text-[#ffffff]"
                   : "bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42]"
-              } ${dragOverIndex === index ? "bg-[#007acc]" : ""}`}
+              } ${dragOverIndex === index ? "bg-[#007acc]" : ""} ${tab.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               style={{
                 width: "160px",
                 height: "35px",
@@ -130,7 +132,10 @@ export function TabGroup({
               onDragStart={(e) => handleTabDragStart(e, tab)}
               onDragOver={(e) => handleTabDragOver(e, index)}
               onDrop={(e) => handleTabDrop(e, index)}
-              onClick={() => onUpdateGroup({ activeTab: tab.id })}
+              onClick={() => {
+                if (tab.disabled) return
+                onUpdateGroup({ activeTab: tab.id })
+              }}
               onMouseEnter={(e) => handleTabMouseEnter(e, tab.id, tab.label)}
               onMouseLeave={handleTabMouseLeave}
               title=""
@@ -197,7 +202,9 @@ export function TabGroup({
       {/* Tab content */}
       <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
         <div className="flex-1 overflow-auto pr-1 pb-2">
-          {activeTab && <TutorPanel activeTab={activeTab.content} textbookId={textbookId} />}
+          {activeTab && (
+            <TutorPanel activeTab={activeTab.content} textbookId={textbookId} selectedChapterId={selectedChapterId} />
+          )}
         </div>
       </div>
     </div>

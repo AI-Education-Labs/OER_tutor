@@ -36,6 +36,7 @@ export interface TabItem {
   icon: any
   content: string
   description: string
+  disabled?: boolean
 }
 
 export interface TabGroupData {
@@ -217,6 +218,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       icon: Target,
       content: "practice",
       description: "Work through problems and exercises",
+      disabled: true,
     },
     {
       id: "progress",
@@ -224,6 +226,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       icon: BarChart3,
       content: "progress",
       description: "Monitor your learning progress and analytics",
+      disabled: true,
     },
   ]
 
@@ -241,6 +244,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   }
 
   const addTabToNewGroup = (tab: TabItem) => {
+    if (tab.disabled) return
     const newGroup: TabGroupData = {
       id: `group-${Date.now()}`,
       tabs: [tab],
@@ -255,6 +259,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   }
 
   const addTabToExistingGroup = (tab: TabItem, groupId?: string) => {
+    if (tab.disabled) return
     const targetGroupId = groupId || (tabGroups.length > 0 ? tabGroups[0].id : null)
 
     if (targetGroupId) {
@@ -279,6 +284,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   }
 
   const addToolFromHelpGrid = (tab: TabItem) => {
+    if (tab.disabled) return
     if (tabGroups.length > 0) {
       addTabToExistingGroup(tab)
     } else {
@@ -313,6 +319,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   }
 
   const createNewTabGroup = (tab: TabItem, position: { x: number; y: number }) => {
+    if (tab.disabled) return
     const newGroup: TabGroupData = {
       id: `group-${Date.now()}`,
       tabs: [tab],
@@ -789,6 +796,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                         onRemoveGroup={() => removeTabGroup(group.id)}
                         isNarrowPanel={isRightPanelNarrow}
                         textbookId={textbookId}
+                        selectedChapterId={selectedChapterId}
                         style={{
                           height: `${group.position.height}%`,
                           minHeight: "200px",
