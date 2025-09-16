@@ -14,7 +14,7 @@ class User(UserBase):
     id: str
     disabled: Optional[int] = 1
 
-class UserInDB(User):
+class UserWithPassword(User):
     hashed_password: str
 
 # New models for progress tracking
