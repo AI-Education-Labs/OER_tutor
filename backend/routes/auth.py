@@ -4,9 +4,12 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
 import jwt
-from backend.models.user import User, UserCreate, UserInDB
+import re
+from backend.models.user import User, UserWithPassword, UserCreate
 from backend.config import settings
 from backend.redis_client import redis_client
+from backend.database import create_user_document, get_collection, get_user_document_by_username
+import uuid
 
 import hashlib
 
@@ -21,43 +24,10 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 # Helper functions
+
+# Hashes the password using SHA-256.
 async def hash_password(password: str) -> str:
-    """
-    Hashes the password using SHA-256.
-    """
     return hashlib.sha256(password.encode()).hexdigest()
-
-async def store_user_in_redis(user: UserInDB):
-    """
-    Stores user information in Redis.
-    """
-    if user is None:
-        raise HTTPException(status_code=400, detail="Invalid user data")
-
-    user_key = f"user:{user.id}"
-    user_data = user.model_dump()
-    await redis_client.hset(user_key, mapping=user_data)
-    return True
-
-async def get_user_by_id(user_id: str) -> Optional[User]:
-    """
-    Retrieves the user from Redis by ID.
-    """
-    user_key = f"user:{user_id}"
-    user_data = await redis_client.hgetall(user_key)
-    
-    if not user_data:
-        return None
-    
-    user = UserInDB(
-        id=user_data.get("id"),
-        username=user_data.get("username"),
-        email=user_data.get("email"),
-        disabled=user_data.get("disabled") == 1,
-        hashed_password=user_data.get("hashed_password"),
-    )
-    
-    return user
 
 async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -74,9 +44,17 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     """
     Logs in a user and returns an access token.
     """
-    user = await get_user_by_id(form_data.username)
+    user = await get_user_document_by_username(form_data.username)
+    input_password_hash = await hash_password(form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    hashed_password = user.get("hashed_password")
     
-    if not user or not user.hashed_password == await hash_password(form_data.password):
+    if hashed_password != input_password_hash:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -85,23 +63,54 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = await create_access_token(
-        data={"sub": user.id}, expires_delta=access_token_expires
+        data={"sub": user.get("id")}, expires_delta=access_token_expires
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
 
+# Register a new user
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(user_create: UserCreate):
-    """
-    Registers a new user
-    """
+    # Username should only have alphanumeric characters
+    if not user_create.username.isalnum():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username should only have alphanumeric characters")
+    # Max 100 characters on username
+    if len(user_create.username) > 100:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username should be less than 100 characters")
+    # Min 3 characters on username
+    if len(user_create.username) < 3:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username should be at least 3 characters")
+    # Max 1000 characters on email
+    if len(user_create.email) > 1000:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email should be less than 1000 characters")
+    # Ensure valid email
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", user_create.email):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email")
+    # Ensure password is at least 8 characters long
+    if len(user_create.password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password should be at least 8 characters long")
+    # Ensure password is at most 100 characters long
+    if len(user_create.password) > 100:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password should be less than 100 characters")
+
+    # Ensure unique username and email
+    users = await get_collection("users")
+    existing = await users.find_one({"username": user_create.username})
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
+    existing = await users.find_one({"email": user_create.email})
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
     hashed_password = await hash_password(user_create.password)
-    user = UserInDB(
-        id=user_create.username,
+
+    user_id = str(uuid.uuid4()) 
+    user = UserWithPassword(
+        id=user_id,
         username=user_create.username,
         email=user_create.email,
         hashed_password=hashed_password,
         disabled=0,
     )
-    await store_user_in_redis(user)
+    await create_user_document(user)
     return {"message": "User registered successfully", "user": user}

@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, AsyncGenerator
 from datetime import datetime, timezone
+from mangum import Mangum
 import jwt
 import json
 import random
@@ -17,7 +18,6 @@ import os
 
 from backend.redis_client import redis_client
 
-from backend.routes.auth import get_user_by_id
 from backend.routes.auth import router as auth_router
 
 from backend.routes.llm_utils import router as llm_utils_router
@@ -26,7 +26,7 @@ from backend.routes.files import router as files_router
 from backend.routes.sidebar_modules import router as sidebar_modules_router
 from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.textbook_information import router as textbook_router
-
+from backend.routes.users import router as users_router
 
 from openai import OpenAI
 
@@ -46,6 +46,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
+from backend.database import ensure_mongo_connection, get_user_document_by_username
 
 
 PDF_DIR = "./public"
@@ -64,7 +65,7 @@ app.include_router(textbooks_router, tags=["textbooks"])
 app.include_router(files_router, tags=["files"])
 app.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
 app.include_router(textbook_router, prefix="/textbook", tags=["textbook"])
-
+app.include_router(users_router, prefix="/users", tags=["users"])
 
 # Add CORS middleware
 app.add_middleware(
@@ -93,12 +94,6 @@ class User(BaseModel):
     email: str  # Changed from EmailStr to str
     full_name: Optional[str] = None
     disabled: Optional[bool] = None
-
-class UserCreate(User):
-    password: str
-
-class UserInDB(User):
-    hashed_password: str
 
 class Token(BaseModel):
     access_token: str
@@ -171,7 +166,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             )
 
         # Assuming you have a function to get the user from your DB
-        user = await get_user_by_id(user_id)  # Replace with your DB fetching logic
+        user = await get_user_document_by_username(user_id)  # Replace with your DB fetching logic
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -593,7 +588,14 @@ async def list_directory(path: str = ""):
         "items": items
     }
 
+
+# ----- AWS Lambda handler (Mangum adapter) -----
+# lifespan="auto" triggers FastAPI startup/shutdown events.
+# If you see timeouts or odd startup behavior, try lifespan="off".
+handler = Mangum(app, lifespan="auto")
+
 # Run the application
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    asyncio.run(ensure_mongo_connection())

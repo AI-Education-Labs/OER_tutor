@@ -10,9 +10,6 @@ from datetime import datetime
 from backend.redis_client import redis_client
 import json
 
-# Import the authentication dependencies from main.py
-from backend.routes.auth import get_user_by_id
-
 router = APIRouter()
 
 # We'll need to import these from main.py or create a separate auth module

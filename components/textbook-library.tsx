@@ -26,10 +26,11 @@ export function TextbookLibrary() {
   useEffect(() => {
     const loadTextbooks = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const resp = await fetch(`${backendUrl}/api/textbooks`)
+        const resp = await fetch(`/api/textbooks`, { cache: "no-store" })
+        console.log(resp)
         if (!resp.ok) throw new Error(`Failed to fetch textbooks (${resp.status})`)
         const data = await resp.json()
+        console.log("/api/textbooks JSON length:", Array.isArray(data) ? data.length : "not array")
 
         const textbook_list: Textbook[] = []
 
