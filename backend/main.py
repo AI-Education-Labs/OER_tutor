@@ -6,7 +6,6 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, AsyncGenerator
 from datetime import datetime, timezone
-from mangum import Mangum
 import jwt
 import json
 import random
@@ -587,12 +586,6 @@ async def list_directory(path: str = ""):
         "path": full_path,
         "items": items
     }
-
-
-# ----- AWS Lambda handler (Mangum adapter) -----
-# lifespan="auto" triggers FastAPI startup/shutdown events.
-# If you see timeouts or odd startup behavior, try lifespan="off".
-handler = Mangum(app, lifespan="auto")
 
 # Run the application
 if __name__ == "__main__":
