@@ -1,10 +1,12 @@
 from pymongo import AsyncMongoClient
 from dotenv import load_dotenv
 from typing import Optional, AsyncIterator, Any, Dict
-from backend.models.user import UserWithPassword
+from backend.features.users.models import UserWithPassword
 import asyncio
 import os
 from pathlib import Path
+
+from backend.features.textbooks.service import get_chapters_from_textbook
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
@@ -165,11 +167,37 @@ async def create_user_document(user: UserWithPassword):
     user_doc["_id"] = user.id
     await collection.insert_one(user_doc)
 
-async def get_user_document_by_id(user_id: str):
+# Temporary function to create a user book document, should be replaced with a more general function.
+async def create_user_book_document(user_id: str):
+    collection = await get_collection("user_books")
+    user_book_doc = {
+        "_id": user_id,
+    }
+    await collection.insert_one(user_book_doc)
+
+async def add_textbook_to_user(user_id: str, textbook_id: str):
+    collection = await get_collection("user_books")
+    if await collection.find_one({"_id": user_id}) is None:
+        await create_user_book_document(user_id)
+
+    chapters = get_chapters_from_textbook(textbook_id)
+    user_book_doc = {}
+    for chapter in chapters:
+        user_book_doc[textbook_id][chapter["id"]] = {
+            "progress": 0,
+            "completed": False,
+            "time_started": None,
+            "time_completed": None,
+        }
+
+
+    await collection.update_one({"_id": user_id}, {"$set": {textbook_id: {}}})
+
+async def get_user_by_id(user_id: str) -> UserWithPassword:
     collection = await get_collection("users")
     return await collection.find_one({"_id": user_id})
 
-async def get_user_document_by_username(username: str) -> UserWithPassword:
+async def get_user_by_username(username: str) -> UserWithPassword:
     collection = await get_collection("users")
     return await collection.find_one({"username": username})
 
@@ -178,7 +206,7 @@ __all__ += [
     "put_user_fields",
     "delete_user_document",
     "create_user_document",
-    "get_user_document_by_id",
-    "get_user_document_by_username",
+    "get_user_by_id",
+    "get_user_by_username",
 ]
 
