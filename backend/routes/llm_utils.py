@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from openai import OpenAI
 from backend.config import settings
-from backend.textextract import text_extract_with_save
+from backend.utils.textextract import text_extract_with_save
 import os
 
 router = APIRouter()

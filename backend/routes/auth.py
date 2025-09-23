@@ -1,50 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime, timedelta
-import jwt
+from datetime import timedelta
 import re
-from backend.models.user import User, UserWithPassword, UserCreate
-from backend.config import settings
-from backend.redis_client import redis_client
-from backend.database import create_user_document, get_collection, get_user_document_by_username
 import uuid
-
-import hashlib
+from backend.features.users.models import UserWithPassword, UserCreate
+from backend.features.auth.models import Token
+from backend.config import settings
+from backend.db.database import create_user_document, get_collection, get_user_by_username
+from backend.features.auth.service import hash_password, create_access_token
 
 router = APIRouter()
-
-# Models
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-# Helper functions
-
-# Hashes the password using SHA-256.
-async def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-
-async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Logs in a user and returns an access token.
     """
-    user = await get_user_document_by_username(form_data.username)
+    user = await get_user_by_username(form_data.username)
     input_password_hash = await hash_password(form_data.password)
     if not user:
         raise HTTPException(
