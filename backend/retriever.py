@@ -33,21 +33,17 @@ os.environ["OPENAI_API_KEY"] = api_key
 
 def create_retriever(textbook_path, textbook_name):
     """
-    Creates a retriever given a textbook pdf with fixed file path handling.
-
-    Args:
-        textbook_path (str): Path to the textbook pdf
-        textbook_name (str): Name of the textbook
-
-    Returns:
-        ContextualCompressionRetriever
+    Creates a retriever given a textbook pdf with simplified, efficient file path handling.
+    This version skips LLM-based filtering for speed/cost efficiency.
     """
 
     if not os.path.exists(textbook_path):
         raise Exception(f"Textbook path does not exist: {textbook_path}")
 
-    # Initialize a persistent Chroma vector database
+    # Use smaller embeddings for efficiency
     embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
+
+    # Persistent Chroma vector database
     persistent_client = chromadb.PersistentClient()
     collection = persistent_client.get_or_create_collection(name=textbook_name)
 
@@ -61,7 +57,7 @@ def create_retriever(textbook_path, textbook_name):
     if collection.count() == 0:
         print("Chroma vector database is empty, loading documents...")
 
-        # Initialize bookmarks
+        # Load bookmarks
         bookmark_str = textbook_name + ".json"
         bookmark_path = os.path.join("./data", bookmark_str)
         try:
@@ -69,114 +65,81 @@ def create_retriever(textbook_path, textbook_name):
                 bookmarks = json.load(f)
             print("Bookmarks loaded")
         except FileNotFoundError:
-            print(f"Error: Bookmarks file not found at {bookmark_path}.  Ensure initialize_bookmarks was run.")
+            print(f"Error: Bookmarks file not found at {bookmark_path}. Ensure initialize_bookmarks was run.")
             return None
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON from {bookmark_path}: {e}")
             return None
 
-        # Create target directory first
+        # Create directory for chapter PDFs
         target_dir = f"./data/{textbook_name}"
         os.makedirs(target_dir, exist_ok=True)
-        print(f"Created target directory: {target_dir}")
 
-        # Create documents
+        reader = PdfReader(textbook_path)
         documents = []
 
-        page_ranges = []
+        # Extract chapters and save as PDFs
         for i in range(1, bookmarks["chapter_num"]+1):
             try:
                 start_page = bookmarks[f"chapter {i}"]["page_num"]
                 end_page = bookmarks[f"chapter {i}"]["last_page"]
-                page_ranges.append((start_page - 1, end_page))
-            except KeyError as e:
-                print(f"Error: Could not find chapter {i} in bookmarks.  Skipping. {e}")
+            except KeyError:
+                print(f"Error: Chapter {i} missing in bookmarks. Skipping.")
                 continue
 
-        reader = PdfReader(textbook_path)
-
-        # Create chapter PDFs directly in the target directory
-        for idx, (start_page, end_page) in enumerate(page_ranges):
             writer = PdfWriter()
-            chapter_num = idx + 1
-            print(f"Processing chapter {chapter_num} from pages {start_page+1} to {end_page}")
-
-            for page_num in range(start_page, end_page):
+            for page_num in range(start_page - 1, end_page):
                 try:
                     writer.add_page(reader.pages[page_num])
-                except IndexError as e:
-                    print(f"Error: Page {page_num+1} not found in PDF. Skipping. {e}")
+                except IndexError:
+                    print(f"Warning: Page {page_num+1} missing, skipping.")
                     continue
 
-            # Save directly to target directory
-            output_pdf = os.path.join(target_dir, f"chapter{chapter_num}.pdf")
-            
-            with open(output_pdf, "wb") as f:
+            chapter_path = os.path.join(target_dir, f"chapter{i}.pdf")
+            with open(chapter_path, "wb") as f:
                 writer.write(f)
-            print(f"Created: {output_pdf}")
+            print(f"Created: {chapter_path}")
 
-        # Load documents from the correct location
-        for i in tqdm(range(1, bookmarks["chapter_num"]+1), desc="Loading documents"):
-            file_path = os.path.join(target_dir, f"chapter{i}.pdf")
-            
-            if not os.path.exists(file_path):
-                print(f"Warning: Chapter file not found at {file_path}. Skipping.")
-                continue
-                
+            # Load and chunk chapter text
+            loader = PyPDFLoader(chapter_path)
             try:
-                loader = PyPDFLoader(file_path)
-                full_chapter = loader.load()
-                print(f"Successfully loaded chapter {i} with {len(full_chapter)} pages")
+                chapter_docs = loader.load_and_split(
+                    chunk_size=500,
+                    chunk_overlap=50
+                )
+                for doc in chapter_docs:
+                    doc.metadata.update({"chapter": f"Chapter {i}"})
+                documents.extend(chapter_docs)
             except Exception as e:
-                print(f"Error loading chapter {i} from {file_path}: {e}")
-                continue
+                print(f"Error loading {chapter_path}: {e}")
 
-            for page_num, document in enumerate(full_chapter, start=1):
-                if document.page_content.strip():  # Only add if not empty
-                    documents.append(
-                        Document(
-                            page_content=document.page_content, 
-                            metadata={"chapter": f"Chapter {i}", "page": page_num}
-                        )
-                    )
-                else:
-                    print(f"Warning: Empty page content in chapter {i}, page {page_num}. Skipping.")
-        
-        print(f"Documents loaded: {len(documents)} total documents")
+        print(f"Total documents: {len(documents)}")
 
-        # Remove bookmarks file
+        # Clean up bookmarks
         if os.path.exists(bookmark_path):
             os.remove(bookmark_path)
-            print("Removed bookmarks file")
 
-        # Add documents to vector database
+        # Add to vector DB in batches
         if documents:
-            print("Adding documents to vector database...")
-            # Add documents in batches for better performance
             batch_size = 10
-            for i in tqdm(range(0, len(documents), batch_size), desc="Adding documents to vector database"):
-                batch = documents[i:i+batch_size]
-                vector_store.add_documents(batch)
-            print(f"Added {len(documents)} documents to vector database")
+            for i in range(0, len(documents), batch_size):
+                vector_store.add_documents(documents[i:i+batch_size])
+            print(f"Added {len(documents)} documents to Chroma")
         else:
-            print("Warning: No documents to add to vector database")
+            print("Warning: no documents added to vector DB")
 
     else:
-        print("Chroma vector database is not empty, skipping document loading")
+        print("Chroma collection already populated, skipping document load")
 
-    llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
-    filter = LLMChainFilter.from_llm(llm)
-    pipeline_compressor = DocumentCompressorPipeline(
-        transformers=[filter]
-    )
-    retriever = ContextualCompressionRetriever(
-        base_compressor=pipeline_compressor, 
-        base_retriever=vector_store.as_retriever(),
-        max_documents=6,
+    # Simple retriever, no LLM filter
+    retriever = vector_store.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": 6}  # adjust k if needed
     )
     print("Retriever initialized")
 
     return retriever
+
 
 # Test function
 def test_retriever():

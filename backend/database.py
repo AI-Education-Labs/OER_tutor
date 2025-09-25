@@ -50,9 +50,9 @@ async def get_database():
 
 async def get_collection(collection_name: str):
     """Get an async collection handle from the database."""
-    print(f"Getting collection {collection_name}")
+    #print(f"Getting collection {collection_name}")
     db = await get_database()
-    print(f"Database: {db}")
+    #print(f"Database: {db}")
     return db[collection_name]
 
 async def ensure_mongo_connection() -> bool:

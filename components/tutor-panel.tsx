@@ -759,7 +759,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
   )
 
   const tabContent = {
-    "ai-chat": () => <AiChatPanel context={chatContext} />,
+    "ai-chat": () => <AiChatPanel context={chatContext} textbookId={textbookId} selectedChapterId={selectedChapterId} />,
     chat: renderSocraticDialogue,
     quiz: renderQuizTab,
     flashcards: renderFlashcardsTab,
