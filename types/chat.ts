@@ -6,8 +6,20 @@ export interface Message {
 }
 
 export interface ChatContext {
-  currentChapter?: string
-  currentSection?: string
-  highlightedText?: string
-  pageNumber?: number
+  textbookId?: string
+  chapterId?: string
+  sessionId?: string
+}
+
+export interface BranchCandidate {
+  new_session_id: string
+  suggested_title: string
+}
+
+export interface ChatSession {
+  session_id: string
+  title: string
+  summary?: string
+  updated_at: string
+  user_id: string
 }
