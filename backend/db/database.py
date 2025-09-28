@@ -1,17 +1,13 @@
 from pymongo import AsyncMongoClient
-from dotenv import load_dotenv
 from typing import Optional, AsyncIterator, Any, Dict
 from backend.features.users.models import UserWithPassword
 import asyncio
-import os
-from pathlib import Path
 
 from backend.features.textbooks.service import get_chapters_from_textbook
+from backend.config import settings
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
-
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
+MONGO_URI = settings.MONGO_URI
+MONGO_DB_NAME = settings.MONGO_DB_NAME
 
 _mongo_client: Optional[AsyncMongoClient] = None
 _client_init_lock: asyncio.Lock = asyncio.Lock()
@@ -37,10 +33,6 @@ async def get_mongo_client() -> AsyncMongoClient:
 
     return _mongo_client
 
-def get_database_name() -> str:
-    """Return the default database name from environment configuration."""
-    return MONGO_DB_NAME
-
 async def get_database():
     """Get an async database handle from the singleton client."""
     client = await get_mongo_client()
@@ -54,7 +46,6 @@ async def get_collection(collection_name: str):
     """Get an async collection handle from the database."""
     print(f"Getting collection {collection_name}")
     db = await get_database()
-    print(f"Database: {db}")
     return db[collection_name]
 
 async def ensure_mongo_connection() -> bool:
@@ -80,39 +71,7 @@ async def close_mongo_client() -> None:
         finally:
             _mongo_client = None
 
-# Optional FastAPI dependencies for injection
-async def mongo_client_dep() -> AsyncIterator[AsyncMongoClient]:
-    client = await get_mongo_client()
-    try:
-        yield client
-    finally:
-        # Intentionally do not close per-request to enable connection reuse
-        pass
-
-async def mongo_db_dep() -> AsyncIterator:
-    db = await get_database()
-    try:
-        yield db
-    finally:
-        # Intentionally do not close per-request to enable connection reuse
-        pass
-
-__all__ = [
-    "get_mongo_client",
-    "get_database",
-    "get_collection",
-    "ensure_mongo_connection",
-    "close_mongo_client",
-    "mongo_client_dep",
-    "mongo_db_dep",
-    "get_database_name",
-]
-
-# -----------------------------
-# Generic CRUD helper functions
-# -----------------------------
-
-async def get_user_document(
+async def get_document(
     collection_name: str,
     user_id: str,
     projection: Optional[Dict[str, int]] = None,
@@ -120,11 +79,19 @@ async def get_user_document(
 ) -> Optional[Dict[str, Any]]:
     """Get a single document by user_id with optional extra filters and projection."""
     collection = await get_collection(collection_name)
-    filter_doc: Dict[str, Any] = {"user_id": user_id}
+    filter_doc: Dict[str, Any] = {"_id": user_id}
     if extra_filter:
         filter_doc.update(extra_filter)
     document = await collection.find_one(filter_doc, projection=projection)
     return document
+
+async def get_document_by_field(
+    collection_name: str,
+    field_name: str,
+    field_value: Any,
+) -> Optional[Dict[str, Any]]:
+    collection = await get_collection(collection_name)
+    return await collection.find_one({field_name: field_value})
 
 async def put_user_fields(
     collection_name: str,
@@ -162,9 +129,8 @@ async def delete_user_document(
 
 async def create_user_document(user: UserWithPassword):
     collection = await get_collection("users")
-    user_doc = user.model_dump()
-    # Set _id to the user.id field for MongoDB primary key
-    user_doc["_id"] = user.id
+    # Dump with aliases so `_id` is persisted instead of `id`
+    user_doc = user.model_dump(by_alias=True, exclude_none=True)
     await collection.insert_one(user_doc)
 
 # Temporary function to create a user book document, should be replaced with a more general function.
@@ -172,26 +138,17 @@ async def create_user_book_document(user_id: str):
     collection = await get_collection("user_books")
     user_book_doc = {
         "_id": user_id,
+        "textbooks": [],
     }
     await collection.insert_one(user_book_doc)
 
 async def add_textbook_to_user(user_id: str, textbook_id: str):
     collection = await get_collection("user_books")
-    if await collection.find_one({"_id": user_id}) is None:
+    # Ensure document exists and add textbook id idempotently
+    existing = await collection.find_one({"_id": user_id})
+    if existing is None:
         await create_user_book_document(user_id)
-
-    chapters = get_chapters_from_textbook(textbook_id)
-    user_book_doc = {}
-    for chapter in chapters:
-        user_book_doc[textbook_id][chapter["id"]] = {
-            "progress": 0,
-            "completed": False,
-            "time_started": None,
-            "time_completed": None,
-        }
-
-
-    await collection.update_one({"_id": user_id}, {"$set": {textbook_id: {}}})
+    await collection.update_one({"_id": user_id}, {"$addToSet": {"textbooks": textbook_id}})
 
 async def get_user_by_id(user_id: str) -> UserWithPassword:
     collection = await get_collection("users")
@@ -200,13 +157,3 @@ async def get_user_by_id(user_id: str) -> UserWithPassword:
 async def get_user_by_username(username: str) -> UserWithPassword:
     collection = await get_collection("users")
     return await collection.find_one({"username": username})
-
-__all__ += [
-    "get_user_document",
-    "put_user_fields",
-    "delete_user_document",
-    "create_user_document",
-    "get_user_by_id",
-    "get_user_by_username",
-]
-

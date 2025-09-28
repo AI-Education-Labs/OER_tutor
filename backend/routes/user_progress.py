@@ -3,11 +3,8 @@ import logging
 # Set up logging
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, List
-from datetime import datetime
-from backend.db.database import get_user_document, put_user_fields
+from fastapi import APIRouter, Depends, HTTPException
+from backend.db.database import get_document, put_user_fields
 
 router = APIRouter()
 
@@ -20,7 +17,7 @@ async def get_textbook_progress(
     textbook_id: str,
     current_user = Depends(validate_access_token)
 ):
-    user_books = await get_user_document("user_books", current_user.id)
+    user_books = await get_document("user_books", current_user.id)
     if user_books is None:
         raise HTTPException(status_code=404, detail="User books not found")
     if textbook_id not in user_books.get(textbook_id, {}):
@@ -41,7 +38,7 @@ async def get_chapter_progress(
     chapter_id: str,
     current_user = Depends(validate_access_token)
 ):
-    user_books = await get_user_document("user_books", current_user.id)
+    user_books = await get_document("user_books", current_user.id)
     if user_books is None:
         raise HTTPException(status_code=404, detail="User books not found")
     if textbook_id not in user_books.get(textbook_id, {}):

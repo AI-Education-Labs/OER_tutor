@@ -1,11 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Search, Plus, BookOpen, Star, Clock } from "lucide-react"
+import { Search, Plus, BookOpen, Star, Clock, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { useToast } from "@/hooks/use-toast"
 
 interface Textbook {
   id: string
@@ -21,33 +24,48 @@ interface Textbook {
 export function TextbookLibrary() {
   const [searchQuery, setSearchQuery] = useState("")
   const [myTextbooks, setMyTextbooks] = useState<Textbook[]>([])
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [codeValue, setCodeValue] = useState("")
+  const { toast } = useToast()
 
-  // Load available textbooks from API and use the UUID (`_id`) from metadata.json as the id
+  // Load available textbooks
   useEffect(() => {
     const loadTextbooks = async () => {
       try {
-        const resp = await fetch(`/api/textbooks`, { cache: "no-store" })
-        console.log(resp)
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+        const resp = await fetch(`/api/textbooks`, {
+          cache: "no-store",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        })
         if (!resp.ok) throw new Error(`Failed to fetch textbooks (${resp.status})`)
         const data = await resp.json()
-        console.log("/api/textbooks JSON length:", Array.isArray(data) ? data.length : "not array")
 
-        const textbook_list: Textbook[] = []
+        
+        // Backend returns { textbooks: [], is_authenticated: boolean, message?: string }
+        const payload = Array.isArray(data)
+          ? { textbooks: data, is_authenticated: true as boolean, message: null as string | null }
+          : (data as { textbooks?: any[]; is_authenticated?: boolean; message?: string | null })
 
-        for (const t of data) {
-          textbook_list.push({
-            id: String(t.id ?? ""),
-            title: t.title ?? "Untitled",
-            author: t.author ?? "",
-            subject: t.subject ?? "",
-            cover: t.cover ?? "/Physics_cover.png",
-            progress: 0,
-          })
-        }
+        console.log("TextbookLibrary: inferred is_authenticated:", payload?.is_authenticated)
+        setIsAuthenticated(Boolean(payload?.is_authenticated))
+        setMessage(payload?.message ?? null)
 
+        const textbook_list: Textbook[] = (payload?.textbooks ?? []).map((t: any) => ({
+          id: String(t.id ?? ""),
+          title: t.title ?? "Untitled",
+          author: t.author ?? "",
+          subject: t.subject ?? "",
+          cover: t.cover ?? "/Physics_cover.png",
+          progress: 0,
+        }))
+        console.log("TextbookLibrary: textbook_list:", textbook_list)
         setMyTextbooks(textbook_list)
       } catch (error) {
-        console.error("Error loading textbooks:", error)
+        console.error("TextbookLibrary: error loading textbooks:", error)
       }
     }
     loadTextbooks()
@@ -111,6 +129,18 @@ export function TextbookLibrary() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {isAuthenticated === false && (
+              <Card className="bg-[#2d2d30] border-[#3e3e42] flex items-center justify-center h-48">
+                <CardContent className="flex flex-col items-center justify-center text-center p-6">
+                  <LogIn className="w-8 h-8 text-[#969696] mb-2" />
+                  <div className="text-sm text-[#cccccc] mb-3">{message || "Sign in to see your textbooks!"}</div>
+                  <Link href="/auth">
+                    <Button size="sm" className="bg-[#007acc] hover:bg-[#005a9e] text-white">Sign in</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+
             {myTextbooks.map((book) => (
               <Link key={book.id} href={`/study/${book.id}`}>
                 <Card className="bg-[#2d2d30] border-[#3e3e42] hover:border-[#007acc] transition-colors cursor-pointer group">
@@ -154,6 +184,19 @@ export function TextbookLibrary() {
                 </Card>
               </Link>
             ))}
+
+            {isAuthenticated && (
+              <button onClick={() => setAddDialogOpen(true)} className="h-full">
+                <Card className="bg-[#232326] border-dashed border-2 border-[#3e3e42] hover:border-[#007acc] transition-colors cursor-pointer flex items-center justify-center h-48">
+                  <CardContent className="flex flex-col items-center justify-center p-6">
+                    <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#3e3e42] flex items-center justify-center mb-3">
+                      <Plus className="w-6 h-6 text-[#cccccc]" />
+                    </div>
+                    <div className="text-sm text-[#cccccc]">Add a textbook</div>
+                  </CardContent>
+                </Card>
+              </button>
+            )}
           </div>
         </div>
 
@@ -203,6 +246,86 @@ export function TextbookLibrary() {
             </div>
           </div>
         )}
+
+        {/* Add Textbook Modal */}
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogContent className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc]">
+            <DialogHeader>
+              <DialogTitle>Enter 6-character textbook code</DialogTitle>
+            </DialogHeader>
+            <div className="flex justify-center py-2">
+              <InputOTP
+                maxLength={6}
+                value={codeValue}
+                onChange={(v: string) => {
+                  setCodeValue(v)
+                  if (v.length === 6) {
+                    ;(async () => {
+                      try {
+                        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+                        const res = await fetch("/api/textbooks/add", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                          },
+                          body: JSON.stringify({ code: v.toUpperCase() }),
+                        })
+                        const text = await res.text()
+                        let data: any = {}
+                        try {
+                          data = text ? JSON.parse(text) : {}
+                        } catch {}
+                        if (res.ok && data?.ok) {
+                          toast({ title: "Added to library", description: `${data?.title || "Textbook"} added.` })
+                          // Refresh textbooks
+                          const token2 = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+                          const resp = await fetch(`/api/textbooks`, {
+                            cache: "no-store",
+                            headers: { ...(token2 ? { Authorization: `Bearer ${token2}` } : {}) },
+                          })
+                          if (resp.ok) {
+                            const payload = await resp.json()
+                            const pls = Array.isArray(payload)
+                              ? { textbooks: payload, is_authenticated: true, message: null }
+                              : payload
+                            const textbook_list: Textbook[] = (pls?.textbooks ?? []).map((t: any) => ({
+                              id: String(t.id ?? ""),
+                              title: t.title ?? "Untitled",
+                              author: t.author ?? "",
+                              subject: t.subject ?? "",
+                              cover: t.cover ?? "/Physics_cover.png",
+                              progress: 0,
+                            }))
+                            setMyTextbooks(textbook_list)
+                          }
+                        } else {
+                          const msg = data?.error || "Invalid code"
+                          toast({ title: "Invalid code", description: msg })
+                        }
+                      } catch (e) {
+                        console.error("Failed to submit code", e)
+                        toast({ title: "Error", description: "Could not add textbook. Try again." })
+                      } finally {
+                        setAddDialogOpen(false)
+                        setTimeout(() => setCodeValue(""), 200)
+                      }
+                    })()
+                  }
+                }}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

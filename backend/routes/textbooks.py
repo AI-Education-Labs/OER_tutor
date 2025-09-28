@@ -1,84 +1,87 @@
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
-from typing import List, Optional, Union
-from datetime import datetime
+from fastapi import APIRouter, HTTPException, Query, Depends
+from typing import List, Optional
 import os
 import json
 import logging
+from backend.features.textbooks.models import TextbookInfo
+from pydantic import BaseModel
+from backend.db.database import get_document
+from backend.features.auth.service import validate_access_token_optional
 
+class TextbookResponse(BaseModel):
+    textbooks: List[TextbookInfo]
+    is_authenticated: bool
+    message: Optional[str] = None
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-# Models local to this router to keep concerns isolated
-class SubChapter(BaseModel):
-    title: str
-    pageOffset: Optional[int] = None
-
-
-class Chapter(BaseModel):
-    id: int
-    title: str
-    sub_chapters: Optional[List[SubChapter]] = None
-    file: str
-
-
-class TextbookInfo(BaseModel):
-    id: str
-    title: str
-    chapters: List[Chapter]
-    filepath: str
-    subject: Optional[str] = None
-    created_at: Optional[datetime] = None
-    cover: Optional[str] = None
-
 
 PUBLIC_DIR = "./public"
 
 
 @router.get("/api/textbooks")
-async def get_textbooks():
+async def get_textbooks(user = Depends(validate_access_token_optional)):
     """Get all available textbooks."""
-    available_textbooks: List[TextbookInfo] = []
+    print(f"get_textbooks: user {user}")
+    if user:
+        # User is authenticated
+        user_uuid = user.get("id")
+        user_books = await get_document("user_books", user_uuid)
+        print(f"get_textbooks: user_books for {user_uuid} -> {user_books}")
+        if(user_books is None):
+            user_books = {}
+        user_textbook_ids = user_books.get("textbooks", [])
+        print(f"get_textbooks: user_books for {user_uuid} -> {user_textbook_ids}")
+        is_authenticated = True
+        message = None
 
-    # Local storage for textbooks, we need to switch to a database later
-    TEXTBOOK_DIR = os.path.join(PUBLIC_DIR, "textbooks")
+        TEXTBOOK_DIR = os.path.join(PUBLIC_DIR, "textbooks")
+        try:
+            # Build a clean list of TextbookInfo objects to return
+            available_textbooks: List[TextbookInfo] = []
+            for item in os.listdir(TEXTBOOK_DIR):
+                dir_path = os.path.join(TEXTBOOK_DIR, item)
 
-    # Temporary textbook retrieval method
-    try:
-        for item in os.listdir(TEXTBOOK_DIR):
-            dir_path = os.path.join(TEXTBOOK_DIR, item)
+                # Check if it's a directory
+                if os.path.isdir(dir_path):
+                    metadata_path = os.path.join(dir_path, "metadata.json")
 
-            # Check if it's a directory
-            if os.path.isdir(dir_path):
-                metadata_path = os.path.join(dir_path, "metadata.json")
+                    # Check if metadata.json exists
+                    if os.path.isfile(metadata_path):
+                        try:
+                            with open(metadata_path, 'r', encoding='utf-8') as f:
+                                metadata = json.load(f)
+                                if metadata.get("_id") in user_textbook_ids:
+                                    print(f"Adding textbook {metadata.get('_id')}: {metadata.get('title')} to available textbooks")
+                                    available_textbooks.append(TextbookInfo(
+                                        id=metadata.get("_id"),
+                                        title=metadata.get("title"),
+                                        chapters=metadata.get("chapters"),
+                                        filepath=metadata.get("filepath"),
+                                        subject=metadata.get("subject"),
+                                        created_at=metadata.get("created_at"),
+                                        cover=metadata.get("cover"),
+                                    ))
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Error parsing metadata.json for {item}: {str(e)}")
+                        except Exception as e:
+                            logger.error(f"Error reading metadata.json for {item}: {str(e)}")
+                    else:
+                        logger.info(f"No metadata.json found for textbook directory: {item}")
+        except Exception as e:
+            logger.error(f"Error reading textbooks directory: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error reading textbooks directory: {str(e)}")
+    else:
+        # User is not authenticated - return sign-in prompt
+        available_textbooks = []
+        is_authenticated = False
+        message = "Sign in to see your textbooks!"
 
-                # Check if metadata.json exists
-                if os.path.isfile(metadata_path):
-                    try:
-                        with open(metadata_path, 'r', encoding='utf-8') as f:
-                            metadata = json.load(f)
-                            available_textbooks.append(TextbookInfo(
-                                id=metadata.get("_id"),
-                                title=metadata.get("title"),
-                                chapters=metadata.get("chapters"),
-                                filepath=metadata.get("filepath"),
-                                subject=metadata.get("subject"),
-                                created_at=metadata.get("created_at"),
-                                cover=metadata.get("cover"),
-                            ))
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Error parsing metadata.json for {item}: {str(e)}")
-                    except Exception as e:
-                        logger.error(f"Error reading metadata.json for {item}: {str(e)}")
-                else:
-                    logger.info(f"No metadata.json found for textbook directory: {item}")
-    except Exception as e:
-        logger.error(f"Error reading textbooks directory: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error reading textbooks directory: {str(e)}")
-
-    return available_textbooks
+    return TextbookResponse(
+        textbooks=available_textbooks,
+        is_authenticated=is_authenticated,
+        message=message
+    )
 
 
 @router.get("/api/textbooks/{textbook}")
