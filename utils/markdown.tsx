@@ -1,40 +1,108 @@
-import type React from "react"
+import React from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { dark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export const formatMarkdown = (text: string): React.ReactNode => {
-  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g
-  const parts: React.ReactNode[] = []
-  let lastIndex = 0
-  let match
+  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
 
   const formatInlineMarkdown = (t: string) => {
-    let text = t
-    text = text.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-white mt-4 mb-2">$1</h3>')
-    text = text.replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold text-white mt-4 mb-2">$1</h2>')
-    text = text.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-white mt-4 mb-3">$1</h1>')
-    text = text.replace(/`([^`]+)`/g, '<code class="bg-[#3e3e42] px-1 py-0.5 rounded text-sm text-[#d4d4d4]">$1</code>')
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>')
-    text = text.replace(/\*(.*?)\*/g, '<em class="italic text-[#cccccc]">$1</em>')
-    text = text.replace(/\n/g, "<br />")
-    return <div dangerouslySetInnerHTML={{ __html: text }} />
-  }
+    let html = t;
+
+    // Headers (H6 → H1)
+    html = html.replace(/^###### (.+)$/gm, '<h6 class="text-xs font-semibold text-white mt-2 mb-1">$1</h6>');
+    html = html.replace(/^##### (.+)$/gm, '<h5 class="text-sm font-semibold text-white mt-2 mb-1">$1</h5>');
+    html = html.replace(/^#### (.+)$/gm, '<h4 class="text-base font-semibold text-white mt-3 mb-2">$1</h4>');
+    html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-white mt-4 mb-2">$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold text-white mt-4 mb-2">$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-white mt-4 mb-3">$1</h1>');
+
+    // Fenced code blocks (```lang ... ```)
+    html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-[#1e1e1e] text-[#d4d4d4] p-3 rounded-md overflow-x-auto"><code>$1</code></pre>');
+
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code class="bg-[#3e3e42] px-1 py-0.5 rounded text-sm text-[#d4d4d4]">$1</code>');
+
+    // Bold, italic, strikethrough
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em class="italic text-[#cccccc]">$1</em>');
+    html = html.replace(/~~(.*?)~~/g, '<del class="text-gray-400">$1</del>');
+
+    // Blockquotes
+    html = html.replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-gray-500 pl-4 italic text-gray-300">$1</blockquote>');
+
+   
+    // Ordered lists (group consecutive numbered items)
+    html = html.replace(/(?:^\d+\.\s.+\n?)+/gm, (match) => {
+      const items = match
+        .trim()
+        .split("\n")
+        .map((line) => line.replace(/^\d+\.\s(.+)/, '<li class="ml-2">$1</li>'))
+        .join("");
+      return `<ol class="list-decimal pl-6">${items}</ol>`;
+    });
+
+    // Unordered lists (group consecutive -/*/+ items)
+    html = html.replace(/(?:^[-*+]\s.+\n?)+/gm, (match) => {
+      const items = match
+        .trim()
+        .split("\n")
+        .map((line) => line.replace(/^[-*+]\s(.+)/, '<li class="ml-2">$1</li>'))
+        .join("");
+      return `<ul class="list-disc pl-6">${items}</ul>`;
+    });
+
+    // Links
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 underline">$1</a>');
+
+    // Images
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="max-w-full h-auto rounded-md my-2" />');
+
+    // Horizontal rules
+    html = html.replace(/^---$/gm, '<hr class="my-4 border-gray-600" />');
+
+    // Paragraphs (lines not matched by other rules)
+    html = html.replace(/^(?!<h\d|<pre|<blockquote|<ul|<ol|<li|<img|<hr|<p)(.+)$/gm, '<p class="text-white my-2">$1</p>');
+
+    // Line breaks
+    html = html.replace(/\n/g, "<br />");
+
+
+    return <div dangerouslySetInnerHTML={{ __html: html }} />;
+  };
 
   while ((match = codeBlockRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) parts.push(formatInlineMarkdown(text.slice(lastIndex, match.index)))
-    const language = match[1] || "text"
-    const code = match[2].trim()
+    // Text before the code block
+    if (match.index > lastIndex) {
+      parts.push(formatInlineMarkdown(text.slice(lastIndex, match.index)));
+    }
+
+    const language = match[1] || "text";
+    const code = match[2].trim();
+
+    // Code block
     parts.push(
       <div key={match.index} className="my-2">
-        <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-md overflow-hidden">
-          <div className="bg-[#2d2d30] px-3 py-1 text-xs text-[#969696] border-b border-[#3e3e42]">{language}</div>
-          <pre className="p-3 text-sm text-[#d4d4d4] overflow-x-auto">
-            <code>{code}</code>
-          </pre>
-        </div>
-      </div>,
-    )
-    lastIndex = match.index + match[0].length
+        <SyntaxHighlighter
+          language={language}
+          style={dark}
+          customStyle={{ margin: 0, borderRadius: "0.375rem", overflowX: "auto" }}
+          showLineNumbers={false}
+        >
+          {code}
+        </SyntaxHighlighter>
+      </div>
+    );
+
+    lastIndex = match.index + match[0].length;
   }
 
-  if (lastIndex < text.length) parts.push(formatInlineMarkdown(text.slice(lastIndex)))
-  return parts.length > 1 ? <>{parts}</> : parts[0] || text
-}
+  // Remaining text after last code block
+  if (lastIndex < text.length) {
+    parts.push(formatInlineMarkdown(text.slice(lastIndex)));
+  }
+
+  return parts.length > 1 ? <>{parts}</> : parts[0] || text;
+};

@@ -167,6 +167,8 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const sessionIdRef = useRef<string | null>(null)
 
   const MAX_MESSAGES_GUEST = 100
+  const MESSAGE_TILL_TITLE_UPDATE = 2
+  const [messageSinceTitleUpdate, setMessageSinceTitleUpdate] = useState(0);
 
   // Scroll on new message
   useEffect(() => {
@@ -417,7 +419,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
             if (isStreamErrorData(data)) {
               let error = data as StreamErrorData
-              console.log("[v0] ❌ Error in stream:", error)
+              console.log("[v0] ❌ Error in stream:", data.error)
               setMessages((prev) =>
                 prev.map((m) => (m.id === tempMessage.id ? { ...m, content: `⚠️ ${error}` } : m)),
               )
@@ -446,8 +448,34 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
         ),
       )
     } finally {
+      updateChatTitle()
       setIsLoading(false)
       abortControllerRef.current = null
+    }
+  }
+
+  const updateChatTitle = async () => {
+    console.log("Attempting to update chat title...")
+    console.log("Current messageSinceTitleUpdate:", messageSinceTitleUpdate)
+    if (messageSinceTitleUpdate < MESSAGE_TILL_TITLE_UPDATE) {
+      setMessageSinceTitleUpdate(prev => prev + 1)
+      return
+    }
+    setMessageSinceTitleUpdate(0)
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const token = localStorage.getItem("access_token")
+      const sessionId = sessionIdRef.current
+      const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+      const data = await res.json()
+      if (data.title) {
+        setCurrentChatTitle(data.title)
+        //await fetchChats() // Refresh chat list to show updated title
+      }
+    } catch (e) {
+      console.error("Failed to update chat title", e)
     }
   }
 

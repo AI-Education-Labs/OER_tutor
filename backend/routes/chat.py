@@ -218,7 +218,7 @@ async def stream_chat(
            llm_msgs = [get_system_prompt()]
            textbook_text = await get_textbook_context(textbook_id, chapter_id) if (textbook_id and chapter_id) else None
            if textbook_text:
-               llm_msgs.append(SystemMessage(content=f"Textbook context: {textbook_text}"))
+               #llm_msgs.append(SystemMessage(content=f"Textbook context: {textbook_text}"))
                print("Fine 1: Added textbook context to system message.")
            if summary_text:
                 llm_msgs.append(SystemMessage(content=f"Conversation so far (summary): {summary_text}"))
