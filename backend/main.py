@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Header, Query, BackgroundTasks, Request, Response
 from sse_starlette.sse import EventSourceResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, AsyncGenerator
 import json
 import logging
@@ -19,17 +18,14 @@ from backend.routes.sidebar_modules import router as sidebar_modules_router
 from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.textbook_information import router as textbook_router
 from backend.routes.users import router as users_router
+from backend.routes.user_books import router as user_books_router
 
 from langchain_openai import ChatOpenAI
 from langchain_community.chat_message_histories import RedisChatMessageHistory
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from backend.session_manager import session_manager
-
-import backend.retriever
-
 from backend.graph import build_graph, get_system_prompt
-
 from backend.config import settings
 
 from dotenv import load_dotenv
@@ -40,9 +36,6 @@ from backend.db.database import ensure_mongo_connection, get_user_by_username
 
 from backend.features.users.models import User
 from backend.features.auth.service import validate_access_token
-
-
-PDF_DIR = "./public"
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -58,6 +51,7 @@ app.include_router(files_router, tags=["files"])
 app.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
 app.include_router(textbook_router, prefix="/textbook", tags=["textbook"])
 app.include_router(users_router, prefix="/users", tags=["users"])
+app.include_router(user_books_router, tags=["user-books"]) 
 
 # Add CORS middleware
 app.add_middleware(
@@ -74,7 +68,7 @@ REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 REDIS_DB = os.getenv("REDIS_DB_CHAT", "1")
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
-retriever = backend.retriever.create_retriever("data/Research-Methods-in-Psychology_repaired.pdf", "Research_Methods_in_Psychology")   # We need to pass in what retriever the chat is going to use, then build it for the user. Since the chroma is already initialized it shouldnt waste time.
+retriever = None
 
 # Routes
 
@@ -89,7 +83,7 @@ async def read_users_me(current_user: User = Depends(validate_access_token)):
 async def initiate_chat(
     request: Request,
     background_tasks: BackgroundTasks,
-    current_user: Optional[User] = Depends(validate_access_token),
+    user_id: Optional[str] = Depends(validate_access_token),
 ):
     """
     Initiates a chat session and starts processing in the background.
@@ -101,8 +95,6 @@ async def initiate_chat(
 
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    
-    user_id = current_user.id if current_user else "anonymous"
     
     # Create session in Redis
     session_id = await session_manager.create_session(
@@ -116,7 +108,7 @@ async def initiate_chat(
         process_chat_message,
         session_id=session_id,
         user_message=message,
-        user=current_user
+        user_id=user_id
     )
 
     response = {"success": True, "session_id": session_id}
@@ -128,7 +120,7 @@ async def initiate_chat(
         headers={"session-id": session_id}
     )
 
-async def process_chat_message(session_id: str, user_message: str, user: Optional[User]):
+async def process_chat_message(session_id: str, user_message: str, user_id: Optional[str]):
     """
     Processes a chat message in the background and puts chunks into the Redis queue.
     """
@@ -151,7 +143,6 @@ async def process_chat_message(session_id: str, user_message: str, user: Optiona
         print(f"LangChain message keys: {langchain_keys}")
 
         # Get the existing summary from Redis
-        user_id = user.id if user else "anonymous"
         summary_key = f"summary:{user_id}"
         conversation_summary = await redis_client.get(summary_key)
         
@@ -215,9 +206,8 @@ async def process_chat_message(session_id: str, user_message: str, user: Optiona
                                 await session_manager.push_to_queue(session_id, {"text": new_chunk})
         
         # Save to history if user is authenticated
-        if user:
-            history.add_user_message(user_message)
-            history.add_ai_message(full_response)
+        history.add_user_message(user_message)
+        history.add_ai_message(full_response)
         
         # Schedule the summary update as a background task
         await update_conversation_summary(
@@ -239,7 +229,7 @@ async def process_chat_message(session_id: str, user_message: str, user: Optiona
 @app.get("/chat/stream/{session_id}")
 async def stream_chat_response(
     session_id: str,
-    current_user: Optional[User] = Depends(validate_access_token)
+    user_id: Optional[str] = Depends(validate_access_token)
 ) -> EventSourceResponse:
     """
     Streams the chat response for a given session ID using Redis queues.
@@ -248,10 +238,6 @@ async def stream_chat_response(
     session_data = await session_manager.get_session(session_id)
     if not session_data:
         raise HTTPException(status_code=404, detail="Session not found")
-
-    # Check if the user has access to this session
-    if current_user and session_data["user_id"] != "anonymous" and session_data["user_id"] != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this session")
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate events for SSE streaming from Redis queue."""
@@ -364,40 +350,6 @@ async def get_chat_history(current_user: User = Depends(validate_access_token)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving chat history: {str(e)}",
         )
-
-# For debugging purposes
-@app.get("/api/debug/file-exists")
-async def check_file_exists(path: str):
-    """Check if a file exists (for debugging)."""
-    full_path = os.path.join(PDF_DIR, path)
-    exists = os.path.isfile(full_path)
-    return {
-        "path": full_path,
-        "exists": exists,
-        "is_readable": os.access(full_path, os.R_OK) if exists else False
-    }
-
-# For debugging purposes
-@app.get("/api/debug/list-dir")
-async def list_directory(path: str = ""):
-    """List contents of a directory (for debugging)."""
-    full_path = os.path.join(PDF_DIR, path)
-    if not os.path.isdir(full_path):
-        raise HTTPException(status_code=404, detail=f"Directory not found: {full_path}")
-    
-    items = []
-    for item in os.listdir(full_path):
-        item_path = os.path.join(full_path, item)
-        items.append({
-            "name": item,
-            "is_dir": os.path.isdir(item_path),
-            "size": os.path.getsize(item_path) if os.path.isfile(item_path) else None
-        })
-    
-    return {
-        "path": full_path,
-        "items": items
-    }
 
 # Run the application
 if __name__ == "__main__":

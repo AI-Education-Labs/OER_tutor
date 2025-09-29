@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 5000
     
     # Database settings
-    DATABASE_URL: str = "sqlite:///./test.db"  # Default to SQLite
+    MONGO_URI: str = ""
+    MONGO_DB_NAME: str = ""
 
     # LLM / Providers
     OPENAI_API_KEY: Optional[str] = None

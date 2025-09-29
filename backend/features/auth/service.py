@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
 from backend.config import settings
-from backend.db.database import get_user_by_username
+from backend.db.database import get_user_by_username, get_user_by_id
 import hashlib
 
 
@@ -32,6 +32,43 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
 
 # Verify access tokens
 # Authentication helper functions
+async def validate_access_token_optional(token: str = Depends(oauth2_scheme)):
+    """
+    Validates JWT token and returns the user if authenticated, None if not.
+    Does not raise exceptions for unauthenticated requests.
+    """
+    if not token:
+        return None
+
+    try:
+        # Decode the token (verify its signature and expiration)
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("user_id")
+        if not user_id:
+            print(f"validate_access_token_optional: no user_id in payload")
+            return None
+
+        expiration = payload.get("exp")
+        if expiration and datetime.fromtimestamp(expiration, timezone.utc) < datetime.now(timezone.utc):
+            print(f"validate_access_token_optional: token expired")
+            return None
+
+        # user_id contains the user's id (uuid) according to token issuance
+        user = await get_user_by_id(user_id)
+
+        print(f"validate_access_token_optional: user {user}")
+        if user is None or user.get("disabled") == True:
+            print(f"validate_access_token_optional: user {user} is None or disabled")
+            return None
+
+        return user
+    except jwt.PyJWTError as e:
+        print(f"validate_access_token_optional: jwt error {e}")
+        return None
+    except Exception as e:
+        print(f"validate_access_token_optional: unexpected error {e}")
+        return None
+
 async def validate_access_token(token: str = Depends(oauth2_scheme)):
     """
     Validates JWT token and returns the user id.
@@ -52,7 +89,6 @@ async def validate_access_token(token: str = Depends(oauth2_scheme)):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token is missing user information",
             )
-        print(f"User ID: {user_id}")
 
         expiration = payload.get("exp")
         if expiration and datetime.fromtimestamp(expiration, timezone.utc) < datetime.now(timezone.utc):
@@ -61,14 +97,14 @@ async def validate_access_token(token: str = Depends(oauth2_scheme)):
                 detail="Token has expired",
             )
 
-        user = await get_user_by_username(user_id)
+        user = await get_user_by_id(user_id)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
         
-        if user.disabled:
+        if user.get("disabled") == True:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Inactive user",

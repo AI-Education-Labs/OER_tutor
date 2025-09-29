@@ -23,6 +23,7 @@ export default function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem("access_token")
     setIsLoggedIn(false)
+    window.location.reload()
   }
 
   return (

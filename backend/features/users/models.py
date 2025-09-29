@@ -11,7 +11,7 @@ class UserCreate(UserBase):
     password: str
 
 class User(UserBase):
-    id: str
+    id: str = Field(alias="_id")
     disabled: Optional[int] = 1
 
 class UserWithPassword(User):
