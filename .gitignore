@@ -43,3 +43,8 @@ package/
 .amplify
 amplify_outputs*
 amplifyconfiguration*
+
+# AWS SAM
+.aws-sam/
+backend/samconfig.toml
+backend/template.yaml

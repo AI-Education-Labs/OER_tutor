@@ -28,6 +28,8 @@ from backend.session_manager import session_manager
 from backend.graph import build_graph, get_system_prompt
 from backend.config import settings
 
+import mangum
+
 from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
@@ -350,6 +352,8 @@ async def get_chat_history(current_user: User = Depends(validate_access_token)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving chat history: {str(e)}",
         )
+
+handler = mangum.Mangum(app)
 
 # Run the application
 if __name__ == "__main__":
