@@ -16,10 +16,10 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 
 from backend.graph import get_system_prompt
-from backend.database import get_collection
-from backend.models.user import User
-from backend.services.auth import get_current_active_user
-from backend.textextract import text_extract
+from backend.db.database import get_collection
+from backend.features.users.models import User
+from backend.features.auth.service import validate_access_token
+from backend.utils.textextract import text_extract
 
 
 router = APIRouter()
@@ -134,7 +134,7 @@ async def get_textbook_context(textbook_id: str, chapter_id: str) -> str:
 async def chat_message(
    request: Request,
    background_tasks: BackgroundTasks,
-   current_user: Optional[User] = Depends(get_current_active_user)
+   user_id: str = Depends(validate_access_token)
 ):
    data = await request.json()
    user_message = data.get("message")
@@ -142,8 +142,6 @@ async def chat_message(
    if not user_message:
        raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-
-   user_id = current_user.id if current_user else "anonymous"
    history = MongoChatMessageHistory(session_id=session_id)
    await history.add_message("user", user_message)
 
@@ -178,7 +176,7 @@ async def chat_message(
 async def stream_chat(
    request: Request,
    background_tasks: BackgroundTasks,
-   current_user: Optional[User] = Depends(get_current_active_user)
+   user_id: str = Depends(validate_access_token)
 ):
    data = await request.json()
    user_message = data.get("message")
@@ -195,8 +193,6 @@ async def stream_chat(
        session_id = str(uuid.uuid4())
        print(f"Generated new session ID: {session_id}")
 
-
-   user_id = current_user.id if current_user else "anonymous"
    history = MongoChatMessageHistory(session_id=session_id)
    await history.add_message("user", user_message)
    print(f"Added user message to history for session {session_id}.")
@@ -315,11 +311,9 @@ async def stream_chat(
 @router.get("/history")
 async def get_chat_history(
     session_id: Optional[str] = None,
-    current_user: dict = Depends(get_current_active_user)
+    user_id: str = Depends(validate_access_token)
 ):
     try:
-        user_id = current_user.id if current_user else "anonymous"
-        
         if session_id:
             # Get specific chat history
             chat_history = MongoChatMessageHistory(session_id=session_id)

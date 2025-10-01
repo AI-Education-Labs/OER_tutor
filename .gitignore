@@ -35,3 +35,16 @@ __pycache__/
 
 package-lock.json
 
+# Packaged Backend
+package/
+
+
+# amplify
+.amplify
+amplify_outputs*
+amplifyconfiguration*
+
+# AWS SAM
+.aws-sam/
+backend/samconfig.toml
+backend/template.yaml

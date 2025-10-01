@@ -4,7 +4,7 @@ from typing import Optional
 from uuid import uuid4
 from datetime import datetime
 
-from backend.database import get_collection
+from backend.db.database import get_collection
 
 router = APIRouter()
 
