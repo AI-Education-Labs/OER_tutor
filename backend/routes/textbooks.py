@@ -20,12 +20,11 @@ PUBLIC_DIR = "./public"
 
 
 @router.get("/api/textbooks")
-async def get_textbooks(user = Depends(validate_access_token_optional)):
+async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
     """Get all available textbooks."""
-    print(f"get_textbooks: user {user}")
-    if user:
+    print(f"get_textbooks: user {user_uuid}")
+    if user_uuid:
         # User is authenticated
-        user_uuid = user.get("id")
         user_books = await get_document("user_books", user_uuid)
         print(f"get_textbooks: user_books for {user_uuid} -> {user_books}")
         if(user_books is None):

@@ -61,7 +61,7 @@ async def validate_access_token_optional(token: str = Depends(oauth2_scheme)):
             print(f"validate_access_token_optional: user {user} is None or disabled")
             return None
 
-        return user.id
+        return user.get("id",None)
     except jwt.PyJWTError as e:
         print(f"validate_access_token_optional: jwt error {e}")
         return None
@@ -110,7 +110,7 @@ async def validate_access_token(token: str = Depends(oauth2_scheme)):
                 detail="Inactive user",
             )
 
-        return user.id
+        return user.get("id",None)
     except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
