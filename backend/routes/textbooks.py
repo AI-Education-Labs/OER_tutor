@@ -5,7 +5,7 @@ import json
 import logging
 from backend.features.textbooks.models import TextbookInfo
 from pydantic import BaseModel
-from backend.db.database import get_document
+from backend.db.database import get_document, get_document_by_field
 from backend.features.auth.service import validate_access_token_optional
 
 class TextbookResponse(BaseModel):
@@ -18,63 +18,41 @@ logger = logging.getLogger(__name__)
 
 PUBLIC_DIR = "./public"
 
-
 @router.get("/api/textbooks")
 async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
     """Get all available textbooks."""
     print(f"get_textbooks: user {user_uuid}")
+    # Check if user is authenticated
+    is_authenticated = False
+    available_textbooks = []
+    message = "Sign in to see your textbooks!"
+
     if user_uuid:
-        # User is authenticated
-        user_books = await get_document("user_books", user_uuid)
-        print(f"get_textbooks: user_books for {user_uuid} -> {user_books}")
-        if(user_books is None):
-            user_books = {}
-        user_textbook_ids = user_books.get("textbooks", [])
-        print(f"get_textbooks: user_books for {user_uuid} -> {user_textbook_ids}")
         is_authenticated = True
-        message = None
+        # Get the textbooks the user has access to
+        user_textbooks_document = await get_document("user_books", user_uuid)
+        if(user_textbooks_document is None):
+            user_textbooks_document = {}
 
-        TEXTBOOK_DIR = os.path.join(PUBLIC_DIR, "textbooks")
+        user_textbook_ids = user_textbooks_document.get("textbooks", [])
+        print(f"User {user_uuid} has the following textbooks -> {user_textbook_ids}")
+
         try:
-            # Build a clean list of TextbookInfo objects to return
-            available_textbooks: List[TextbookInfo] = []
-            for item in os.listdir(TEXTBOOK_DIR):
-                dir_path = os.path.join(TEXTBOOK_DIR, item)
-
-                # Check if it's a directory
-                if os.path.isdir(dir_path):
-                    metadata_path = os.path.join(dir_path, "metadata.json")
-
-                    # Check if metadata.json exists
-                    if os.path.isfile(metadata_path):
-                        try:
-                            with open(metadata_path, 'r', encoding='utf-8') as f:
-                                metadata = json.load(f)
-                                if metadata.get("_id") in user_textbook_ids:
-                                    print(f"Adding textbook {metadata.get('_id')}: {metadata.get('title')} to available textbooks")
-                                    available_textbooks.append(TextbookInfo(
-                                        id=metadata.get("_id"),
-                                        title=metadata.get("title"),
-                                        chapters=metadata.get("chapters"),
-                                        filepath=metadata.get("filepath"),
-                                        subject=metadata.get("subject"),
-                                        created_at=metadata.get("created_at"),
-                                        cover=metadata.get("cover"),
-                                    ))
-                        except json.JSONDecodeError as e:
-                            logger.error(f"Error parsing metadata.json for {item}: {str(e)}")
-                        except Exception as e:
-                            logger.error(f"Error reading metadata.json for {item}: {str(e)}")
-                    else:
-                        logger.info(f"No metadata.json found for textbook directory: {item}")
+            for textbook_id in user_textbook_ids:
+                # TODO: We should promise.all this later
+                textbook_metadata = await get_document_by_field("textbooks", "_id", textbook_id)
+                available_textbooks.append(TextbookInfo(
+                    id=textbook_metadata.get("_id"),
+                    title=textbook_metadata.get("title"),
+                    chapters=textbook_metadata.get("chapters"),
+                    filepath=textbook_metadata.get("filepath"),
+                    subject=textbook_metadata.get("subject"),
+                    created_at=textbook_metadata.get("created_at"),
+                    cover=textbook_metadata.get("cover"),
+                ))
         except Exception as e:
-            logger.error(f"Error reading textbooks directory: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error reading textbooks directory: {str(e)}")
-    else:
-        # User is not authenticated - return sign-in prompt
-        available_textbooks = []
-        is_authenticated = False
-        message = "Sign in to see your textbooks!"
+            logger.error(f"Error getting textbook metadata for {textbook_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error getting textbook metadata for {textbook_id}: {str(e)}")
 
     return TextbookResponse(
         textbooks=available_textbooks,
@@ -82,75 +60,46 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
         message=message
     )
 
-
-@router.get("/api/textbooks/{textbook}")
-async def get_textbook_details(textbook: str, title: Optional[str] = Query(None)):
-    TEXTBOOK_DIR = os.path.join(PUBLIC_DIR, "textbooks", textbook)
-    metadata_path = os.path.join(TEXTBOOK_DIR, "metadata.json")
-    with open(metadata_path, 'r', encoding='utf-8') as f:
-        metadata = json.load(f)
+# TODO: These routes need to be protected
+@router.get("/api/textbooks/{textbook_uuid}")
+async def get_textbook_details(textbook_uuid: str):
+    metadata = await get_document_by_field("textbooks", "_id", textbook_uuid)
+    if metadata is None:
+        raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
     return metadata
     
 
-@router.get("/api/textbooks/{textbook}/chapters")
-async def get_chapters(textbook: str, title: Optional[str] = Query(None)):
+@router.get("/api/textbooks/{textbook_uuid}/chapters")
+async def get_chapters(textbook_uuid: str):
     """Get available chapters for a textbook.
-
-    Expects textbooks to be located under public/textbooks/<textbook>/metadata.json
     and returns a consistent response shape: { "chapters": [...] }.
     """
-    # Ensure we look under the textbooks subdirectory
-    textbook_dir = os.path.join(PUBLIC_DIR, "textbooks", textbook)
+    textbook_metadata = await get_textbook_details(textbook_uuid)
+    chapters = textbook_metadata.get("chapters", [])
 
-    # Normalize the slashes for Unix based systems
-    print(f"Looking for chapters in: {textbook_dir}")
-
-
-    # Check if the directory exists
-    if not os.path.isdir(textbook_dir):
-        logger.error(f"Textbook directory not found: {textbook_dir}")
-        # Keep 404 for backward compatibility with previous logic
-        raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook}")
-
-    # Get the metadata.json file
-    metadata_path = os.path.join(textbook_dir, "metadata.json")
-    if not os.path.isfile(metadata_path):
-        logger.error(f"Metadata file not found: {metadata_path}")
-        raise HTTPException(status_code=404, detail=f"Metadata file not found for textbook: {textbook}")
-
-    # Load the metadata.json file
-    with open(metadata_path, 'r', encoding='utf-8') as f:
-        metadata = json.load(f)
-
-    # Get the chapters from the metadata.json file
-    chapters = metadata.get("chapters", [])
     return {"chapters": chapters}
 
 
-@router.get("/api/textbooks/{textbook_id}/chapters/{chapter_id}/pdf")
-async def get_chapter_pdf(textbook_id: str, chapter_id: str):
+@router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
+async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     """Get the PDF file for a specific chapter by looking up the filename in metadata."""
     try:
+        ##################
+        # Local Approach #
+        ##################
+
         # Get the textbook directory
-        textbook_dir = os.path.join(PUBLIC_DIR, "textbooks", textbook_id)
+        textbook_dir = os.path.join(PUBLIC_DIR, "textbooks", textbook_uuid)
         
         # Check if the directory exists
         if not os.path.isdir(textbook_dir):
             logger.error(f"Textbook directory not found: {textbook_dir}")
-            raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_id}")
+            raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
 
-        # Get the metadata.json file
-        metadata_path = os.path.join(textbook_dir, "metadata.json")
-        if not os.path.isfile(metadata_path):
-            logger.error(f"Metadata file not found: {metadata_path}")
-            raise HTTPException(status_code=404, detail=f"Metadata file not found for textbook: {textbook_id}")
-
-        # Load the metadata.json file
-        with open(metadata_path, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
+        textbook_metadata = await get_textbook_details(textbook_uuid)
 
         # Find the chapter with the matching ID
-        chapters = metadata.get("chapters", [])
+        chapters = textbook_metadata.get("chapters", [])
         target_chapter = None
         
         for chapter in chapters:
@@ -159,7 +108,7 @@ async def get_chapter_pdf(textbook_id: str, chapter_id: str):
                 break
         
         if not target_chapter:
-            logger.error(f"Chapter {chapter_id} not found in textbook {textbook_id}")
+            logger.error(f"Chapter {chapter_id} not found in textbook {textbook_uuid}")
             raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found")
         
         # Get the PDF filename from the chapter metadata
@@ -176,8 +125,14 @@ async def get_chapter_pdf(textbook_id: str, chapter_id: str):
             logger.error(f"PDF file not found: {pdf_path}")
             raise HTTPException(status_code=404, detail=f"PDF file not found: {pdf_filename}")
         
+        ##################
+        # S3 Approach  -> Change The following line to fetch from S3 instead of local filesystem
+        ##################
+
         # Return the relative URL path that the frontend can use
-        pdf_url = f"/textbooks/{textbook_id}/{pdf_filename}"
+        pdf_url = f"/textbooks/{textbook_uuid}/{pdf_filename}"
+        
+
         return {"pdf_url": pdf_url, "chapter_title": target_chapter.get("title", f"Chapter {chapter_id}")}
         
     except HTTPException:

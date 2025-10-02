@@ -1,9 +1,8 @@
 from pymongo import AsyncMongoClient
-from typing import Optional, AsyncIterator, Any, Dict
+from typing import Optional, Any, Dict
 from backend.features.users.models import UserWithPassword
 import asyncio
 
-from backend.features.textbooks.service import get_chapters_from_textbook
 from backend.config import settings
 
 MONGO_URI = settings.MONGO_URI

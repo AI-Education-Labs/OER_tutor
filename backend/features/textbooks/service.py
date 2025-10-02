@@ -1,9 +1,10 @@
-import os
-import json
+from backend.db.database import get_document_by_field
+from fastapi import HTTPException
 
 PUBLIC_DIR = "./public"
 
-def get_chapters_from_textbook(textbook_id: str):
-    with open(os.path.join(PUBLIC_DIR, "textbooks", textbook_id, "metadata.json"), "r") as f:
-        metadata = json.load(f)
+async def get_chapters_from_textbook(textbook_id: str):
+    metadata = await get_document_by_field("textbooks", "_id", textbook_id)
+    if metadata is None:
+        raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_id}")
     return metadata.get("chapters", [])

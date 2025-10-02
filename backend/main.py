@@ -1,16 +1,9 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Header, Query, BackgroundTasks, Request, Response
-from sse_starlette.sse import EventSourceResponse
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional, Dict, AsyncGenerator
-import json
 import logging
 import asyncio
-import os
-
-from backend.redis_client import redis_client
 
 from backend.routes.auth import router as auth_router
-
 from backend.routes.llm_utils import router as llm_utils_router
 from backend.routes.textbooks import router as textbooks_router
 from backend.routes.files import router as files_router
@@ -21,24 +14,9 @@ from backend.routes.users import router as users_router
 from backend.routes.chat import router as chat_router
 from backend.routes.user_books import router as user_books_router
 
-from langchain_openai import ChatOpenAI
-from langchain_community.chat_message_histories import RedisChatMessageHistory
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-
-from backend.session_manager import session_manager
-from backend.graph import build_graph, get_system_prompt
-from backend.config import settings
-
 import mangum
 
-from dotenv import load_dotenv
-from pathlib import Path
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
-
 from backend.db.database import ensure_mongo_connection
-
-from backend.features.users.models import User
-from backend.features.auth.service import validate_access_token
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -66,23 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Redis URL configuration from environment variables
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = os.getenv("REDIS_PORT", "6379")
-REDIS_DB = os.getenv("REDIS_DB_CHAT", "1")
-REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-
-retriever = None
-
-# Routes
-
-@app.get("/users/me", response_model=User)
-async def read_users_me(current_user: User = Depends(validate_access_token)):
-    """
-    Returns the current authenticated user's information.
-    """
-    return current_user
-
+# Mangum handler
 handler = mangum.Mangum(app)
 
 # Run the application
