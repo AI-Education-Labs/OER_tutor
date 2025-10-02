@@ -44,7 +44,7 @@ async def get_database():
 
 async def get_collection(collection_name: str):
     """Get an async collection handle from the database."""
-    print(f"Getting collection {collection_name}")
+    #print(f"Getting collection {collection_name}")
     db = await get_database()
     return db[collection_name]
 

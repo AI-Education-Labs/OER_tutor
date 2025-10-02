@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
 from backend.config import settings
-from backend.db.database import get_user_by_username, get_user_by_id
+from backend.db.database import get_user_by_id
 import hashlib
 
 
@@ -34,7 +34,7 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
 # Authentication helper functions
 async def validate_access_token_optional(token: str = Depends(oauth2_scheme)):
     """
-    Validates JWT token and returns the user if authenticated, None if not.
+    Validates JWT token and returns the user id if valid, None if not.
     Does not raise exceptions for unauthenticated requests.
     """
     if not token:
@@ -61,7 +61,7 @@ async def validate_access_token_optional(token: str = Depends(oauth2_scheme)):
             print(f"validate_access_token_optional: user {user} is None or disabled")
             return None
 
-        return user
+        return user.get("id",None)
     except jwt.PyJWTError as e:
         print(f"validate_access_token_optional: jwt error {e}")
         return None
@@ -110,7 +110,7 @@ async def validate_access_token(token: str = Depends(oauth2_scheme)):
                 detail="Inactive user",
             )
 
-        return user
+        return user.get("id",None)
     except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

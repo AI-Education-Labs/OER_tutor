@@ -1,679 +1,629 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect, useRef } from "react"
-import { Send, User, Bot, AlertCircle } from "lucide-react"
+import React, { useState, useEffect, useRef, useMemo } from "react"
+import { Send, User, Bot, AlertCircle, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import type { Message, ChatContext } from "@/types/chat"
+import type { Message, ChatContext, BranchCandidate, ChatSession } from "@/types/chat"
+import { formatMarkdown } from "@/utils/markdown"
 
 interface AiChatPanelProps {
   context?: ChatContext
+  textbookId?: string
+  selectedChapterId?: string
 }
 
-// Markdown formatting utility functions
-const formatMarkdown = (text: string): React.ReactNode => {
-  // Split text by code blocks first
-  const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g
-  const parts = []
-  let lastIndex = 0
-  let match
-
-  while ((match = codeBlockRegex.exec(text)) !== null) {
-    // Add text before code block
-    if (match.index > lastIndex) {
-      parts.push(formatInlineMarkdown(text.slice(lastIndex, match.index)))
-    }
-
-    // Add code block
-    const language = match[1] || "text"
-    const code = match[2].trim()
-    parts.push(
-      <div key={match.index} className="my-2">
-        <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-md overflow-hidden">
-          <div className="bg-[#2d2d30] px-3 py-1 text-xs text-[#969696] border-b border-[#3e3e42]">{language}</div>
-          <pre className="p-3 text-sm text-[#d4d4d4] overflow-x-auto">
-            <code>{code}</code>
-          </pre>
-        </div>
-      </div>,
-    )
-
-    lastIndex = match.index + match[0].length
-  }
-
-  // Add remaining text
-  if (lastIndex < text.length) {
-    parts.push(formatInlineMarkdown(text.slice(lastIndex)))
-  }
-
-  return parts.length > 1 ? <>{parts}</> : parts[0] || text
+type StreamTextData = {
+  text: string
+  session_id: string
 }
 
-const formatInlineMarkdown = (text: string): React.ReactNode => {
-  // Handle headers (must be done before other formatting)
-  text = text.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-[#ffffff] mt-4 mb-2">$1</h3>')
-  text = text.replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold text-[#ffffff] mt-4 mb-2">$1</h2>')
-  text = text.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-[#ffffff] mt-4 mb-3">$1</h1>')
-
-  // Handle inline code
-  text = text.replace(/`([^`]+)`/g, '<code class="bg-[#3e3e42] px-1 py-0.5 rounded text-sm text-[#d4d4d4]">$1</code>')
-
-  // Handle bold
-  text = text.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-[#ffffff]">$1</strong>')
-
-  // Handle italic
-  text = text.replace(/\*(.*?)\*/g, '<em class="italic text-[#cccccc]">$1</em>')
-
-  // Handle links
-  text = text.replace(
-    /\[([^\]]+)\]$$([^)]+)$$/g,
-    '<a href="$2" class="text-[#007acc] hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
-  )
-
-  // Handle line breaks
-  text = text.replace(/\n/g, "<br />")
-
-  // Handle lists
-  text = text.replace(
-    /^- (.+)$/gm,
-    '<div class="flex items-start gap-2 my-1"><span class="text-[#007acc] mt-1">•</span><span>$1</span></div>',
-  )
-  text = text.replace(
-    /^\d+\. (.+)$/gm,
-    '<div class="flex items-start gap-2 my-1"><span class="text-[#007acc] mt-1 min-w-[1.5rem]">$&</span></div>',
-  )
-
-  return <div dangerouslySetInnerHTML={{ __html: text }} />
+type StreamBranchData = {
+  start_new_chat: boolean
+  new_session_id: string
+  suggested_title: string
 }
 
-// Session storage utilities
+type StreamDoneData = {
+  done: boolean
+  session_id: string
+}
+
+type StreamErrorData = {
+  error: string
+}
+
+type StreamData = StreamTextData | StreamBranchData | StreamDoneData | StreamErrorData
+
+// Helper type guards
+const isStreamTextData = (data: StreamData): data is StreamTextData => "text" in data
+const isStreamBranchData = (data: StreamData): data is StreamBranchData => "start_new_chat" in data
+const isStreamDoneData = (data: StreamData): data is StreamDoneData => "done" in data
+const isStreamErrorData = (data: StreamData): data is StreamErrorData => "error" in data
+
+// ---------------- Session storage ----------------
 const CHAT_STORAGE_KEY = "ai-chat-messages"
 const MESSAGE_COUNT_KEY = "ai-chat-message-count"
 
 const saveChatToSession = (messages: Message[], messageCount: number) => {
   try {
-    // Convert dates to strings for storage
-    const serializedMessages = messages.map((msg) => ({
-      ...msg,
-      timestamp: msg.timestamp.toISOString(),
-    }))
-    sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(serializedMessages))
+    const serialized = messages.map((m) => ({ ...m, timestamp: m.timestamp.toISOString() }))
+    sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(serialized))
     sessionStorage.setItem(MESSAGE_COUNT_KEY, messageCount.toString())
-    console.log("💾 Saved chat to session storage:", { messageCount: messages.length, userMessageCount: messageCount })
-  } catch (error) {
-    console.warn("Failed to save chat to session storage:", error)
-  }
+  } catch {}
 }
 
 const loadChatFromSession = (): { messages: Message[]; messageCount: number } => {
   try {
-    const savedMessages = sessionStorage.getItem(CHAT_STORAGE_KEY)
-    const savedCount = sessionStorage.getItem(MESSAGE_COUNT_KEY)
-
-    if (savedMessages) {
-      const parsedMessages = JSON.parse(savedMessages)
-      // Convert timestamp strings back to Date objects
-      const messages = parsedMessages.map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp),
-      }))
-      const messageCount = savedCount ? Number.parseInt(savedCount, 10) : 0
-      console.log("📂 Loaded chat from session storage:", {
-        messageCount: messages.length,
-        userMessageCount: messageCount,
-      })
-      return { messages, messageCount }
-    }
-  } catch (error) {
-    console.warn("Failed to load chat from session storage:", error)
-  }
-
-  console.log("📂 No saved chat found in session storage")
-  return { messages: [], messageCount: 0 }
-}
-
-const clearChatSession = () => {
-  try {
-    sessionStorage.removeItem(CHAT_STORAGE_KEY)
-    sessionStorage.removeItem(MESSAGE_COUNT_KEY)
-    console.log("🗑️ Cleared chat session storage")
-  } catch (error) {
-    console.warn("Failed to clear chat session:", error)
-  }
-}
-
-// Initialize state with session storage data immediately
-const getInitialChatState = () => {
-  if (typeof window !== "undefined") {
-    const { messages, messageCount } = loadChatFromSession()
+    const raw = sessionStorage.getItem(CHAT_STORAGE_KEY)
+    const count = sessionStorage.getItem(MESSAGE_COUNT_KEY)
+    if (!raw) return { messages: [], messageCount: 0 }
+    const messages = JSON.parse(raw).map((m: { content: string; role: string; timestamp: string; id: string }) => ({
+      ...m,
+      timestamp: new Date(m.timestamp),
+    }))
+    const messageCount = count ? Number.parseInt(count) : 0
     return { messages, messageCount }
+  } catch {
+    return { messages: [], messageCount: 0 }
   }
-  return { messages: [], messageCount: 0 }
 }
 
-export function AiChatPanel({ context }: AiChatPanelProps) {
-  // Initialize state immediately with session storage data
-  const initialState = getInitialChatState()
-  const [messages, setMessages] = useState<Message[]>(initialState.messages)
+const removeChatSession = () => {
+  sessionStorage.removeItem(CHAT_STORAGE_KEY)
+  sessionStorage.removeItem(MESSAGE_COUNT_KEY)
+  sessionStorage.removeItem("current_session_id")
+}
+
+// ---------------- MessageCard ----------------
+const MessageCard = React.memo(
+  ({
+    message,
+    branchCandidate,
+    onBranch,
+  }: {
+    message: Message
+    branchCandidate?: BranchCandidate
+    onBranch?: (payload: BranchCandidate) => void
+  }) => {
+    return (
+      <div className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+        {message.role === "assistant" && (
+          <div className="w-8 h-8 bg-[#007acc] rounded-full flex items-center justify-center flex-shrink-0">
+            <Bot className="w-4 h-4 text-white" />
+          </div>
+        )}
+        <Card
+          className={`max-w-[80%] ${
+            message.role === "user"
+              ? "bg-[#007acc] border-[#007acc] text-white"
+              : "bg-[#3e3e42] border-[#3e3e42] text-[#cccccc]"
+          }`}
+        >
+          <CardContent className="p-3">
+            {message.content === "" && message.id.startsWith("temp-") ? (
+              <div className="flex items-center gap-2 text-[#cccccc]">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"></div>
+                  <div
+                    className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
+                </div>
+                <span className="text-sm">AI is thinking...</span>
+              </div>
+            ) : (
+              <div className="text-sm">{formatMarkdown(message.content)}</div>
+            )}
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-xs opacity-70">
+                {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </div>
+              {message.role === "assistant" && branchCandidate && (
+                <button
+                  className="text-xs text-yellow-400 underline hover:text-yellow-300 transition-colors"
+                  title={`Start new chat: ${branchCandidate.suggested_title}`}
+                  onClick={() => onBranch?.(branchCandidate)}
+                >
+                  branch
+                </button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        {message.role === "user" && (
+          <div className="w-8 h-8 bg-[#4ec9b0] rounded-full flex items-center justify-center flex-shrink-0">
+            <User className="w-4 h-4 text-white" />
+          </div>
+        )}
+      </div>
+    )
+  },
+)
+
+// ---------------- Main Component ----------------
+export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPanelProps) {
+  const initial = loadChatFromSession()
+  const [messages, setMessages] = useState<Message[]>(initial.messages)
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [messageCount, setMessageCount] = useState(initialState.messageCount)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [isLoadingGreeting, setIsLoadingGreeting] = useState(false)
+  const [messageCount, setMessageCount] = useState<number>(initial.messageCount)
+  const [branchCandidates, setBranchCandidates] = useState<Record<string, BranchCandidate>>({})
+  const [chats, setChats] = useState<ChatSession[]>([])
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [currentChatTitle, setCurrentChatTitle] = useState<string>("Current Chat")
+  const [hoveredChat, setHoveredChat] = useState<string | null>(null)
+  const [showSummary, setShowSummary] = useState<string | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
 
-  const MAX_MESSAGES_GUEST = 5
+  const MAX_MESSAGES_GUEST = 100
+  const MESSAGE_TILL_TITLE_UPDATE = 2
+  const [messageSinceTitleUpdate, setMessageSinceTitleUpdate] = useState(0);
 
-  // Save chat to session storage whenever messages or messageCount changes
-  useEffect(() => {
-    if (isInitialized && (messages.length > 0 || messageCount > 0)) {
-      saveChatToSession(messages, messageCount)
-    }
-  }, [messages, messageCount, isInitialized])
-
-  useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
-    setIsInitialized(true)
-  }, [])
-
+  // Scroll on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Fetch greeting when component initializes and no saved messages exist
+  // Save chat
+  useEffect(() => saveChatToSession(messages, messageCount), [messages, messageCount])
+
+  // Detect login
   useEffect(() => {
-    if (isInitialized && messages.length === 0) {
-      console.log("🤖 Fetching welcome message from API")
-      setIsLoadingGreeting(true)
-
-      // Add initial loading message
-      const loadingMessage: Message = {
-        id: "loading-greeting",
-        content: "",
-        role: "assistant",
-        timestamp: new Date(),
-      }
-      setMessages([loadingMessage])
-
-      const token = localStorage.getItem("access_token")
-      console.log("Token for greeting request:", token ? "Present" : "Not present")
-
-      fetch("/api/greeting", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      })
-        .then((res) => {
-          console.log("Greeting API response status:", res.status)
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-          }
-          return res.json()
-        })
-        .then((data) => {
-          console.log("Greeting API response data:", data)
-          const welcomeMessage: Message = {
-            id: "welcome",
-            content: data.response || "Hello! I'm your AI study assistant. How can I help you today?",
-            role: "assistant",
-            timestamp: new Date(),
-          }
-          setMessages([welcomeMessage])
-        })
-        .catch((err) => {
-          console.error("Failed to fetch greeting:", err)
-          // Fallback to default greeting
-          const fallbackMessage: Message = {
-            id: "welcome",
-            content: `Hello! I'm your AI study assistant. I can help you understand the textbook content, explain concepts, and answer questions about what you're reading.${
-              context?.currentChapter ? `\n\nI can see you're currently reading: ${context.currentChapter}` : ""
-            }${
-              context?.highlightedText ? `\n\nI notice you've highlighted: "${context.highlightedText}"` : ""
-            }\n\nWhat would you like to know?`,
-            role: "assistant",
-            timestamp: new Date(),
-          }
-          setMessages([fallbackMessage])
-        })
-        .finally(() => {
-          setIsLoadingGreeting(false)
-        })
-    }
-  }, [context, isInitialized, messages.length])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value)
-
-    // Auto-resize textarea
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-    }
-  }
-
-  const fetchGreeting = async () => {
-    setIsLoadingGreeting(true)
-    const loadingMessage: Message = {
-      id: "loading-greeting",
-      content: "",
-      role: "assistant",
-      timestamp: new Date(),
-    }
-    setMessages([loadingMessage])
-
     const token = localStorage.getItem("access_token")
-    console.log("Fetching new greeting, token:", token ? "Present" : "Not present")
+    setIsLoggedIn(!!token)
+  }, [])
 
+  // Load all chats for sidebar
+  const fetchChats = async () => {
     try {
-      const response = await fetch("/api/greeting", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const token = localStorage.getItem("access_token")
+      const res = await fetch(`${backendUrl}/chat/history`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
-
-      console.log("New greeting API response status:", response.status)
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-      console.log("New greeting API response data:", data)
-
-      const welcomeMessage: Message = {
-        id: "welcome",
-        content: data.response || "Hello! I'm your AI study assistant. How can I help you today?",
-        role: "assistant",
-        timestamp: new Date(),
-      }
-      setMessages([welcomeMessage])
-    } catch (err) {
-      console.error("Failed to fetch new greeting:", err)
-      // Fallback to default greeting
-      const fallbackMessage: Message = {
-        id: "welcome",
-        content: `Hello! I'm your AI study assistant. I can help you understand the textbook content, explain concepts, and answer questions about what you're reading.${
-          context?.currentChapter ? `\n\nI can see you're currently reading: ${context.currentChapter}` : ""
-        }${
-          context?.highlightedText ? `\n\nI notice you've highlighted: "${context.highlightedText}"` : ""
-        }\n\nWhat would you like to know?`,
-        role: "assistant",
-        timestamp: new Date(),
-      }
-      setMessages([fallbackMessage])
-    } finally {
-      setIsLoadingGreeting(false)
+      const data = await res.json()
+      setChats(data.chats || [])
+    } catch (e) {
+      console.error("Failed to load chats", e)
     }
   }
+
+  const loadChat = async (sessionId: string, title: string) => {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const token = localStorage.getItem("access_token")
+      const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+      const data = await res.json()
+
+      // Backend now returns: { session_id, title, summary, messages }
+      const messages = data.messages || []
+      const loadedMessages: Message[] = messages.map(
+        (msg: { content: string; role: string; timestamp: string }, index: number) => ({
+          id: `${sessionId}-${index}`,
+          content: msg.content,
+          role: msg.role,
+          timestamp: new Date(msg.timestamp),
+        }),
+      )
+
+      if (data.summary && data.summary.trim()) {
+        const summaryMessage: Message = {
+          id: `${sessionId}-summary`,
+          content: `**Conversation Summary:**\n\n${data.summary}`,
+          role: "assistant",
+          timestamp: new Date(),
+        }
+        loadedMessages.push(summaryMessage)
+      }
+
+      setMessages(loadedMessages)
+      setCurrentChatTitle(data.title || title)
+      sessionIdRef.current = sessionId
+      setBranchCandidates({})
+      setShowSidebar(false)
+
+      // Clear session storage since we're loading from server
+      removeChatSession()
+    } catch (e) {
+      console.error("Failed to load chat", e)
+    }
+  }
+
+  const handleChatHover = (sessionId: string, summary: string) => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+
+    setHoveredChat(sessionId)
+
+    // Only show summary if it exists
+    if (summary && summary.trim()) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setShowSummary(sessionId)
+      }, 1000)
+    }
+  }
+
+  const handleChatLeave = () => {
+    // Clear timeout but don't immediately hide - let tooltip handle its own mouse events
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+  }
+
+  const handleTooltipEnter = () => {
+    // Keep tooltip visible when hovering over it
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+  }
+
+  const handleTooltipLeave = () => {
+    // Hide tooltip when leaving it
+    setHoveredChat(null)
+    setShowSummary(null)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const clearChat = () => {
-    console.log("🗑️ Clearing chat")
     setMessages([])
     setMessageCount(0)
-    clearChatSession()
-
-    // Fetch new greeting
-    fetchGreeting()
+    setBranchCandidates({})
+    setCurrentChatTitle("New Chat")
+    sessionIdRef.current = null
+    removeChatSession()
   }
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     if (!input.trim() || isLoading) return
+    if (!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST) return
 
-    // Check message limit for non-logged in users
-    if (!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST) {
-      return
-    }
+    const userMessage: Message = { id: Date.now().toString(), content: input, role: "user", timestamp: new Date() }
+    const tempMessage: Message = { id: `temp-${Date.now()}`, content: "", role: "assistant", timestamp: new Date() }
 
-    const userMessage = input.trim()
-
-    // Add user message
-    const userMessageObj: Message = {
-      id: Date.now().toString(),
-      content: userMessage,
-      role: "user",
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, userMessageObj])
-    setInput("")
+    setMessages((prev) => [...prev, userMessage, tempMessage])
     setMessageCount((prev) => prev + 1)
+    setInput("")
     setIsLoading(true)
 
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"
-    }
-
-    // Create a temporary message for streaming
-    const tempMessageId = `temp-${Date.now()}`
-    const tempMessage: Message = {
-      id: tempMessageId,
-      content: "",
-      role: "assistant",
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, tempMessage])
-
     try {
-      // Get the authentication token from localStorage if available
       const token = localStorage.getItem("access_token")
-      console.log("=== Frontend Chat Request ===")
-      console.log("Token from localStorage:", token ? "Token exists" : "No token found")
-      console.log("Token preview:", token ? `${token}` : "none")
-      console.log("Token length:", token ? token.length : 0)
-      console.log("Is logged in:", isLoggedIn)
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const body: any = { message: userMessage.content, textbook_id: textbookId, chapter_id: selectedChapterId }
+      if (sessionIdRef.current) body.session_id = sessionIdRef.current
 
-      // Prepare context for the API
-      const chatContext = {
-        ...context,
-        previousMessages: messages.slice(-6), // Send last 6 messages for context
-      }
+      abortControllerRef.current?.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
 
-      // Step 1: Initiate the chat session
-      console.log("Initiating chat session...")
-      console.log("Request payload:", {
-        message: userMessage,
-        token: token ? "TOKEN_PROVIDED" : null,
-        context: chatContext,
-      })
-
-      const initiateResponse = await fetch("/api/chat/initiate", {
+      const streamRes = await fetch(`${backendUrl}/chat/stream`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          token: token || null,
-          context: chatContext,
-        }),
+        headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+        body: JSON.stringify(body),
+        signal: controller.signal,
       })
 
-      console.log("Initiate response status:", initiateResponse.status)
-      console.log("Initiate response headers:", Object.fromEntries(initiateResponse.headers.entries()))
+      if (!streamRes.body) throw new Error("No response body")
 
-      if (!initiateResponse.ok) {
-        const errorText = await initiateResponse.text()
-        console.error("=== INITIATE ERROR ===")
-        console.error("Status:", initiateResponse.status)
-        console.error("Status Text:", initiateResponse.statusText)
-        console.error("Response Text:", errorText)
-        console.error("Response Headers:", Object.fromEntries(initiateResponse.headers.entries()))
-
-        let errorData
-        try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          errorData = { error: errorText || "Unknown error" }
-        }
-
-        console.error("Parsed error data:", errorData)
-        throw new Error(errorData.error || "Failed to initiate chat session")
-      }
-
-      const initiateData = await initiateResponse.json()
-      console.log("Initiate response data:", initiateData)
-      const { session_id } = initiateData
-
-      if (!session_id) {
-        console.error("No session_id in response:", initiateData)
-        throw new Error("No session ID received from server")
-      }
-
-      // Step 2: Stream the response
-      console.log("Starting stream request with session_id:", session_id)
-      const streamResponse = await fetch(`/api/chat/stream?sessionId=${session_id}`, {
-        method: "GET",
-        headers: {
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      })
-
-      console.log("Stream response status:", streamResponse.status)
-      console.log("Stream response headers:", Object.fromEntries(streamResponse.headers.entries()))
-
-      if (!streamResponse.ok) {
-        const errorText = await streamResponse.text()
-        console.error("=== STREAM ERROR ===")
-        console.error("Status:", streamResponse.status)
-        console.error("Status Text:", streamResponse.statusText)
-        console.error("Response Text:", errorText)
-        console.error("Response Headers:", Object.fromEntries(streamResponse.headers.entries()))
-        throw new Error(`Failed to connect to chat stream: ${streamResponse.status} ${streamResponse.statusText}`)
-      }
-
-      // Handle streaming response
-      const reader = streamResponse.body?.getReader()
+      const reader = streamRes.body.getReader()
       const decoder = new TextDecoder()
-
-      if (!reader) {
-        throw new Error("Failed to get stream reader")
-      }
-
-      let fullResponse = ""
-      let buffer = "" // Add buffer to accumulate partial data
+      let buffer = ""
+      const chunks: string[] = []
+      const rawDataReceived: string[] = [] // Track all raw data received
 
       while (true) {
         const { done, value } = await reader.read()
-
         if (done) {
-          console.log("Stream reading completed")
+          console.log("[v0] 🔚 Stream ended. Total chunks received:", chunks.length)
+          console.log("[v0] 🔚 All raw data received:", rawDataReceived) // Log all raw data
+          console.log("[v0] 🔚 Final branch candidates state:", branchCandidates)
           break
         }
 
-        // Decode the chunk and add to buffer
-        const chunk = decoder.decode(value, { stream: true })
-        buffer += chunk
-        console.log("Received chunk:", chunk.substring(0, 100) + "...")
+        const rawChunk = decoder.decode(value, { stream: true })
+        rawDataReceived.push(rawChunk) // Store raw chunk
+        console.log("[v0] 🔍 Raw chunk received:", JSON.stringify(rawChunk)) // Log raw chunk with escaping
 
-        // Process complete SSE events from buffer
+        buffer += rawChunk
         const lines = buffer.split("\n")
-
-        // Keep the last incomplete line in buffer
         buffer = lines.pop() || ""
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
+          console.log("[v0] 📥 Processing line:", JSON.stringify(line)) // Log with escaping
+
+          if (line.includes("start_new_chat")) {
+            console.log("[v0] 🌟 FOUND LINE WITH start_new_chat:", JSON.stringify(line))
+
+            // Try to parse as direct JSON
             try {
-              const jsonStr = line.slice(6).trim()
-
-              // Skip empty data lines
-              if (!jsonStr) continue
-
-              const data = JSON.parse(jsonStr)
-              console.log("Parsed SSE data:", data)
-
-              if (data.text) {
-                // Update the streaming message
-                fullResponse += data.text
-                setMessages((prev) =>
-                  prev.map((msg) => (msg.id === tempMessageId ? { ...msg, content: fullResponse } : msg)),
-                )
-              }
-
-              if (data.done) {
-                console.log("Streaming marked as complete")
-                break
-              }
-
-              if (data.error) {
-                console.error("SSE error:", data.error)
-                throw new Error(data.error)
+              const directData = JSON.parse(line)
+              console.log("[v0] 🌟 Direct JSON parse successful:", directData)
+              if (directData.start_new_chat) {
+                console.log("[v0] 🌟 BRANCH SIGNAL IN DIRECT JSON!")
               }
             } catch (e) {
-              console.error("Error parsing SSE data:", e, "Raw line:", line)
-              // Don't throw here, just log and continue
+              console.log("[v0] ⚠️ Direct JSON parse failed:", e)
             }
+          }
+
+          if (!line.startsWith("data: ")) {
+            console.log("[v0] ⚠️ Skipping non-data line:", JSON.stringify(line))
+            continue
+          }
+
+          const jsonStr = line.slice(6).trim()
+          if (!jsonStr) {
+            console.log("[v0] ⚠️ Empty JSON string after 'data: '")
+            continue
+          }
+
+          console.log("[v0] 🔍 Raw JSON string:", jsonStr)
+          let data: StreamData
+          try {
+            data = JSON.parse(jsonStr) as StreamData
+            console.log("[v0] ✅ Parsed stream data:", data)
+            console.log("[v0] 🔍 Data keys:", Object.keys(data))
+
+            if (isStreamTextData(data)) {
+              if (!sessionIdRef.current && data.session_id) {
+                sessionIdRef.current = data.session_id
+                console.log("[v0] 🆔 Set session ID:", data.session_id)
+              }
+              chunks.push(data.text)
+              const current = chunks.join("")
+              setMessages((prev) => prev.map((m) => (m.id === tempMessage.id ? { ...m, content: current } : m)))
+            }
+
+            if (isStreamBranchData(data)) {
+              console.log("[v0] 🌟 BRANCH SIGNAL DETECTED! Full data object:", JSON.stringify(data, null, 2))
+
+              const branchData = {
+                new_session_id: data.new_session_id,
+                suggested_title: data.suggested_title || "New Chat",
+              }
+
+              console.log("[v0] 🌿 Creating branch candidate:", branchData)
+              setBranchCandidates((prev) => {
+                const updated = { ...prev, [tempMessage.id]: branchData }
+                console.log("[v0] 🌿 Updated branch candidates:", updated)
+                return updated
+              })
+            }
+
+            if (isStreamDoneData(data)) {
+              console.log("[v0] ✅ Stream marked as done")
+            }
+
+            if (isStreamErrorData(data)) {
+              let error = data as StreamErrorData
+              console.log("[v0] ❌ Error in stream:", data.error)
+              setMessages((prev) =>
+                prev.map((m) => (m.id === tempMessage.id ? { ...m, content: `⚠️ ${error}` } : m)),
+              )
+              controller.abort()
+            }
+          } catch (parseError) {
+            console.error("[v0] 💥 Failed to parse stream data:", parseError, "Raw line:", line)
+            console.error("[v0] 💥 JSON string that failed:", jsonStr)
           }
         }
       }
 
-      // If we didn't get any content, show a fallback message
-      if (!fullResponse) {
-        console.warn("No response content received")
+      if (chunks.length === 0) {
         setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === tempMessageId
-              ? { ...msg, content: "I received your message but couldn't generate a response. Please try again." }
-              : msg,
+          prev.map((m) =>
+            m.id === tempMessage.id ? { ...m, content: "I couldn't generate a response. Try again." } : m,
           ),
         )
-      } else {
-        console.log("Final response length:", fullResponse.length)
       }
-    } catch (error) {
-      console.error("=== FULL ERROR ===")
-      console.error("Error type:", typeof error)
-      console.error("Error message:", error instanceof Error ? error.message : String(error))
-      console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
-
-      // Update the temporary message with the error
+    } catch (err) {
       setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessageId
-            ? {
-                ...msg,
-                content:
-                  error instanceof Error
-                    ? error.message
-                    : "Sorry, I encountered an error. Please try again. If you're running this in preview mode, the backend server may not be available.",
-              }
-            : msg,
+        prev.map((m) =>
+          m.id === tempMessage.id
+            ? { ...m, content: err instanceof Error ? `⚠️ ${err.message}` : "Streaming error occurred." }
+            : m,
         ),
       )
     } finally {
+      updateChatTitle()
       setIsLoading(false)
+      abortControllerRef.current = null
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage(e)
+  const updateChatTitle = async () => {
+    console.log("Attempting to update chat title...")
+    console.log("Current messageSinceTitleUpdate:", messageSinceTitleUpdate)
+    if (messageSinceTitleUpdate < MESSAGE_TILL_TITLE_UPDATE) {
+      setMessageSinceTitleUpdate(prev => prev + 1)
+      return
+    }
+    setMessageSinceTitleUpdate(0)
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+      const token = localStorage.getItem("access_token")
+      const sessionId = sessionIdRef.current
+      const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      })
+      const data = await res.json()
+      if (data.title) {
+        setCurrentChatTitle(data.title)
+        //await fetchChats() // Refresh chat list to show updated title
+      }
+    } catch (e) {
+      console.error("Failed to update chat title", e)
     }
   }
 
-  const canSendMessage = isLoggedIn || messageCount < MAX_MESSAGES_GUEST
+  const handleBranch = async (payload: BranchCandidate) => {
+    console.log("[v0] Starting new branch:", payload)
+
+    setMessages([])
+    setMessageCount(0)
+    setBranchCandidates({})
+    setCurrentChatTitle(payload.suggested_title)
+    sessionIdRef.current = payload.new_session_id
+
+    // Clear session storage for clean start
+    removeChatSession()
+
+    // Update session storage with new session ID
+    sessionStorage.setItem("current_session_id", payload.new_session_id)
+
+    // Refresh chat list to show the new chat
+    await fetchChats()
+  }
+
+  const canSend = isLoggedIn || messageCount < MAX_MESSAGES_GUEST
+
+  const renderedMessages = useMemo(
+    () =>
+      messages.map((message) => (
+        <MessageCard
+          key={message.id}
+          message={message}
+          branchCandidate={branchCandidates[message.id]}
+          onBranch={handleBranch}
+        />
+      )),
+    [messages, branchCandidates],
+  )
 
   return (
-    <div className="h-full flex flex-col bg-[#252526]">
-      {/* Clear chat button */}
-      <div className="flex justify-end p-2 border-b border-[#3e3e42]">
-        <Button
-          onClick={clearChat}
-          size="sm"
-          variant="ghost"
-          className="text-[#969696] hover:text-[#ffffff] hover:bg-[#3e3e42] h-6 px-2"
-          disabled={isLoadingGreeting}
-        >
-          Clear
-        </Button>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-auto p-3 space-y-4 show-scrollbar">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-            {message.role === "assistant" && (
-              <div className="w-8 h-8 bg-[#007acc] rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-white" />
-              </div>
-            )}
-
-            <Card
-              className={`max-w-[80%] ${
-                message.role === "user"
-                  ? "bg-[#007acc] border-[#007acc] text-white"
-                  : "bg-[#3e3e42] border-[#3e3e42] text-[#cccccc]"
-              }`}
-            >
-              <CardContent className="p-3">
-                {/* Show loading animation for empty messages (greeting or temp) */}
-                {message.content === "" && (message.id.startsWith("temp-") || message.id === "loading-greeting") ? (
-                  <div className="flex items-center gap-2 text-[#cccccc]">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
-                    </div>
-                    <span className="text-sm">
-                      {message.id === "loading-greeting" ? "Fetching greeting..." : "AI is thinking..."}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="text-sm">{formatMarkdown(message.content)}</div>
-                )}
-                <div className="text-xs opacity-70 mt-2">
-                  {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {message.role === "user" && (
-              <div className="w-8 h-8 bg-[#4ec9b0] rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="w-4 h-4 text-white" />
-              </div>
-            )}
+    <div className="h-full flex bg-[#252526]">
+      {/* Sidebar */}
+      {showSidebar && (
+        <div className="w-64 bg-[#1e1e1e] border-r border-[#3e3e42] flex flex-col">
+          <div className="p-3 border-b border-[#3e3e42]">
+            <div className="font-bold text-white mb-2">Chats</div>
+            <Button onClick={clearChat} size="sm" className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white">
+              New Chat
+            </Button>
           </div>
-        ))}
+          <div className="flex-1 overflow-auto relative">
+            {chats.map((c) => (
+              <div key={c.session_id} className="relative">
+                <button
+                  className={`block w-full text-left px-3 py-2 hover:bg-[#2d2d30] text-sm border-b border-[#3e3e42] transition-colors ${
+                    sessionIdRef.current === c.session_id ? "bg-[#2d2d30] text-white" : "text-[#cccccc]"
+                  }`}
+                  onClick={() => loadChat(c.session_id, c.title || "Untitled Chat")}
+                  onMouseEnter={() => handleChatHover(c.session_id, c.summary || "")}
+                  onMouseLeave={handleChatLeave}
+                >
+                  <div className="font-medium">{c.title || "Untitled Chat"}</div>
+                  <div className="text-xs text-[#969696] mt-1">{new Date(c.updated_at).toLocaleDateString()}</div>
+                </button>
 
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Message limit warning */}
-      {!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST && (
-        <div className="p-3 bg-[#2d2d30] border-t border-[#3e3e42]">
-          <div className="flex items-center gap-2 text-[#ce9178] text-sm">
-            <AlertCircle className="w-4 h-4" />
-            <span>You've reached the message limit. Sign in for unlimited chat!</span>
+                {showSummary === c.session_id && c.summary && (
+                  <div
+                    className="absolute left-full top-0 ml-2 z-50 bg-[#1e1e1e] border border-[#3e3e42] rounded-md p-3 shadow-lg max-w-xs pointer-events-auto"
+                    onMouseEnter={handleTooltipEnter}
+                    onMouseLeave={handleTooltipLeave}
+                  >
+                    <div className="text-xs text-[#cccccc] font-medium mb-1">Summary:</div>
+                    <div className="text-xs text-[#969696] leading-relaxed">{c.summary}</div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Input */}
-      <div className="p-3 border-t border-[#3e3e42] bg-[#2d2d30]">
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              canSendMessage ? "Ask me anything about the textbook content..." : "Sign in to continue chatting"
-            }
-            className="flex-1 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc] min-h-[40px] max-h-[120px] resize-none"
-            disabled={!canSendMessage || isLoading || isLoadingGreeting}
-            rows={1}
-          />
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="flex justify-between items-center p-2 border-b border-[#3e3e42]">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                setShowSidebar(!showSidebar)
+                if (!showSidebar) fetchChats()
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <Menu className="w-4 h-4 text-[#969696]" />
+            </Button>
+            <span className="text-sm text-[#cccccc] font-medium">{currentChatTitle}</span>
+          </div>
           <Button
-            type="submit"
+            onClick={clearChat}
             size="sm"
-            className="bg-[#007acc] hover:bg-[#005a9e] text-white self-end"
-            disabled={!input.trim() || !canSendMessage || isLoading || isLoadingGreeting}
+            variant="ghost"
+            className="text-[#969696] hover:text-white"
+            disabled={isLoading}
           >
-            <Send className="w-4 h-4" />
+            Clear
           </Button>
-        </form>
+        </div>
 
-        {canSendMessage && (
-          <div className="text-xs text-[#969696] mt-2">Press Enter to send, Shift+Enter for new line</div>
+        {/* Messages */}
+        <div className="flex-1 overflow-auto p-3 space-y-4 show-scrollbar">
+          {renderedMessages}
+          <div ref={messagesEndRef} className="h-0 w-0 opacity-0 pointer-events-none" />
+        </div>
+
+        {/* Message limit warning */}
+        {!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST && (
+          <div className="p-3 bg-[#2d2d30] border-t border-[#3e3e42] flex items-center gap-2 text-[#ce9178] text-sm">
+            <AlertCircle className="w-4 h-4" /> You've reached the message limit. Sign in for unlimited chat!
+          </div>
         )}
+
+        {/* Input */}
+        <div className="p-3 border-t border-[#3e3e42] bg-[#2d2d30]">
+          <form onSubmit={handleSendMessage} className="flex gap-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSendMessage()
+                }
+              }}
+              placeholder={canSend ? "Ask me anything..." : "Sign in to continue chatting"}
+              className="flex-1 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc] min-h-[40px] max-h-[120px] resize-none overflow-auto"
+              disabled={!canSend || isLoading}
+              rows={1}
+            />
+            <Button
+              type="submit"
+              size="sm"
+              className="bg-[#007acc] hover:bg-[#005a9e] text-white"
+              disabled={!input.trim() || !canSend || isLoading}
+            >
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+          {canSend && <div className="text-xs text-[#969696] mt-2">Press Enter to send, Shift+Enter for new line</div>}
+        </div>
       </div>
     </div>
   )
