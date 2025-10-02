@@ -34,7 +34,7 @@ async def add_user_textbook(payload: AddTextbookRequest, user = Depends(validate
         raise HTTPException(status_code=404, detail="Textbook not found")
     else:
         # If the textbook exists, add it to the user's books
-        textbook_id = valid_textbook.get("s3_id")
+        textbook_id = valid_textbook.get("_id")
         textbook_title = valid_textbook.get("title")
         print(f"Adding Textbook {textbook_title} ({textbook_id}) to user {user.get('id')}")
         await add_textbook_to_user(user.get("id"), textbook_id)
