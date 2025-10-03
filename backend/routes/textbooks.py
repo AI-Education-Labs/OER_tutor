@@ -7,6 +7,14 @@ from backend.features.textbooks.models import TextbookInfo
 from pydantic import BaseModel
 from backend.db.database import get_document, get_document_by_field
 from backend.features.auth.service import validate_access_token_optional
+import boto3
+from botocore.exceptions import ClientError
+from starlette.concurrency import run_in_threadpool
+
+S3_BUCKET = "textbooks-aie"
+S3_PREFIX = "public/textbooks"
+# Create S3 client (will use your AWS credentials from aws configure or env vars)
+s3 = boto3.client("s3")
 
 class TextbookResponse(BaseModel):
     textbooks: List[TextbookInfo]
@@ -80,9 +88,9 @@ async def get_chapters(textbook_uuid: str):
     return {"chapters": chapters}
 
 
-@router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
+""" @router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
 async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
-    """Get the PDF file for a specific chapter by looking up the filename in metadata."""
+    Get the PDF file for a specific chapter by looking up the filename in metadata.
     try:
         ##################
         # Local Approach #
@@ -137,6 +145,63 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
         
     except HTTPException:
         # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error getting chapter PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving chapter PDF: {str(e)}") """
+
+@router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
+async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
+    """Return a presigned URL to the chapter PDF stored in S3."""
+    try:
+        # --- keep your metadata lookup ---
+        textbook_metadata = await get_textbook_details(textbook_uuid)
+
+        chapters = textbook_metadata.get("chapters", [])
+        target_chapter = next(
+            (c for c in chapters if str(c.get("id")) == str(chapter_id)), None
+        )
+        if not target_chapter:
+            logger.error(f"Chapter {chapter_id} not found in textbook {textbook_uuid}")
+            raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found")
+
+        pdf_filename = target_chapter.get("file")
+        if not pdf_filename:
+            logger.error(f"No PDF file specified for chapter {chapter_id}")
+            raise HTTPException(status_code=404, detail=f"No PDF file found for chapter {chapter_id}")
+
+        # --- S3 path ---
+        key = f"{S3_PREFIX}/{textbook_uuid}/{pdf_filename}"
+
+        # Optional existence check (network call) — run in threadpool to avoid blocking the event loop
+        try:
+            await run_in_threadpool(lambda: s3.head_object(Bucket=S3_BUCKET, Key=key))
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            if code in ("404", "NotFound", "NoSuchKey"):
+                logger.error(f"S3 object not found: s3://{S3_BUCKET}/{key}")
+                raise HTTPException(status_code=404, detail=f"PDF file not found: {pdf_filename}")
+            logger.exception("S3 head_object failed")
+            raise HTTPException(status_code=500, detail="Error checking PDF in S3")
+
+        # Generate a presigned URL so the browser can open the PDF inline
+        url = s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": S3_BUCKET,
+                "Key": key,
+                "ResponseContentType": "application/pdf",
+                "ResponseContentDisposition": f'inline; filename="{pdf_filename}"',
+            },
+            ExpiresIn=3600,  # seconds
+        )
+
+        return {
+            "pdf_url": url,
+            "chapter_title": target_chapter.get("title", f"Chapter {chapter_id}")
+        }
+
+    except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting chapter PDF: {str(e)}")
