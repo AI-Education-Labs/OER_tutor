@@ -128,8 +128,9 @@ async def delete_user_document(
 
 async def create_user_document(user: UserWithPassword):
     collection = await get_collection("users")
-    # Dump with aliases so `_id` is persisted instead of `id`
+    # create a _id field for mongodb
     user_doc = user.model_dump(by_alias=True, exclude_none=True)
+    user_doc["_id"] = user_doc["id"]
     await collection.insert_one(user_doc)
 
 # Temporary function to create a user book document, should be replaced with a more general function.

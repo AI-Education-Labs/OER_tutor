@@ -55,7 +55,7 @@ async def validate_access_token_optional(token: str = Depends(oauth2_scheme)):
 
         # user_id contains the user's id (uuid) according to token issuance
         user = await get_user_by_id(user_id)
-
+        
         print(f"validate_access_token_optional: user {user}")
         if user is None or user.get("disabled") == True:
             print(f"validate_access_token_optional: user {user} is None or disabled")
