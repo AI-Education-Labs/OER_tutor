@@ -23,7 +23,7 @@ PUBLIC_DIR = "./public"
 
 
 @router.post("/api/user_books/add", response_model=AddTextbookResponse)
-async def add_user_textbook(payload: AddTextbookRequest, user = Depends(validate_access_token)):
+async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_access_token)):
     """Add a textbook to the authenticated user's library using a 6-char code."""
     textbook_code = (payload.code or "").strip().upper()
 
@@ -36,6 +36,6 @@ async def add_user_textbook(payload: AddTextbookRequest, user = Depends(validate
         # If the textbook exists, add it to the user's books
         textbook_id = valid_textbook.get("_id")
         textbook_title = valid_textbook.get("title")
-        print(f"Adding Textbook {textbook_title} ({textbook_id}) to user {user.get('id')}")
-        await add_textbook_to_user(user.get("id"), textbook_id)
+        print(f"Adding Textbook {textbook_title} ({textbook_id}) to user {user_id}")
+        await add_textbook_to_user(user_id, textbook_id)
         return AddTextbookResponse(ok=True, textbook_id=textbook_id, title=textbook_title)
