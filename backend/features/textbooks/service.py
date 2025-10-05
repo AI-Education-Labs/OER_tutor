@@ -3,6 +3,7 @@ from fastapi import HTTPException
 
 PUBLIC_DIR = "./public"
 
+# DEPRECIATED
 async def get_chapters_from_textbook(textbook_id: str):
     metadata = await get_document_by_field("textbooks", "_id", textbook_id)
     if metadata is None:

@@ -1,7 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-import os
-import json
 import logging
 from pydantic import BaseModel
 from backend.db.database import add_textbook_to_user, get_document_by_field
@@ -18,9 +16,6 @@ class AddTextbookResponse(BaseModel):
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-PUBLIC_DIR = "./public"
-
 
 @router.post("/api/user_books/add", response_model=AddTextbookResponse)
 async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_access_token)):

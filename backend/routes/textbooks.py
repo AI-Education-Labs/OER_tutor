@@ -1,7 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Optional
-import os
-import json
 import logging
 from backend.features.textbooks.models import TextbookInfo
 from pydantic import BaseModel
@@ -12,7 +10,6 @@ from botocore.exceptions import ClientError
 from starlette.concurrency import run_in_threadpool
 
 S3_BUCKET = "textbooks-aie"
-S3_PREFIX = "public/textbooks"
 # Create S3 client (will use your AWS credentials from aws configure or env vars)
 s3 = boto3.client("s3")
 
@@ -23,8 +20,6 @@ class TextbookResponse(BaseModel):
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-PUBLIC_DIR = "./public"
 
 @router.get("/api/textbooks")
 async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
@@ -87,69 +82,6 @@ async def get_chapters(textbook_uuid: str):
 
     return {"chapters": chapters}
 
-
-""" @router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
-async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
-    Get the PDF file for a specific chapter by looking up the filename in metadata.
-    try:
-        ##################
-        # Local Approach #
-        ##################
-
-        # Get the textbook directory
-        textbook_dir = os.path.join(PUBLIC_DIR, "textbooks", textbook_uuid)
-        
-        # Check if the directory exists
-        if not os.path.isdir(textbook_dir):
-            logger.error(f"Textbook directory not found: {textbook_dir}")
-            raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
-
-        textbook_metadata = await get_textbook_details(textbook_uuid)
-
-        # Find the chapter with the matching ID
-        chapters = textbook_metadata.get("chapters", [])
-        target_chapter = None
-        
-        for chapter in chapters:
-            if str(chapter.get("id")) == str(chapter_id):
-                target_chapter = chapter
-                break
-        
-        if not target_chapter:
-            logger.error(f"Chapter {chapter_id} not found in textbook {textbook_uuid}")
-            raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found")
-        
-        # Get the PDF filename from the chapter metadata
-        pdf_filename = target_chapter.get("file")
-        if not pdf_filename:
-            logger.error(f"No PDF file specified for chapter {chapter_id}")
-            raise HTTPException(status_code=404, detail=f"No PDF file found for chapter {chapter_id}")
-        
-        # Construct the full path to the PDF
-        pdf_path = os.path.join(textbook_dir, pdf_filename)
-        
-        # Check if the PDF file exists
-        if not os.path.isfile(pdf_path):
-            logger.error(f"PDF file not found: {pdf_path}")
-            raise HTTPException(status_code=404, detail=f"PDF file not found: {pdf_filename}")
-        
-        ##################
-        # S3 Approach  -> Change The following line to fetch from S3 instead of local filesystem
-        ##################
-
-        # Return the relative URL path that the frontend can use
-        pdf_url = f"/textbooks/{textbook_uuid}/{pdf_filename}"
-        
-
-        return {"pdf_url": pdf_url, "chapter_title": target_chapter.get("title", f"Chapter {chapter_id}")}
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        logger.error(f"Error getting chapter PDF: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving chapter PDF: {str(e)}") """
-
 @router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
 async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     """Return a presigned URL to the chapter PDF stored in S3."""
@@ -171,7 +103,7 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
             raise HTTPException(status_code=404, detail=f"No PDF file found for chapter {chapter_id}")
 
         # --- S3 path ---
-        key = f"{S3_PREFIX}/{textbook_uuid}/{pdf_filename}"
+        key = f"{textbook_uuid}/{pdf_filename}"
 
         # Optional existence check (network call) — run in threadpool to avoid blocking the event loop
         try:
@@ -195,6 +127,7 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
             },
             ExpiresIn=3600,  # seconds
         )
+        print(f"Generated presigned URL for {pdf_filename}: {url}")
 
         return {
             "pdf_url": url,
