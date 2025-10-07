@@ -67,6 +67,7 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
 @router.get("/api/textbooks/{textbook_uuid}")
 async def get_textbook_details(textbook_uuid: str):
     metadata = await get_document_by_field("textbooks", "_id", textbook_uuid)
+    print(f"Textbook metadata: {metadata}")
     if metadata is None:
         raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
     return metadata
@@ -85,6 +86,7 @@ async def get_chapters(textbook_uuid: str):
 @router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
 async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     """Return a presigned URL to the chapter PDF stored in S3."""
+    print(f"Getting chapter PDF for {textbook_uuid} and {chapter_id}")
     try:
         # --- keep your metadata lookup ---
         textbook_metadata = await get_textbook_details(textbook_uuid)

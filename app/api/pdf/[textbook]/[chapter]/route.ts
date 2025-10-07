@@ -13,7 +13,7 @@ export async function GET(
     console.log(`Fetching PDF for textbook: ${textbook}, chapter: ${chapter}`)
 
     // Forward the request to the FastAPI backend
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000"
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
     const response = await fetch(`${backendUrl}/api/pdf/${textbook}/${chapter}`)
 
     if (!response.ok) {

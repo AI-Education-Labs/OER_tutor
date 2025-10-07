@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 export async function POST(req: Request) {
   try {
     const { context, hint, num_flashcards, chapter, textbook_id } = await req.json()
-    const backendUrl = process.env.BACKEND_URL
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
     const payload = {
       context,

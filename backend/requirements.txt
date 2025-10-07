@@ -6,7 +6,7 @@ PyJWT
 pydantic[email]
 pydantic-settings
 python-dotenv
-redis>=5
+boto3
 pymongo>=4.5
 openai
 langchain

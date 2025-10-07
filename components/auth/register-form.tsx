@@ -10,8 +10,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, User, Mail, Lock, Eye, EyeOff } from "lucide-react"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [registerData, setRegisterData] = useState({
