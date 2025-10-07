@@ -415,7 +415,7 @@ export function PDFViewer({
       setLoading(true)
       setError(null)
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       console.log("[v0] Backend URL:", backendUrl)
 
       const fullUrl = `${backendUrl}/api/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`
