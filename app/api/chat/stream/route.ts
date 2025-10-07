@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server"
 
 export async function POST(req: NextRequest) {
   try {
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000"
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
     const streamUrl = `${backendUrl}/chat/stream`
 
     // Pass through auth header if present

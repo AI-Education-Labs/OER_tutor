@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ detail: "Username and password are required" }, { status: 400 });
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
     const upstream = await fetch(`${backendUrl}/auth/token`, {
       method: "POST",

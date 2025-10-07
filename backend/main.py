@@ -9,7 +9,6 @@ from backend.routes.textbooks import router as textbooks_router
 from backend.routes.files import router as files_router
 from backend.routes.sidebar_modules import router as sidebar_modules_router
 from backend.routes.user_progress import router as textbook_progress_router
-from backend.routes.textbook_information import router as textbook_router
 from backend.routes.users import router as users_router
 from backend.routes.chat import router as chat_router
 from backend.routes.user_books import router as user_books_router
@@ -30,7 +29,6 @@ app.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-mod
 app.include_router(textbooks_router, tags=["textbooks"])
 app.include_router(files_router, tags=["files"])
 app.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
-app.include_router(textbook_router, prefix="/textbook", tags=["textbook"])
 app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(chat_router, prefix="/chat", tags=["chat"])
 app.include_router(user_books_router, tags=["user-books"]) 
