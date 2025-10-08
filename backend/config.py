@@ -18,10 +18,12 @@ class Settings(BaseSettings):
     MONGO_URI: str = ""
     MONGO_DB_NAME: str = ""
 
+    # AWS settings
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+
     # S3 settings
     S3_BUCKET: str = ""
-    S3_ACCESS_KEY: str = ""
-    S3_SECRET_KEY: str = ""
     S3_REGION: str = ""
 
     # LLM / Providers

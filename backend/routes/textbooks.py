@@ -14,9 +14,8 @@ from backend.config import settings
 S3_BUCKET = settings.S3_BUCKET
 S3_CLIENT_REGION = settings.S3_REGION or None
 if S3_CLIENT_REGION:
-    s3 = boto3.client("s3", region_name=S3_CLIENT_REGION)
-else:
-    s3 = boto3.client("s3")
+    s3 = boto3.client("s3", region_name=S3_CLIENT_REGION, aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
 
 class TextbookResponse(BaseModel):
     textbooks: List[TextbookInfo]
