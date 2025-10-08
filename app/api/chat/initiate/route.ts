@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
       console.log("Added Authorization header")
     }
 
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000"
-    console.log("Backend URL:", backendUrl)
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
     console.log("Forwarding to backend /chat/initiate...")
 

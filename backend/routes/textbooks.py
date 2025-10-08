@@ -1,185 +1,177 @@
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
-from typing import List, Optional, Union
-from datetime import datetime
-import os
-import json
+from fastapi import APIRouter, HTTPException, Query, Depends
+from typing import List, Optional
 import logging
+from backend.features.textbooks.models import TextbookInfo
+from pydantic import BaseModel
+from backend.db.database import get_document, get_document_by_field
+from backend.features.auth.service import validate_access_token_optional
+import boto3
+import logging
+from botocore.exceptions import ClientError
+from starlette.concurrency import run_in_threadpool
+from backend.config import settings
 
+S3_BUCKET = settings.S3_BUCKET
+S3_CLIENT_REGION = settings.S3_REGION or None
+if S3_CLIENT_REGION:
+    s3 = boto3.client("s3", region_name=S3_CLIENT_REGION)
+else:
+    s3 = boto3.client("s3")
+
+class TextbookResponse(BaseModel):
+    textbooks: List[TextbookInfo]
+    is_authenticated: bool
+    message: Optional[str] = None
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
-# Models local to this router to keep concerns isolated
-class SubChapter(BaseModel):
-    title: str
-    pageOffset: Optional[int] = None
-
-
-class Chapter(BaseModel):
-    id: int
-    title: str
-    sub_chapters: Optional[List[SubChapter]] = None
-    file: str
-
-
-class TextbookInfo(BaseModel):
-    id: str
-    title: str
-    chapters: List[Chapter]
-    filepath: str
-    subject: Optional[str] = None
-    created_at: Optional[datetime] = None
-    cover: Optional[str] = None
-
-
-PUBLIC_DIR = "./public"
-
-
 @router.get("/api/textbooks")
-async def get_textbooks():
+async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
     """Get all available textbooks."""
-    available_textbooks: List[TextbookInfo] = []
+    print(f"get_textbooks: user {user_uuid}")
+    # Check if user is authenticated
+    is_authenticated = False
+    available_textbooks = []
+    message = "Sign in to see your textbooks!"
 
-    # Local storage for textbooks, we need to switch to a database later
-    TEXTBOOK_DIR = os.path.join(PUBLIC_DIR, "textbooks")
+    if user_uuid:
+        is_authenticated = True
+        # Get the textbooks the user has access to
+        user_textbooks_document = await get_document("user_books", user_uuid)
+        if(user_textbooks_document is None):
+            user_textbooks_document = {}
 
-    # Temporary textbook retrieval method
-    try:
-        for item in os.listdir(TEXTBOOK_DIR):
-            dir_path = os.path.join(TEXTBOOK_DIR, item)
+        user_textbook_ids = user_textbooks_document.get("textbooks", [])
+        print(f"User {user_uuid} has the following textbooks -> {user_textbook_ids}")
 
-            # Check if it's a directory
-            if os.path.isdir(dir_path):
-                metadata_path = os.path.join(dir_path, "metadata.json")
+        try:
+            for textbook_id in user_textbook_ids:
+                # TODO: We should promise.all this later
+                textbook_metadata = await get_document_by_field("textbooks", "_id", textbook_id)
+                available_textbooks.append(TextbookInfo(
+                    id=textbook_metadata.get("_id"),
+                    title=textbook_metadata.get("title"),
+                    chapters=textbook_metadata.get("chapters"),
+                    filepath=textbook_metadata.get("filepath"),
+                    subject=textbook_metadata.get("subject"),
+                    created_at=textbook_metadata.get("created_at"),
+                    cover=textbook_metadata.get("cover"),
+                ))
+        except Exception as e:
+            logger.error(f"Error getting textbook metadata for {textbook_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error getting textbook metadata for {textbook_id}: {str(e)}")
 
-                # Check if metadata.json exists
-                if os.path.isfile(metadata_path):
-                    try:
-                        with open(metadata_path, 'r', encoding='utf-8') as f:
-                            metadata = json.load(f)
-                            available_textbooks.append(TextbookInfo(
-                                id=metadata.get("_id"),
-                                title=metadata.get("title"),
-                                chapters=metadata.get("chapters"),
-                                filepath=metadata.get("filepath"),
-                                subject=metadata.get("subject"),
-                                created_at=metadata.get("created_at"),
-                                cover=metadata.get("cover"),
-                            ))
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Error parsing metadata.json for {item}: {str(e)}")
-                    except Exception as e:
-                        logger.error(f"Error reading metadata.json for {item}: {str(e)}")
-                else:
-                    logger.info(f"No metadata.json found for textbook directory: {item}")
-    except Exception as e:
-        logger.error(f"Error reading textbooks directory: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error reading textbooks directory: {str(e)}")
+    return TextbookResponse(
+        textbooks=available_textbooks,
+        is_authenticated=is_authenticated,
+        message=message
+    )
 
-    return available_textbooks
-
-
-@router.get("/api/textbooks/{textbook}")
-async def get_textbook_details(textbook: str, title: Optional[str] = Query(None)):
-    TEXTBOOK_DIR = os.path.join(PUBLIC_DIR, "textbooks", textbook)
-    metadata_path = os.path.join(TEXTBOOK_DIR, "metadata.json")
-    with open(metadata_path, 'r', encoding='utf-8') as f:
-        metadata = json.load(f)
+# TODO: These routes need to be protected
+@router.get("/api/textbooks/{textbook_uuid}")
+async def get_textbook_details(textbook_uuid: str):
+    metadata = await get_document_by_field("textbooks", "_id", textbook_uuid)
+    print(f"Textbook metadata: {metadata}")
+    if metadata is None:
+        raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
     return metadata
     
 
-@router.get("/api/textbooks/{textbook}/chapters")
-async def get_chapters(textbook: str, title: Optional[str] = Query(None)):
+@router.get("/api/textbooks/{textbook_uuid}/chapters")
+async def get_chapters(textbook_uuid: str):
     """Get available chapters for a textbook.
-
-    Expects textbooks to be located under public/textbooks/<textbook>/metadata.json
     and returns a consistent response shape: { "chapters": [...] }.
     """
-    # Ensure we look under the textbooks subdirectory
-    textbook_dir = os.path.join(PUBLIC_DIR, "textbooks", textbook)
+    textbook_metadata = await get_textbook_details(textbook_uuid)
+    chapters = textbook_metadata.get("chapters", [])
 
-    # Normalize the slashes for Unix based systems
-    print(f"Looking for chapters in: {textbook_dir}")
-
-
-    # Check if the directory exists
-    if not os.path.isdir(textbook_dir):
-        logger.error(f"Textbook directory not found: {textbook_dir}")
-        # Keep 404 for backward compatibility with previous logic
-        raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook}")
-
-    # Get the metadata.json file
-    metadata_path = os.path.join(textbook_dir, "metadata.json")
-    if not os.path.isfile(metadata_path):
-        logger.error(f"Metadata file not found: {metadata_path}")
-        raise HTTPException(status_code=404, detail=f"Metadata file not found for textbook: {textbook}")
-
-    # Load the metadata.json file
-    with open(metadata_path, 'r', encoding='utf-8') as f:
-        metadata = json.load(f)
-
-    # Get the chapters from the metadata.json file
-    chapters = metadata.get("chapters", [])
     return {"chapters": chapters}
 
-
-@router.get("/api/textbooks/{textbook_id}/chapters/{chapter_id}/pdf")
-async def get_chapter_pdf(textbook_id: str, chapter_id: str):
-    """Get the PDF file for a specific chapter by looking up the filename in metadata."""
+@router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
+async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
+    """Return a presigned URL to the chapter PDF stored in S3."""
+    print(f"Getting chapter PDF for {textbook_uuid} and {chapter_id}")
     try:
-        # Get the textbook directory
-        textbook_dir = os.path.join(PUBLIC_DIR, "textbooks", textbook_id)
-        
-        # Check if the directory exists
-        if not os.path.isdir(textbook_dir):
-            logger.error(f"Textbook directory not found: {textbook_dir}")
-            raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_id}")
+        # --- keep your metadata lookup ---
+        textbook_metadata = await get_textbook_details(textbook_uuid)
 
-        # Get the metadata.json file
-        metadata_path = os.path.join(textbook_dir, "metadata.json")
-        if not os.path.isfile(metadata_path):
-            logger.error(f"Metadata file not found: {metadata_path}")
-            raise HTTPException(status_code=404, detail=f"Metadata file not found for textbook: {textbook_id}")
-
-        # Load the metadata.json file
-        with open(metadata_path, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
-
-        # Find the chapter with the matching ID
-        chapters = metadata.get("chapters", [])
-        target_chapter = None
-        
-        for chapter in chapters:
-            if str(chapter.get("id")) == str(chapter_id):
-                target_chapter = chapter
-                break
-        
+        chapters = textbook_metadata.get("chapters", [])
+        target_chapter = next(
+            (c for c in chapters if str(c.get("id")) == str(chapter_id)), None
+        )
         if not target_chapter:
-            logger.error(f"Chapter {chapter_id} not found in textbook {textbook_id}")
+            logger.error(f"Chapter {chapter_id} not found in textbook {textbook_uuid}")
             raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found")
-        
-        # Get the PDF filename from the chapter metadata
+
         pdf_filename = target_chapter.get("file")
         if not pdf_filename:
             logger.error(f"No PDF file specified for chapter {chapter_id}")
             raise HTTPException(status_code=404, detail=f"No PDF file found for chapter {chapter_id}")
-        
-        # Construct the full path to the PDF
-        pdf_path = os.path.join(textbook_dir, pdf_filename)
-        
-        # Check if the PDF file exists
-        if not os.path.isfile(pdf_path):
-            logger.error(f"PDF file not found: {pdf_path}")
-            raise HTTPException(status_code=404, detail=f"PDF file not found: {pdf_filename}")
-        
-        # Return the relative URL path that the frontend can use
-        pdf_url = f"/textbooks/{textbook_id}/{pdf_filename}"
-        return {"pdf_url": pdf_url, "chapter_title": target_chapter.get("title", f"Chapter {chapter_id}")}
-        
+
+        # --- S3 path ---
+        key = f"{textbook_uuid}/{pdf_filename}"
+
+        # Optional existence check (network call) — run in threadpool to avoid blocking the event loop
+        try:
+            logger.info(f"Checking S3 object existence: bucket={S3_BUCKET}, key={key}, client_region={getattr(s3.meta, 'region_name', None)}")
+            await run_in_threadpool(lambda: s3.head_object(Bucket=S3_BUCKET, Key=key))
+        except ClientError as e:
+            response = getattr(e, "response", {}) or {}
+            error_info = response.get("Error", {}) or {}
+            code = str(error_info.get("Code") or "")
+            message = str(error_info.get("Message") or "")
+            request_id = (response.get("ResponseMetadata", {}) or {}).get("RequestId", "")
+            http_headers = (response.get("ResponseMetadata", {}) or {}).get("HTTPHeaders", {}) or {}
+            bucket_region = http_headers.get("x-amz-bucket-region", "")
+            client_region = getattr(s3.meta, "region_name", None)
+
+            logger.error(
+                "S3 head_object failed for s3://%s/%s [code=%s message=%s request_id=%s bucket_region=%s client_region=%s]",
+                S3_BUCKET,
+                key,
+                code,
+                message,
+                request_id,
+                bucket_region,
+                client_region,
+            )
+
+            if code in ("404", "NotFound", "NoSuchKey"):
+                raise HTTPException(status_code=404, detail=f"PDF file not found: {pdf_filename}")
+            if code in ("403", "AccessDenied"):
+                raise HTTPException(status_code=403, detail="Access denied to the PDF file in S3")
+            if code in ("NoSuchBucket",):
+                raise HTTPException(status_code=404, detail=f"S3 bucket not found: {S3_BUCKET}")
+            if code in ("PermanentRedirect", "AuthorizationHeaderMalformed"):
+                hint_region = bucket_region or error_info.get("Region", "")
+                logger.error(
+                    "Likely S3 region mismatch. Bucket region=%s, client region=%s",
+                    hint_region,
+                    client_region,
+                )
+                raise HTTPException(status_code=500, detail="S3 region mismatch; check bucket region and client configuration")
+            raise HTTPException(status_code=500, detail=f"Error checking PDF in S3: {code or 'UnknownError'}")
+
+        # Generate a presigned URL so the browser can open the PDF inline
+        url = s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": S3_BUCKET,
+                "Key": key,
+                "ResponseContentType": "application/pdf",
+                "ResponseContentDisposition": f'inline; filename="{pdf_filename}"',
+            },
+            ExpiresIn=3600,  # seconds
+        )
+        print(f"Generated presigned URL for {pdf_filename}: {url}")
+
+        return {
+            "pdf_url": url,
+            "chapter_title": target_chapter.get("title", f"Chapter {chapter_id}")
+        }
+
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
     except Exception as e:
         logger.error(f"Error getting chapter PDF: {str(e)}")

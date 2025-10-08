@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 PUBLIC_DIR = "./public"
 
-
+# DEPRECIATED
 @router.get("/api/pdf/{textbook}/{chapter}")
 async def get_pdf(textbook: str, chapter: int):
     """Serve a PDF file for a specific textbook chapter."""

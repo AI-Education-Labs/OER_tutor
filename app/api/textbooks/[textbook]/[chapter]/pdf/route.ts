@@ -9,7 +9,7 @@ export async function GET(
     const resolved = await params
     const { id: textbook, chapterId } = resolved
 
-    const backendUrl = process.env.BACKEND_URL
+    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
     if (!backendUrl) {
       return NextResponse.json({ error: "Backend URL not configured" }, { status: 500 })
     }
@@ -22,7 +22,10 @@ export async function GET(
       return NextResponse.json({ error: `Backend error ${response.status}` }, { status: response.status })
     }
 
+    console.log("Response:", response)
+
     const data = await response.json()
+    console.log("Data:", data)
     return NextResponse.json(data)
   } catch (error) {
     console.error("Error fetching chapter PDF:", error)
