@@ -6,12 +6,17 @@ from pydantic import BaseModel
 from backend.db.database import get_document, get_document_by_field
 from backend.features.auth.service import validate_access_token_optional
 import boto3
+import logging
 from botocore.exceptions import ClientError
 from starlette.concurrency import run_in_threadpool
+from backend.config import settings
 
-S3_BUCKET = "textbooks-aie"
-# Create S3 client (will use your AWS credentials from aws configure or env vars)
-s3 = boto3.client("s3")
+S3_BUCKET = settings.S3_BUCKET
+S3_CLIENT_REGION = settings.S3_REGION or None
+if S3_CLIENT_REGION:
+    s3 = boto3.client("s3", region_name=S3_CLIENT_REGION)
+else:
+    s3 = boto3.client("s3")
 
 class TextbookResponse(BaseModel):
     textbooks: List[TextbookInfo]
@@ -109,14 +114,44 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
 
         # Optional existence check (network call) — run in threadpool to avoid blocking the event loop
         try:
+            logger.info(f"Checking S3 object existence: bucket={S3_BUCKET}, key={key}, client_region={getattr(s3.meta, 'region_name', None)}")
             await run_in_threadpool(lambda: s3.head_object(Bucket=S3_BUCKET, Key=key))
         except ClientError as e:
-            code = e.response.get("Error", {}).get("Code", "")
+            response = getattr(e, "response", {}) or {}
+            error_info = response.get("Error", {}) or {}
+            code = str(error_info.get("Code") or "")
+            message = str(error_info.get("Message") or "")
+            request_id = (response.get("ResponseMetadata", {}) or {}).get("RequestId", "")
+            http_headers = (response.get("ResponseMetadata", {}) or {}).get("HTTPHeaders", {}) or {}
+            bucket_region = http_headers.get("x-amz-bucket-region", "")
+            client_region = getattr(s3.meta, "region_name", None)
+
+            logger.error(
+                "S3 head_object failed for s3://%s/%s [code=%s message=%s request_id=%s bucket_region=%s client_region=%s]",
+                S3_BUCKET,
+                key,
+                code,
+                message,
+                request_id,
+                bucket_region,
+                client_region,
+            )
+
             if code in ("404", "NotFound", "NoSuchKey"):
-                logger.error(f"S3 object not found: s3://{S3_BUCKET}/{key}")
                 raise HTTPException(status_code=404, detail=f"PDF file not found: {pdf_filename}")
-            logger.exception("S3 head_object failed")
-            raise HTTPException(status_code=500, detail="Error checking PDF in S3")
+            if code in ("403", "AccessDenied"):
+                raise HTTPException(status_code=403, detail="Access denied to the PDF file in S3")
+            if code in ("NoSuchBucket",):
+                raise HTTPException(status_code=404, detail=f"S3 bucket not found: {S3_BUCKET}")
+            if code in ("PermanentRedirect", "AuthorizationHeaderMalformed"):
+                hint_region = bucket_region or error_info.get("Region", "")
+                logger.error(
+                    "Likely S3 region mismatch. Bucket region=%s, client region=%s",
+                    hint_region,
+                    client_region,
+                )
+                raise HTTPException(status_code=500, detail="S3 region mismatch; check bucket region and client configuration")
+            raise HTTPException(status_code=500, detail=f"Error checking PDF in S3: {code or 'UnknownError'}")
 
         # Generate a presigned URL so the browser can open the PDF inline
         url = s3.generate_presigned_url(
