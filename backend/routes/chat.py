@@ -19,7 +19,7 @@ from backend.graph import get_system_prompt
 from backend.db.database import get_collection
 from backend.features.users.models import User
 from backend.features.auth.service import validate_access_token
-from backend.utils.textextract import text_extract
+from backend.routes.textbooks import get_chapter_text
 
 
 router = APIRouter()
@@ -117,9 +117,7 @@ async def update_conversation_summary(user_id: str, session_id: str):
 
 async def get_textbook_context(textbook_id: str, chapter_id: str) -> str:
    try:
-       pdf_path = f"./public/textbooks/{textbook_id}/chapter{chapter_id}_repaired.pdf"
-       text = text_extract(pdf_path)
-       return text
+       return await get_chapter_text(textbook_id, chapter_id)
    except Exception as e:
        print(f"Error retrieving textbook context: {e}")
        return ""
