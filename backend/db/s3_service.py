@@ -2,6 +2,7 @@ import boto3
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 from botocore.exceptions import ClientError
+from botocore.config import Config
 from backend.config import settings
 
 S3_BUCKET = settings.S3_BUCKET
@@ -9,14 +10,58 @@ AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY
 
 S3_CLIENT_REGION = settings.S3_REGION or None
+S3_SIGV4_CONFIG = Config(signature_version="s3v4")
+
+# Prefer default credential chain (Lambda/EC2 role, env, shared config) so
+# Lambda receives temporary creds with a session token and SigV4.
+import os as _os
+IS_LAMBDA = bool(_os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+_endpoint_url = None
 if S3_CLIENT_REGION:
-    if(AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY):
-        s3 = boto3.client("s3", region_name=S3_CLIENT_REGION, aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-    else:
-        raise Exception("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are not set")
+	_endpoint_url = f"https://s3.{S3_CLIENT_REGION}.amazonaws.com"
+
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and not IS_LAMBDA:
+	# Use static keys only outside Lambda
+	s3 = boto3.client(
+		"s3",
+		region_name=S3_CLIENT_REGION,
+		aws_access_key_id=AWS_ACCESS_KEY_ID,
+		aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+		endpoint_url=_endpoint_url,
+		config=S3_SIGV4_CONFIG,
+	)
 else:
-    s3 = boto3.client("s3")
+	# Default chain (role creds in Lambda), force regional endpoint and SigV4
+	s3 = boto3.client(
+		"s3",
+		region_name=S3_CLIENT_REGION,
+		endpoint_url=_endpoint_url,
+		config=S3_SIGV4_CONFIG,
+	)
+
+# Diagnostics: log client configuration and credential shape (no secrets)
+try:
+	import botocore as _botocore  # local import to avoid global dependency if absent
+	_session = boto3.session.Session()
+	_creds_obj = _session.get_credentials()
+	_has_creds = bool(_creds_obj)
+	_has_session_token = False
+	if _creds_obj:
+		_frozen = _creds_obj.get_frozen_credentials()
+		_has_session_token = bool(getattr(_frozen, "token", None))
+	_sigv = getattr(s3.meta.config, "signature_version", None)
+	_endpoint = getattr(s3.meta, "endpoint_url", None)
+	_region = S3_CLIENT_REGION or "default"
+	_boto3_ver = getattr(boto3, "__version__", "unknown")
+	_botocore_ver = getattr(_botocore, "__version__", "unknown")
+	# Use print to surface logs even before logging is configured in Lambda
+	print(
+		f"S3 client diagnostics: region={_region}, endpoint={_endpoint}, signature_version={_sigv}, "
+		f"boto3={_boto3_ver}, botocore={_botocore_ver}, has_creds={_has_creds}, has_session_token={_has_session_token}"
+	)
+except Exception:
+	# Best-effort diagnostics; never fail module import
+	pass
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +104,20 @@ def generate_presigned_get_url(
 		params["ResponseContentType"] = response_content_type
 	if response_content_disposition:
 		params["ResponseContentDisposition"] = response_content_disposition
+	# Log presign context (no secrets)
+	try:
+		_session = boto3.session.Session()
+		_creds_obj = _session.get_credentials()
+		_has_session_token = False
+		if _creds_obj:
+			_frozen = _creds_obj.get_frozen_credentials()
+			_has_session_token = bool(getattr(_frozen, "token", None))
+		print(
+			f"Presigning S3 GET: bucket={bucket_name} key={key} sigv={getattr(s3.meta.config, 'signature_version', None)} "
+			f"endpoint={getattr(s3.meta, 'endpoint_url', None)} has_session_token={_has_session_token}"
+		)
+	except Exception:
+		pass
 	return s3.generate_presigned_url(
 		ClientMethod="get_object",
 		Params=params,

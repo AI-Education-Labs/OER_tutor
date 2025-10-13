@@ -19,7 +19,10 @@ from backend.db.database import ensure_mongo_connection
 
 from dotenv import load_dotenv
 from pathlib import Path
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+import os
+# Only load local .env during development (not in Lambda)
+if not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+	load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

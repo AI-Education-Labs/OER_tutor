@@ -178,13 +178,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       description: "Chat with AI about the textbook content and your highlights",
     },
     {
-      id: "chat",
-      label: "Socratic Dialogue",
-      icon: MessageSquare,
-      content: "chat",
-      description: "Explore concepts through guided questions and discovery",
-    },
-    {
       id: "quiz",
       label: "Concept Checks",
       icon: Brain,
@@ -197,13 +190,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       icon: CreditCard,
       content: "flashcards",
       description: "Practice key concepts with spaced repetition",
-    },
-    {
-      id: "notes",
-      label: "Study Notes",
-      icon: FileText,
-      content: "notes",
-      description: "AI-generated and personal study notes",
     },
     {
       id: "concepts",
@@ -226,6 +212,22 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       icon: BarChart3,
       content: "progress",
       description: "Monitor your learning progress and analytics",
+      disabled: true,
+    },
+    {
+      id: "chat",
+      label: "Socratic Dialogue",
+      icon: MessageSquare,
+      content: "chat",
+      description: "Explore concepts through guided questions and discovery",
+      disabled: true,
+    },
+    {
+      id: "notes",
+      label: "Study Notes",
+      icon: FileText,
+      content: "notes",
+      description: "AI-generated and personal study notes",
       disabled: true,
     },
   ]
