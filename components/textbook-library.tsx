@@ -71,27 +71,15 @@ export function TextbookLibrary() {
     loadTextbooks()
   }, [])
 
-
-  const searchResults = [
-    {
-      id: "3",
-      title: "Organic Chemistry",
-      author: "Paula Bruice",
-      subject: "Chemistry",
-      cover: "/placeholder.svg?height=200&width=150&query=organic chemistry textbook",
-    },
-    {
-      id: "4",
-      title: "Physics for Scientists and Engineers",
-      author: "Raymond Serway",
-      subject: "Physics",
-      cover: "/placeholder.svg?height=200&width=150&query=physics textbook",
-    },
-  ]
-
-  const addTextbook = (textbook: Textbook) => {
-    setMyTextbooks([...myTextbooks, { ...textbook, progress: 0 }])
-  }
+  const filteredTextbooks = myTextbooks.filter((book) => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return true
+    return (
+      book.title.toLowerCase().includes(q) ||
+      book.author.toLowerCase().includes(q) ||
+      book.subject.toLowerCase().includes(q)
+    )
+  })
 
   return (
     <div className="min-h-screen bg-[#1e1e1e] text-[#cccccc]">
@@ -125,7 +113,7 @@ export function TextbookLibrary() {
         <div className="mb-12">
           <h2 className="text-lg font-medium mb-4 text-[#ffffff] flex items-center gap-2">
             <BookOpen className="w-5 h-5" />
-            My Textbooks ({myTextbooks.length})
+            My Textbooks ({filteredTextbooks.length})
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -141,7 +129,7 @@ export function TextbookLibrary() {
               </Card>
             )}
 
-            {myTextbooks.map((book) => (
+            {filteredTextbooks.map((book) => (
               <Link key={book.id} href={`/study/${book.id}`}>
                 <Card className="bg-[#2d2d30] border-[#3e3e42] hover:border-[#007acc] transition-colors cursor-pointer group">
                   <CardContent className="p-4">
@@ -200,52 +188,6 @@ export function TextbookLibrary() {
           </div>
         </div>
 
-        {/* Search Results */}
-        {searchQuery && (
-          <div>
-            <h2 className="text-lg font-medium mb-4 text-[#ffffff] flex items-center gap-2">
-              <Search className="w-5 h-5" />
-              Search Results
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {searchResults
-                .filter(
-                  (book) =>
-                    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    book.subject.toLowerCase().includes(searchQuery.toLowerCase()),
-                )
-                .map((book) => (
-                  <Card
-                    key={book.id}
-                    className="bg-[#2d2d30] border-[#3e3e42] hover:border-[#007acc] transition-colors"
-                  >
-                    <CardContent className="p-4">
-                      <img
-                        src={book.cover || "/placeholder.svg"}
-                        alt={book.title}
-                        className="w-full h-32 object-cover rounded mb-3"
-                      />
-
-                      <h3 className="font-medium text-sm mb-1 text-[#ffffff] line-clamp-2">{book.title}</h3>
-                      <p className="text-xs text-[#969696] mb-2">{book.author}</p>
-                      <p className="text-xs text-[#4ec9b0] mb-3">{book.subject}</p>
-
-                      <Button
-                        onClick={() => addTextbook(book)}
-                        size="sm"
-                        className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white text-xs"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add to Library
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          </div>
-        )}
 
         {/* Add Textbook Modal */}
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
