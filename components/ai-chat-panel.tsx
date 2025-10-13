@@ -171,9 +171,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const [messageSinceTitleUpdate, setMessageSinceTitleUpdate] = useState(0);
 
   // Scroll on new message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  // }, [messages])
 
   // Save chat
   useEffect(() => saveChatToSession(messages, messageCount), [messages, messageCount])
@@ -308,6 +308,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     setMessageCount((prev) => prev + 1)
     setInput("")
     setIsLoading(true)
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 0)
 
     try {
       const token = localStorage.getItem("access_token")
