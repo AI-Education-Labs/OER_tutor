@@ -17,6 +17,10 @@ import mangum
 
 from backend.db.database import ensure_mongo_connection
 
+from dotenv import load_dotenv
+from pathlib import Path
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

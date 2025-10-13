@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     S3_REGION: str = ""
 
     # LLM / Providers
-    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: str = None
     LANGCHAIN_API_KEY: Optional[str] = None
 
     # Qdrant settings

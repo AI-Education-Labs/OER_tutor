@@ -3,14 +3,13 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from openai import OpenAI
 from backend.config import settings
-from backend.utils.textextract import text_extract_with_save
-import os
+from backend.routes.textbooks import get_chapter_text
 
 router = APIRouter()
 
 
 def get_openai_client() -> OpenAI:
-    api_key = settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+    api_key = settings.OPENAI_API_KEY
     try:
         if api_key:
             return OpenAI(api_key=api_key)
@@ -72,15 +71,14 @@ async def generate_quiz(body: QuizRequest):
 
     system_prompt = f"You are a helpful tutor for a student currently studying a textbook. Help create a formatted quiz for the student. Each question should be a multiple choice question with four options and one correct answer. The options should be realistic but clearly wrong to someone who understands the material. Generate a multiple choice quiz with {num_questions} questions based on the following their current chapter: "
 
-    chapter_path = "public/textbooks/" + textbook_id + "/chapter" + chapter
-
-    # Get the text from the chapter
+    # Get the text from the chapter stored in S3 via shared helper
     chapter_text = ""
-    if os.path.exists(chapter_path + ".txt"):
-        with open(chapter_path + ".txt", "r", encoding="utf-8", errors="replace") as file:
-            chapter_text = file.read()
-    else:
-        chapter_text = text_extract_with_save(chapter_path + ".pdf")
+    try:
+        chapter_text = await get_chapter_text(textbook_id, chapter)
+    except HTTPException as e:
+        raise e
+    except Exception:
+        chapter_text = ""
 
     if(chapter_text == ""):
         raise HTTPException(status_code=500, detail="Error extracting text from chapter")
@@ -144,15 +142,14 @@ async def generate_flashcard(body: FlashcardRequest):
 
     system_prompt = f"You are a helpful tutor for a student currently studying a textbook. Help create a deck of flashcards quiz for the student. You will represent the flashcard deck in two arrays of equal size, one representing the front sides of the flashcards and one representing the backside of the flashcard. Use the flashcards to help the student learn and understand keywords, terms, and condensed concepts. Be sure to keep the order for the front and the back of the flashcard arrays respective of each other, e.g. Index 1 of the front array should correspond to the answer of Index 1 of the back array. Generate a deck of flashcards with {num_flashcards} flashcards based on the current chapter: "
 
-    chapter_path = "public/textbooks/" + textbook_id + "/chapter" + chapter 
-
-    # Get the text from the chapter
+    # Get the text from the chapter stored in S3 via shared helper
     chapter_text = ""
-    if os.path.exists(chapter_path + ".txt"):
-        with open(chapter_path + ".txt", "r", encoding="utf-8", errors="replace") as file:
-            chapter_text = file.read()
-    else:
-        chapter_text = text_extract_with_save(chapter_path + ".pdf")
+    try:
+        chapter_text = await get_chapter_text(textbook_id, chapter)
+    except HTTPException as e:
+        raise e
+    except Exception:
+        chapter_text = ""
 
     print("chapter_text:", chapter_text)
 
