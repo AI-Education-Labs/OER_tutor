@@ -212,6 +212,46 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
 
       setChapters(chapterList)
       setTextbookData(textbookInfo)
+
+      // Background: merge server progress if available (do not block UI)
+      ;(async () => {
+        try {
+          const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+          if (!token) return
+          const resp = await fetch(`/api/user/progress/${encodeURIComponent(textbookId)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            cache: "no-store",
+          })
+          if (!resp.ok) return
+          const server = await resp.json()
+          const chaptersProgress: Record<string, number> = (server?.chapters as any) || {}
+          if (!chaptersProgress || typeof chaptersProgress !== "object") return
+
+          setChapters((prev) =>
+            prev.map((c) => ({
+              ...c,
+              progress: Math.max(
+                0,
+                Math.min(100, Math.round(Math.max(Number(chaptersProgress[c.id] ?? 0), Number(c.progress ?? 0))))),
+            })),
+          )
+
+          setTextbookData((prev) => {
+            if (!prev) return prev
+            const updated = prev.chapters.map((c) => ({
+              ...c,
+              progress: Math.max(
+                0,
+                Math.min(100, Math.round(Math.max(Number(chaptersProgress[c.id] ?? 0), Number(c.progress ?? 0))))),
+            }))
+            const total = updated.reduce((sum, c) => sum + c.progress, 0)
+            const overall = updated.length > 0 ? total / updated.length : 0
+            return { ...prev, chapters: updated, overall_progress: overall }
+          })
+        } catch {
+          // ignore server errors
+        }
+      })()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load textbook data"
       setError(errorMessage)

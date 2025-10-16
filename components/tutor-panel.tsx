@@ -237,34 +237,10 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingContent, setEditingContent] = useState("")
 
-  const [keyConcepts] = useState([
-    {
-      id: "concept-1",
-      title: "Limit Definition",
-      description: "The fundamental concept of limits in calculus",
-      mastery: 85,
-      lastReviewed: "Today",
-    },
-    {
-      id: "concept-2",
-      title: "Continuity",
-      description: "When a function has no breaks or jumps",
-      mastery: 70,
-      lastReviewed: "Yesterday",
-    },
-    {
-      id: "concept-3",
-      title: "Squeeze Theorem",
-      description: "A technique for evaluating limits using bounds",
-      mastery: 45,
-      lastReviewed: "3 days ago",
-    },
-  ])
-
   const [chatContext, setChatContext] = useState<ChatContext>({
-    currentChapter: "Chapter 1: What is Physics?",
-    currentSection: "Physics: Definitions and Applications",
-    pageNumber: 1,
+    textbookId: "1",
+    chapterId: "1",
+    sessionId: "1",
   })
 
   const handleElementHover = (e: React.MouseEvent, id: string, text: string, selector = ".truncated-text") => {
@@ -755,7 +731,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
   )
 
   const renderKeyConceptsTab = () => (
-    <KeyConceptsPanel textbookId={textbookId} />
+    <KeyConceptsPanel textbookId={textbookId} selectedChapterId={selectedChapterId} />
   )
 
   const tabContent = {

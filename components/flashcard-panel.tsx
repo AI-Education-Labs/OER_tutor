@@ -5,6 +5,8 @@ import { Loader2, Shuffle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { toast } from "@/components/ui/use-toast"
 
 interface Flashcard {
   front: string
@@ -26,6 +28,50 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   const [showBack, setShowBack] = useState<boolean>(false)
   const [defaultFront, setDefaultFront] = useState<boolean>(true) // true = Original(front), false = Flipped(back)
   const [numCards, setNumCards] = useState<number>(5)
+  const [previousDecks, setPreviousDecks] = useState<any[]>([])
+  const [prevLoading, setPrevLoading] = useState<boolean>(false)
+  const [prevError, setPrevError] = useState<string>("")
+
+  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quizzes" | "notes"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
+    const handleDelete = async (e: React.MouseEvent) => {
+      e.stopPropagation()
+      try {
+        // Optimistic remove
+        onOptimisticRemove(id, item)
+        const resp = await fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" })
+        if (!resp.ok) {
+          onFailureRestore(id, item)
+          toast({ title: "Delete failed", description: `Could not delete. Please try again. (${resp.status})` })
+        }
+      } catch (err) {
+        onFailureRestore(id, item)
+        toast({ title: "Delete failed", description: "Could not delete. Please try again." })
+      }
+    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="w-6 h-6 rounded hover:bg-[#4b4b4b] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="More options"
+            title="More options"
+          >
+            <span className="block w-[2px] h-[14px] bg-[#9e9e9e] relative">
+              <span className="absolute left-0 top-0 w-[2px] h-[2px] bg-[#9e9e9e]"></span>
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[2px] bg-[#9e9e9e]"></span>
+              <span className="absolute left-0 bottom-0 w-[2px] h-[2px] bg-[#9e9e9e]"></span>
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
+          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-[#3e3e42]">
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
 
   // Load subchapters for the currently selected chapter
   useEffect(() => {
@@ -70,6 +116,92 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       isCancelled = true
     }
   }, [textbookId, selectedChapterId])
+
+  // Load user's previously generated decks when entering menu
+  useEffect(() => {
+    let isCancelled = false
+    if (stage !== "menu") return
+    const load = async () => {
+      try {
+        setPrevLoading(true)
+        setPrevError("")
+        const resp = await fetch("/api/flashcards", { cache: "no-store" })
+        if (!resp.ok) {
+          if (resp.status === 401 || resp.status === 403) {
+            if (!isCancelled) {
+              setPreviousDecks([])
+              setPrevError("Your session has expired. Please log in again.")
+            }
+            return
+          }
+          const msg = `Failed to fetch decks (${resp.status})`
+          throw new Error(msg)
+        }
+        const data = await resp.json()
+        if (!isCancelled) setPreviousDecks(Array.isArray(data) ? data : [])
+      } catch {
+        if (!isCancelled) {
+          setPreviousDecks([])
+          setPrevError("Could not load previous decks. Make sure you are logged in.")
+        }
+      } finally {
+        if (!isCancelled) setPrevLoading(false)
+      }
+    }
+    load()
+    return () => {
+      isCancelled = true
+    }
+  }, [stage])
+
+  const reloadPrev = async () => {
+    setStage((s) => s) // noop to keep stage
+    try {
+      setPrevLoading(true)
+      setPrevError("")
+      const resp = await fetch("/api/flashcards", { cache: "no-store" })
+      if (!resp.ok) {
+        if (resp.status === 401 || resp.status === 403) {
+          setPreviousDecks([])
+          setPrevError("Your session has expired. Please log in again.")
+          return
+        }
+        throw new Error()
+      }
+      const data = await resp.json()
+      setPreviousDecks(Array.isArray(data) ? data : [])
+    } catch {
+      setPreviousDecks([])
+      setPrevError("Could not load previous decks. Make sure you are logged in.")
+    } finally {
+      setPrevLoading(false)
+    }
+  }
+
+  const loadDeck = (doc: any) => {
+    try {
+      const fronts: string[] = Array.isArray(doc?.flashcard?.flashcards_front) ? doc.flashcard.flashcards_front : []
+      const backs: string[] = Array.isArray(doc?.flashcard?.flashcards_back) ? doc.flashcard.flashcards_back : []
+      const length = Math.min(fronts.length, backs.length)
+      if (length === 0) return
+      const nextCards: Flashcard[] = Array.from({ length }, (_, i) => ({ front: String(fronts[i] ?? ""), back: String(backs[i] ?? "") }))
+      setCards(nextCards)
+      setCurrentIndex(0)
+      setShowBack(!defaultFront)
+      setStage("study")
+    } catch {
+      // ignore
+    }
+  }
+
+  const formatWhen = (ts?: number) => {
+    if (!ts) return ""
+    try {
+      return new Date(ts * 1000).toLocaleString()
+    } catch {
+      return String(ts)
+    }
+  }
 
   const startGeneration = async () => {
     setStage("loading")
@@ -212,6 +344,59 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           {!contextText && (
             <div className="text-xs text-[#969696]">Select a chapter to get started!</div>
           )}
+          <div className="pt-2 border-t border-[#3e3e42]">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-medium text-[#ffffff]">Previous Decks</h4>
+              {prevLoading && (
+                <div className="text-[10px] text-[#969696] flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Loading
+                </div>
+              )}
+            </div>
+            {prevError && <div className="text-[10px] text-[#ff6b6b] mb-2">{prevError}</div>}
+            {(!previousDecks || previousDecks.length === 0) && !prevLoading ? (
+              <div className="text-xs text-[#969696]">No saved decks yet</div>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-auto pr-1 show-scrollbar">
+              {previousDecks.map((d, idx) => {
+                  const count = Math.min(
+                    Array.isArray(d?.flashcard?.flashcards_front) ? d.flashcard.flashcards_front.length : 0,
+                    Array.isArray(d?.flashcard?.flashcards_back) ? d.flashcard.flashcards_back.length : 0
+                  )
+                  return (
+                  <div key={d?._id || idx} className="group relative">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      className="w-full text-left px-3 py-2 rounded bg-[#2d2d30] hover:bg-[#3e3e42] border border-[#3e3e42]"
+                      onClick={() => loadDeck(d)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); loadDeck(d) } }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-xs text-[#ffffff] truncate">{d?.hint || "Untitled deck"}</div>
+                          <div className="text-[10px] text-[#969696] truncate">{formatWhen(d?.created_time)}</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-[11px] text-[#cccccc] whitespace-nowrap">{count} cards</div>
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MenuButton
+                              id={d?._id}
+                              kind="flashcards"
+                              item={d}
+                              onOptimisticRemove={(id) => setPreviousDecks((prev) => prev.filter((x) => x?._id !== id))}
+                              onFailureRestore={(id, item) => setPreviousDecks((prev) => [item, ...prev])}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -302,8 +487,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
             <Button
               size="sm"
-              variant="outline"
-              className="border-[#3e3e42] text-[#cccccc] hover:text-[#ffffff] w-full sm:w-auto"
+              className="bg-[#3e3e42] text-[#ffffff] hover:bg-[#4a4a50] w-full sm:w-auto"
               onClick={goPrev}
               disabled={!canPrev}
             >

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { context, hint, num_flashcards, chapter, textbook_id } = await req.json()
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
@@ -13,9 +13,13 @@ export async function POST(req: Request) {
       num_flashcards: typeof num_flashcards === "number" ? num_flashcards : 5,
     }
 
+    const token = req.cookies.get("access_token")?.value
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    if (token) headers["Authorization"] = `Bearer ${token}`
+
     const resp = await fetch(`${backendUrl}/llm/api/flashcard/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     })
 

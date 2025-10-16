@@ -39,30 +39,6 @@ else:
 		config=S3_SIGV4_CONFIG,
 	)
 
-# Diagnostics: log client configuration and credential shape (no secrets)
-try:
-	import botocore as _botocore  # local import to avoid global dependency if absent
-	_session = boto3.session.Session()
-	_creds_obj = _session.get_credentials()
-	_has_creds = bool(_creds_obj)
-	_has_session_token = False
-	if _creds_obj:
-		_frozen = _creds_obj.get_frozen_credentials()
-		_has_session_token = bool(getattr(_frozen, "token", None))
-	_sigv = getattr(s3.meta.config, "signature_version", None)
-	_endpoint = getattr(s3.meta, "endpoint_url", None)
-	_region = S3_CLIENT_REGION or "default"
-	_boto3_ver = getattr(boto3, "__version__", "unknown")
-	_botocore_ver = getattr(_botocore, "__version__", "unknown")
-	# Use print to surface logs even before logging is configured in Lambda
-	print(
-		f"S3 client diagnostics: region={_region}, endpoint={_endpoint}, signature_version={_sigv}, "
-		f"boto3={_boto3_ver}, botocore={_botocore_ver}, has_creds={_has_creds}, has_session_token={_has_session_token}"
-	)
-except Exception:
-	# Best-effort diagnostics; never fail module import
-	pass
-
 logger = logging.getLogger(__name__)
 
 

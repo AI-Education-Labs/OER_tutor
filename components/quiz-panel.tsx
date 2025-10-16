@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { toast } from "@/components/ui/use-toast"
 
 interface GeneratedQuestion {
   question: string
@@ -30,6 +32,49 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
   const [timeSeconds, setTimeSeconds] = useState<number>(0)
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
   const [numQuestions, setNumQuestions] = useState<number>(5)
+  const [previousQuizzes, setPreviousQuizzes] = useState<any[]>([])
+  const [prevLoading, setPrevLoading] = useState<boolean>(false)
+  const [prevError, setPrevError] = useState<string>("")
+
+  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quizzes" | "notes"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
+    const handleDelete = async (e: React.MouseEvent) => {
+      e.stopPropagation()
+      try {
+        onOptimisticRemove(id, item)
+        const resp = await fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" })
+        if (!resp.ok) {
+          onFailureRestore(id, item)
+          toast({ title: "Delete failed", description: `Could not delete. Please try again. (${resp.status})` })
+        }
+      } catch {
+        onFailureRestore(id, item)
+        toast({ title: "Delete failed", description: "Could not delete. Please try again." })
+      }
+    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="w-6 h-6 rounded hover:bg-[#4b4b4b] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="More options"
+            title="More options"
+          >
+            <span className="block w-[2px] h-[14px] bg-[#9e9e9e] relative">
+              <span className="absolute left-0 top-0 w-[2px] h-[2px] bg-[#9e9e9e]"></span>
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[2px] bg-[#9e9e9e]"></span>
+              <span className="absolute left-0 bottom-0 w-[2px] h-[2px] bg-[#9e9e9e]"></span>
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
+          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-[#3e3e42]">
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
 
   // Load subchapters for the currently selected chapter
   useEffect(() => {
@@ -70,6 +115,50 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       isCancelled = true
     }
   }, [textbookId, selectedChapterId])
+
+  // Load user's previous quizzes when in menu
+  useEffect(() => {
+    let isCancelled = false
+    if (stage !== "menu") return
+    const load = async () => {
+      try {
+        setPrevLoading(true)
+        setPrevError("")
+        const resp = await fetch("/api/quizzes", { cache: "no-store" })
+        if (!resp.ok) {
+          if (resp.status === 401 || resp.status === 403) {
+            if (!isCancelled) {
+              setPreviousQuizzes([])
+              setPrevError("Your session has expired. Please log in again.")
+            }
+            return
+          }
+          throw new Error()
+        }
+        const data = await resp.json()
+        if (!isCancelled) setPreviousQuizzes(Array.isArray(data) ? data : [])
+      } catch {
+        if (!isCancelled) {
+          setPreviousQuizzes([])
+          setPrevError("Could not load previous quizzes. Make sure you are logged in.")
+        }
+      } finally {
+        if (!isCancelled) setPrevLoading(false)
+      }
+    }
+    load()
+    return () => { isCancelled = true }
+  }, [stage])
+
+  const loadQuiz = (doc: any) => {
+    try {
+      const list = Array.isArray(doc?.quiz) ? doc.quiz : []
+      if (!list.length) return
+      setQuestions(list)
+      setAnswers(new Array(list.length).fill(-1))
+      setStage("quiz")
+    } catch {}
+  }
 
   const startGeneration = async () => {
     setStage("loading")
@@ -247,6 +336,53 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
             </Button>
           </div>
           {!contextText && <div className="text-xs text-[#969696]">Select a chapter to get started!</div>}
+        <div className="pt-2 border-t border-[#3e3e42]">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-xs font-medium text-[#ffffff]">Previous Quizzes</h4>
+            {prevLoading && (
+              <div className="text-[10px] text-[#969696] flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading
+              </div>
+            )}
+          </div>
+          {prevError && <div className="text-[10px] text-[#ff6b6b] mb-2">{prevError}</div>}
+          {(!previousQuizzes || previousQuizzes.length === 0) && !prevLoading ? (
+            <div className="text-xs text-[#969696]">No saved quizzes yet</div>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-auto pr-1 show-scrollbar">
+              {previousQuizzes.map((d, idx) => (
+                <div key={d?._id || idx} className="group relative">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="w-full text-left px-3 py-2 rounded bg-[#2d2d30] hover:bg-[#3e3e42] border border-[#3e3e42]"
+                    onClick={() => loadQuiz(d)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); loadQuiz(d) } }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-xs text-[#ffffff] truncate">{d?.hint || "Untitled quiz"}</div>
+                        <div className="text-[10px] text-[#969696] truncate">{new Date((d?.created_time ?? 0) * 1000).toLocaleString()}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-[11px] text-[#cccccc] whitespace-nowrap">{Array.isArray(d?.quiz) ? d.quiz.length : 0} questions</div>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MenuButton
+                            id={d?._id}
+                            kind="quizzes"
+                            item={d}
+                            onOptimisticRemove={(id) => setPreviousQuizzes((prev) => prev.filter((x) => x?._id !== id))}
+                            onFailureRestore={(id, item) => setPreviousQuizzes((prev) => [item, ...prev])}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         </div>
       </div>
     )

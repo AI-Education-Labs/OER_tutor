@@ -81,6 +81,51 @@ export function PDFViewer({
   const pagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingServerUpdateRef = useRef<{ percent: number; page: number } | null>(null)
+  const lastSentRef = useRef<{ percent: number; page: number } | null>(null)
+  const suppressTrackingRef = useRef<boolean>(false)
+  const selectedChapterIdRef = useRef<string | undefined>(undefined)
+  const resumeAtMsRef = useRef<number>(0)
+  const firstTrackDoneRef = useRef<boolean>(false)
+
+  const sendProgressToServer = (percent: number, page: number, chapter: number) => {
+    try {
+      if (!textbookId || !currentChapterId) return
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+      if (!token) return
+      // Avoid duplicate sends for same payload
+      const last = lastSentRef.current
+      if (last && last.percent <= percent && last.page <= page) return
+
+      fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/chapter/${encodeURIComponent(String(currentChapterId))}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ percent, page, chapter }),
+        },
+      ).catch(() => {})
+      lastSentRef.current = { percent, page }
+    } catch {
+      // noop
+    }
+  }
+
+  const flushProgressUpdate = () => {
+    const pending = pendingServerUpdateRef.current
+    if (pending) {
+      sendProgressToServer(pending.percent, pending.page, Number(currentChapterId))
+      pendingServerUpdateRef.current = null
+    }
+  }
+
+  const scheduleDebouncedProgressUpdate = (percent: number, page: number) => {
+    pendingServerUpdateRef.current = { percent, page }
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      flushProgressUpdate()
+    }, 3000)
+  }
 
   useEffect(() => {
     const loadPDFJS = async () => {
@@ -112,6 +157,21 @@ export function PDFViewer({
 
   useEffect(() => {
     if (textbookId && selectedChapterId && pdfJsLoaded) {
+      // Reset per-chapter state to avoid carryover
+      setCurrentPage(1)
+      lastSentRef.current = null
+      pendingServerUpdateRef.current = null
+      suppressTrackingRef.current = true
+      selectedChapterIdRef.current = selectedChapterId
+      firstTrackDoneRef.current = false
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
+      // Ensure we start at top for the new chapter before rendering
+      try {
+        scrollContainerRef.current?.scrollTo({ top: 0 })
+      } catch {}
       loadChapterPDF(textbookId, selectedChapterId)
     }
   }, [textbookId, selectedChapterId, pdfJsLoaded])
@@ -126,6 +186,12 @@ export function PDFViewer({
 
     const updateProgress = () => {
       ticking = false
+      if (suppressTrackingRef.current) {
+        return
+      }
+      if (typeof performance !== "undefined" && performance.now() < (resumeAtMsRef.current || 0)) {
+        return
+      }
       const maxScrollable = container.scrollHeight - container.clientHeight
       if (maxScrollable <= 0) return
       const rawPercent = (container.scrollTop / maxScrollable) * 100
@@ -142,6 +208,21 @@ export function PDFViewer({
       }
 
       onProgressChange?.(clampedPercent)
+
+      // Only track when the PDF viewer is truly on the selected chapter and user has scrolled or percent > 0
+      if (!currentChapterId || String(currentChapterId) !== selectedChapterIdRef.current) {
+        return
+      }
+      const nearTop = container.scrollTop <= 1
+      if (!firstTrackDoneRef.current && nearTop && clampedPercent === 0) {
+        // Ignore the very first 0% update at load to avoid churn
+        firstTrackDoneRef.current = true
+        return
+      }
+      firstTrackDoneRef.current = true
+
+      // Schedule debounced server sync (Kindle-like)
+      scheduleDebouncedProgressUpdate(clampedPercent, newCurrentPage)
 
       try {
         const key = "readingProgress"
@@ -174,11 +255,24 @@ export function PDFViewer({
 
     container.addEventListener("scroll", onScroll, { passive: true })
     window.addEventListener("resize", updateProgress)
+    const onVisibility = () => {
+      if (document.hidden) {
+        flushProgressUpdate()
+      }
+    }
+    const onBeforeUnload = () => {
+      flushProgressUpdate()
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    window.addEventListener("beforeunload", onBeforeUnload)
     updateProgress()
 
     return () => {
       container.removeEventListener("scroll", onScroll as EventListener)
       window.removeEventListener("resize", updateProgress)
+      document.removeEventListener("visibilitychange", onVisibility)
+      window.removeEventListener("beforeunload", onBeforeUnload)
+      flushProgressUpdate()
     }
   }, [textbookId, currentChapterId, pdfDoc, currentPage, totalPages, onPageChange, onProgressChange])
 
@@ -203,11 +297,7 @@ export function PDFViewer({
     onPageChange?.(pageNumber, totalPages)
   }
 
-  useEffect(() => {
-    if (targetPage && pdfDoc && totalPages > 0) {
-      scrollToPage(targetPage)
-    }
-  }, [targetPage, pdfDoc, totalPages])
+  // Disable auto-jump to targetPage for now to avoid jumping before pages finish rendering
 
   const handleTextSelection = (e: React.MouseEvent<HTMLDivElement>) => {
     const selection = window.getSelection()
@@ -406,7 +496,28 @@ export function PDFViewer({
 
   useEffect(() => {
     if (pdfDoc) {
-      renderAllPages()
+      ;(async () => {
+        await renderAllPages()
+        // Re-enable tracking once pages are laid out
+        suppressTrackingRef.current = false
+        // Delay accepting updates slightly to avoid stale geometry
+        if (typeof performance !== "undefined") {
+          resumeAtMsRef.current = performance.now() + 500
+        } else {
+          resumeAtMsRef.current = Date.now() + 500
+        }
+        // Trigger an initial update at top (will compute ~0%)
+        try {
+          scrollContainerRef.current?.scrollTo({ top: 0 })
+        } catch {}
+        // Let the scroll/resize listener compute next frame
+        requestAnimationFrame(() => {
+          try {
+            const evt = new Event("resize")
+            window.dispatchEvent(evt)
+          } catch {}
+        })
+      })()
     }
   }, [pdfDoc])
 
