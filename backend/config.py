@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "your-secret-key"  # Change in production
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 5000
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 50000
     
     # Database settings
     MONGO_URI: str = ""
