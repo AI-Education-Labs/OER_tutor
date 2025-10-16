@@ -61,16 +61,19 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
         try:
             for textbook_id in user_textbook_ids:
                 # TODO: We should promise.all this later
-                textbook_metadata = await get_document_by_field("textbooks", "_id", textbook_id)
-                available_textbooks.append(TextbookInfo(
-                    id=textbook_metadata.get("_id"),
-                    title=textbook_metadata.get("title"),
-                    chapters=textbook_metadata.get("chapters"),
-                    filepath=textbook_metadata.get("filepath"),
-                    subject=textbook_metadata.get("subject"),
-                    created_at=textbook_metadata.get("created_at"),
-                    cover=textbook_metadata.get("cover"),
-                ))
+                if textbook_id is None:
+                    continue
+                else:
+                    textbook_metadata = await get_document_by_field("textbooks", "_id", textbook_id)
+                    available_textbooks.append(TextbookInfo(
+                        id=textbook_metadata.get("_id"),
+                        title=textbook_metadata.get("title"),
+                        chapters=textbook_metadata.get("chapters"),
+                        filepath=textbook_metadata.get("filepath"),
+                        subject=textbook_metadata.get("subject"),
+                        created_at=textbook_metadata.get("created_at"),
+                        cover=textbook_metadata.get("cover"),
+                    ))
         except Exception as e:
             logger.error(f"Error getting textbook metadata for {textbook_id}: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error getting textbook metadata for {textbook_id}: {str(e)}")

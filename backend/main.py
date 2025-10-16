@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import asyncio
+from dotenv import load_dotenv
 
 from backend.routes.auth import router as auth_router
 from backend.routes.llm_utils import router as llm_utils_router
@@ -14,6 +15,10 @@ from backend.routes.chat import router as chat_router
 from backend.routes.user_books import router as user_books_router
 
 import mangum
+
+from dotenv import load_dotenv
+from pathlib import Path
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 from backend.db.database import ensure_mongo_connection
 
