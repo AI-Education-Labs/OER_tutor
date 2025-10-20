@@ -47,4 +47,3 @@ amplifyconfiguration*
 # AWS SAM
 .aws-sam/
 samconfig.toml
-template.yaml
