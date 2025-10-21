@@ -166,14 +166,13 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
         byTextbook = {}
       }
 
-      const chapterList = chaptersArray.map((c: any) => {
+        const chapterList = chaptersArray.map((c: any) => {
         const id = String(c.id ?? "")
         const stored = Number(byTextbook[id] ?? 0)
 
         const sections: Section[] = (c.sub_chapters || []).map((subChapter: any, index: number) => {
           let title: string
           let pageOffset = 0
-
           if (typeof subChapter === "string") {
             title = subChapter
             pageOffset = 0
@@ -184,7 +183,6 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
             title = `Section ${index + 1}`
             pageOffset = 0
           }
-
           return {
             id: `${id}-${index + 1}`,
             title,
@@ -469,7 +467,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
                           {section.title}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <div className="text-[10px] text-[#969696]">Page {section.page}</div>
+                          <div className="text-[10px] text-[#969696]">Page {pageOffset}</div>
                           {section.progress !== undefined && section.progress > 0 && (
                             <div className="text-[10px] text-[#007acc]">{Math.round(section.progress)}%</div>
                           )}

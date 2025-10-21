@@ -96,14 +96,15 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
           }
           const rawSubs = current_chapter?.sub_chapters ?? []
           const subs: string[] = Array.isArray(rawSubs)
-            ? rawSubs.map((s: any) => (typeof s === "string" ? s : String(s?.title ?? ""))).filter((s: string) => s)
+            ? rawSubs.map((s: any) => (typeof s === "string" ? (s === "Introduction" ? '' : s) 
+            : String(s?.title === "Introduction" ? "" : String(s?.title ?? "")))).filter((s: string) => s)
             : []
           if (!isCancelled) {
             setSubchapters(subs)
             setContextText(`context-ready:${selectedChapterId}`)
-            if (!selectedSubchapter && subs.length > 0) {
-              setSelectedSubchapter(subs[0])
-            }
+            // if (!selectedSubchapter && subs.length > 0) {
+            //   setSelectedSubchapter(subs[0])
+            // }
           }
         }
       } catch {
@@ -331,7 +332,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
           </div>
 
           <div className="flex gap-2 justify-center">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!contextText}>
+            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!selectedSubchapter}>
               Generate Quiz
             </Button>
           </div>

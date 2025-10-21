@@ -94,7 +94,8 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           }
           const rawSubs = current_chapter?.sub_chapters ?? []
           const sub_chapters: string[] = Array.isArray(rawSubs)
-            ? rawSubs.map((s: any) => (typeof s === "string" ? s : String(s?.title ?? ""))).filter((s: string) => s)
+            ? rawSubs.map((s: any) => (typeof s === "string" ? (s === "Introduction" ? '' : s) 
+            : String(s?.title === "Introduction" ? "" : String(s?.title ?? "")))).filter((s: string) => s)
             : []
           console.log("Subs:", sub_chapters);
           if (!isCancelled) {
@@ -102,9 +103,9 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
             // Enable generation UI by marking context as available for this chapter
             setContextText(`context-ready:${selectedChapterId}`)
             // Default select first subchapter if none selected
-            if (!selectedSubchapter && sub_chapters.length > 0) {
-              setSelectedSubchapter(sub_chapters[0])
-            }
+            // if (!selectedSubchapter && sub_chapters.length > 0) {
+            //   setSelectedSubchapter(sub_chapters[0])
+            // }
           }
         }
       } catch {
@@ -337,7 +338,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           </div>
 
           <div className="flex gap-2 justify-center">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!contextText}>
+            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!selectedSubchapter}>
               Generate Flashcards
             </Button>
           </div>
