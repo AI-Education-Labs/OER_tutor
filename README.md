@@ -1,5 +1,5 @@
 # OER_tutor
-Tutor for OpenStax textbooks
+Tutor for setting up OpenStax textbooks
 
 ## Configuration 
 You **MUST** create a .env file in the backend directory, there is a .env.example file as a template.

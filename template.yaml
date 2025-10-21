@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: OER Tutor - FastAPI backend deployed as AWS Lambda container image
+
+Parameters:
+  Env:
+    Type: String
+    AllowedValues: [dev, prod]
+    Default: dev
+  ProjectName:
+    Type: String
+    Default: oertutor
+  SecretName:
+    Type: String
+    Default: devEnvironmentVariables
+  S3BucketName:
+    Type: String
+    Default: textbooks-aie
+  S3BucketRegion: 
+    Type: String
+    Default: us-west-2
+
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowHeaders: ['*']
+        AllowMethods: ['*']
+
+  FastApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Timeout: 30
+      MemorySize: 1024
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref S3BucketName
+      Events:
+        ProxyApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+        Root:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /
+            Method: ANY
+      ImageConfig:
+        Command:
+          - backend.main.handler
+      Environment:
+        Variables:
+          MONGO_URI:         !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:MONGO_URI}}"
+          MONGO_DB_NAME:     !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:MONGO_DB_NAME}}"
+          OPENAI_API_KEY:    !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:OPENAI_API_KEY}}"
+          LANGCHAIN_API_KEY: !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:LANGCHAIN_API_KEY}}"
+
+          S3_BUCKET: !Ref S3BucketName
+          S3_REGION: !Ref S3BucketRegion
+
+    Metadata:
+      DockerContext: ./backend
+      Dockerfile: Dockerfile
+      DockerTag: fastapi-lambda
+
+Outputs:
+  HttpApiUrl:
+    Description: HTTP API URL
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"

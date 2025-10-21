@@ -1,22 +1,16 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 import logging
 from backend.features.textbooks.models import TextbookInfo
 from pydantic import BaseModel
 from backend.db.database import get_document, get_document_by_field
 from backend.features.auth.service import validate_access_token_optional
-import boto3
-import logging
 from botocore.exceptions import ClientError
 from starlette.concurrency import run_in_threadpool
 from backend.config import settings
+from backend.db.s3_service import generate_presigned_get_url, head_object, get_client, get_object_bytes
 
 S3_BUCKET = settings.S3_BUCKET
-S3_CLIENT_REGION = settings.S3_REGION or None
-if S3_CLIENT_REGION:
-    s3 = boto3.client("s3", region_name=S3_CLIENT_REGION)
-else:
-    s3 = boto3.client("s3")
 
 class TextbookResponse(BaseModel):
     textbooks: List[TextbookInfo]
@@ -25,6 +19,25 @@ class TextbookResponse(BaseModel):
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+async def get_chapter_text(textbook_uuid: str, chapter_id: str) -> str:
+    """Fetch chapter text content from S3 as UTF-8.
+
+    Expects key pattern "{textbook_uuid}/chapter{chapter_id}.txt".
+    """
+    key = f"{textbook_uuid}/chapter{chapter_id}.txt"
+    try:
+        data = get_object_bytes(key)
+        text = data.decode("utf-8", errors="replace")
+        if not text:
+            raise HTTPException(status_code=500, detail="Chapter text is empty")
+        return text
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching chapter text from S3 for key {key}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving chapter text: {str(e)}")
 
 @router.get("/api/textbooks")
 async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
@@ -48,16 +61,19 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
         try:
             for textbook_id in user_textbook_ids:
                 # TODO: We should promise.all this later
-                textbook_metadata = await get_document_by_field("textbooks", "_id", textbook_id)
-                available_textbooks.append(TextbookInfo(
-                    id=textbook_metadata.get("_id"),
-                    title=textbook_metadata.get("title"),
-                    chapters=textbook_metadata.get("chapters"),
-                    filepath=textbook_metadata.get("filepath"),
-                    subject=textbook_metadata.get("subject"),
-                    created_at=textbook_metadata.get("created_at"),
-                    cover=textbook_metadata.get("cover"),
-                ))
+                if textbook_id is None:
+                    continue
+                else:
+                    textbook_metadata = await get_document_by_field("textbooks", "_id", textbook_id)
+                    available_textbooks.append(TextbookInfo(
+                        id=textbook_metadata.get("_id"),
+                        title=textbook_metadata.get("title"),
+                        chapters=textbook_metadata.get("chapters"),
+                        filepath=textbook_metadata.get("filepath"),
+                        subject=textbook_metadata.get("subject"),
+                        created_at=textbook_metadata.get("created_at"),
+                        cover=textbook_metadata.get("cover"),
+                    ))
         except Exception as e:
             logger.error(f"Error getting textbook metadata for {textbook_id}: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error getting textbook metadata for {textbook_id}: {str(e)}")
@@ -111,58 +127,15 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
 
         # --- S3 path ---
         key = f"{textbook_uuid}/{pdf_filename}"
-
-        # Optional existence check (network call) — run in threadpool to avoid blocking the event loop
-        try:
-            logger.info(f"Checking S3 object existence: bucket={S3_BUCKET}, key={key}, client_region={getattr(s3.meta, 'region_name', None)}")
-            await run_in_threadpool(lambda: s3.head_object(Bucket=S3_BUCKET, Key=key))
-        except ClientError as e:
-            response = getattr(e, "response", {}) or {}
-            error_info = response.get("Error", {}) or {}
-            code = str(error_info.get("Code") or "")
-            message = str(error_info.get("Message") or "")
-            request_id = (response.get("ResponseMetadata", {}) or {}).get("RequestId", "")
-            http_headers = (response.get("ResponseMetadata", {}) or {}).get("HTTPHeaders", {}) or {}
-            bucket_region = http_headers.get("x-amz-bucket-region", "")
-            client_region = getattr(s3.meta, "region_name", None)
-
-            logger.error(
-                "S3 head_object failed for s3://%s/%s [code=%s message=%s request_id=%s bucket_region=%s client_region=%s]",
-                S3_BUCKET,
-                key,
-                code,
-                message,
-                request_id,
-                bucket_region,
-                client_region,
-            )
-
-            if code in ("404", "NotFound", "NoSuchKey"):
-                raise HTTPException(status_code=404, detail=f"PDF file not found: {pdf_filename}")
-            if code in ("403", "AccessDenied"):
-                raise HTTPException(status_code=403, detail="Access denied to the PDF file in S3")
-            if code in ("NoSuchBucket",):
-                raise HTTPException(status_code=404, detail=f"S3 bucket not found: {S3_BUCKET}")
-            if code in ("PermanentRedirect", "AuthorizationHeaderMalformed"):
-                hint_region = bucket_region or error_info.get("Region", "")
-                logger.error(
-                    "Likely S3 region mismatch. Bucket region=%s, client region=%s",
-                    hint_region,
-                    client_region,
-                )
-                raise HTTPException(status_code=500, detail="S3 region mismatch; check bucket region and client configuration")
-            raise HTTPException(status_code=500, detail=f"Error checking PDF in S3: {code or 'UnknownError'}")
+        print(f"Searching for PDF in S3 at key: {key}")
 
         # Generate a presigned URL so the browser can open the PDF inline
-        url = s3.generate_presigned_url(
-            ClientMethod="get_object",
-            Params={
-                "Bucket": S3_BUCKET,
-                "Key": key,
-                "ResponseContentType": "application/pdf",
-                "ResponseContentDisposition": f'inline; filename="{pdf_filename}"',
-            },
-            ExpiresIn=3600,  # seconds
+        url = generate_presigned_get_url(
+            key=key,
+            bucket=S3_BUCKET,
+            response_content_type="application/pdf",
+            response_content_disposition=f'inline; filename="{pdf_filename}"',
+            expires_in_seconds=3600,
         )
         print(f"Generated presigned URL for {pdf_filename}: {url}")
 

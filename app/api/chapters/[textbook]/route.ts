@@ -20,7 +20,6 @@ export async function GET(
     }
 
     const data = await response.json()
-    console.log("Data:", data)
     // Normalize to always return { chapters: [...] }
     const normalized = Array.isArray(data) ? { chapters: data } : data
     return NextResponse.json(normalized)

@@ -87,16 +87,12 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       if (!textbookId) return
 
       try {
-        console.log("[v0] Fetching textbook data for ID:", textbookId)
-
         const response = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`)
         console.log("[v0] Fetch response status:", response.status)
 
         if (response.ok) {
           const data = await response.json()
           console.log("[v0] Raw textbook data received:", data)
-          console.log("[v0] Chapters in data:", data.chapters)
-          console.log("[v0] Data structure keys:", Object.keys(data))
           setTextbookData(data)
         } else {
           const errorText = await response.text()
@@ -118,6 +114,30 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     }
 
     fetchTextbookData()
+  }, [textbookId])
+
+  // Restore last visit for this textbook (non-blocking UI)
+  useEffect(() => {
+    const restore = async () => {
+      if (!textbookId) return
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+        if (!token) return
+        const resp = await fetch(`/api/user/progress/${encodeURIComponent(textbookId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        })
+        if (!resp.ok) return
+        const data = await resp.json()
+        const last = data?.last_visit
+        if (last && typeof last.chapter === "number") {
+          setSelectedChapterId(String(last.chapter))
+        }
+      } catch (e) {
+        // ignore restore failures
+      }
+    }
+    restore()
   }, [textbookId])
 
   // Get user authentication on component mount
@@ -178,13 +198,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       description: "Chat with AI about the textbook content and your highlights",
     },
     {
-      id: "chat",
-      label: "Socratic Dialogue",
-      icon: MessageSquare,
-      content: "chat",
-      description: "Explore concepts through guided questions and discovery",
-    },
-    {
       id: "quiz",
       label: "Concept Checks",
       icon: Brain,
@@ -197,13 +210,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       icon: CreditCard,
       content: "flashcards",
       description: "Practice key concepts with spaced repetition",
-    },
-    {
-      id: "notes",
-      label: "Study Notes",
-      icon: FileText,
-      content: "notes",
-      description: "AI-generated and personal study notes",
     },
     {
       id: "concepts",
@@ -226,6 +232,22 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       icon: BarChart3,
       content: "progress",
       description: "Monitor your learning progress and analytics",
+      disabled: true,
+    },
+    {
+      id: "chat",
+      label: "Socratic Dialogue",
+      icon: MessageSquare,
+      content: "chat",
+      description: "Explore concepts through guided questions and discovery",
+      disabled: true,
+    },
+    {
+      id: "notes",
+      label: "Study Notes",
+      icon: FileText,
+      content: "notes",
+      description: "AI-generated and personal study notes",
       disabled: true,
     },
   ]
@@ -437,6 +459,21 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
   const handleProgressChange = (progress: number) => {
     setCurrentProgress(progress)
+    // Best-effort persist last visit in background
+    if (!textbookId || !selectedChapterId) return
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+      if (!token) return
+      // Fire-and-forget last visit using keepalive for page-close safety
+      fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/last-visit`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ chapter: Number(selectedChapterId), page: currentPage || 1 }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {
+      // noop
+    }
   }
 
   const getCurrentChapterInfo = () => {

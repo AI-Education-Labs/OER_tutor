@@ -171,9 +171,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const [messageSinceTitleUpdate, setMessageSinceTitleUpdate] = useState(0);
 
   // Scroll on new message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  // }, [messages])
 
   // Save chat
   useEffect(() => saveChatToSession(messages, messageCount), [messages, messageCount])
@@ -187,7 +187,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   // Load all chats for sidebar
   const fetchChats = async () => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
       const res = await fetch(`${backendUrl}/chat/history`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -201,7 +201,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
   const loadChat = async (sessionId: string, title: string) => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
       const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -308,10 +308,13 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     setMessageCount((prev) => prev + 1)
     setInput("")
     setIsLoading(true)
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }, 0)
 
     try {
       const token = localStorage.getItem("access_token")
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const body: any = { message: userMessage.content, textbook_id: textbookId, chapter_id: selectedChapterId }
       if (sessionIdRef.current) body.session_id = sessionIdRef.current
 
@@ -463,7 +466,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     }
     setMessageSinceTitleUpdate(0)
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
       const sessionId = sessionIdRef.current
       const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {

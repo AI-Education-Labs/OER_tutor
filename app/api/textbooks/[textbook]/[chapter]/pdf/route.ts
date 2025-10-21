@@ -25,7 +25,6 @@ export async function GET(
     console.log("Response:", response)
 
     const data = await response.json()
-    console.log("Data:", data)
     return NextResponse.json(data)
   } catch (error) {
     console.error("Error fetching chapter PDF:", error)
