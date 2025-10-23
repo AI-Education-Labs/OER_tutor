@@ -75,12 +75,12 @@ Copy .env.example to .env
 cp .env.example .env
 ```
 
-Edit the environment variables. Langchain is optional, however `LANGSMITH_TRACING` must be set to false if not configured properly
+Edit the environment variables. Langsmith is optional, however `LANGSMITH_TRACING` must be set to false if not configured properly
 
 
 ### Configuring Langchain
 
-Langchain is a tracing tool. (Langsmith is for chaining llm tooling)
+Langsmith is a tracing tool. (Langchain is for chaining llm tooling)
 
 1. Go to https://www.langchain.com/ and sign up 
 2. On the left panel at the bottom, click on the gear.
