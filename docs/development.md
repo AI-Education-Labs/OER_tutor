@@ -77,6 +77,13 @@ cp .env.example .env
 
 Edit the environment variables. Langsmith is optional, however `LANGSMITH_TRACING` must be set to false if not configured properly
 
+4. **Run backend**
+If you created a virtual environment, activate it before starting the backend (for example: `source venv/bin/activate` on macOS/Linux or `venv\Scripts\activate` on Windows).
+
+```shell
+# this should be run from project root
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
 
 ### Configuring Langchain
 
