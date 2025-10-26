@@ -97,7 +97,8 @@ This will start the FastAPI server on [http://localhost:8000](http://localhost:8
 2. You should see the application running
 3. Register
 4. Login to the account you made
-5. Begin Chatting
+5. When prompted for textbook code enter "PHYSIC" or "PSYCH1"
+6. Begin Chatting
 
 ## Troubleshooting
 
