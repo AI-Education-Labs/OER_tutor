@@ -75,12 +75,19 @@ Copy .env.example to .env
 cp .env.example .env
 ```
 
-Edit the environment variables. Langchain is optional, however `LANGSMITH_TRACING` must be set to false if not configured properly
+Edit the environment variables. Langsmith is optional, however `LANGSMITH_TRACING` must be set to false if not configured properly
 
+4. **Run backend**
+If you created a virtual environment, activate it before starting the backend (for example: `source venv/bin/activate` on macOS/Linux or `venv\Scripts\activate` on Windows).
+
+```shell
+# this should be run from project root
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
 
 ### Configuring Langchain
 
-Langchain is a tracing tool. (Langsmith is for chaining llm tooling)
+Langsmith is a tracing tool. (Langchain is for chaining llm tooling)
 
 1. Go to https://www.langchain.com/ and sign up 
 2. On the left panel at the bottom, click on the gear.
