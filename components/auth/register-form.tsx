@@ -36,7 +36,7 @@ export default function RegisterForm() {
     }
   }
 
-  const validateRegistration = (): string | null => {
+  const validateRegistration = (): string | null => { // TODO: zod would work really well right here, bundle size might not be worth it though
     const { username, email, password, confirmPassword } = registerData
 
     if (!isAlphanumeric(username)) {

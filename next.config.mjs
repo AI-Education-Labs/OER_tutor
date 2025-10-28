@@ -14,17 +14,9 @@ const nextConfig = {
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
     return [
       {
-        source: '/textbook/:path*',
-        destination: `${backendUrl}/textbook/:path*`,
-      },
-      {
-        source: '/auth/:path*',
-        destination: `${backendUrl}/auth/:path*`,
-      },
-      {
-        source: '/progress/:path*',
-        destination: `${backendUrl}/progress/:path*`,
-      },
+        source: '/api/:path*',
+        destination: `${backendUrl}/api/v1/:path*`, // proxy /api/* to backend /api/v1/*
+      }
     ]
   },
 }
