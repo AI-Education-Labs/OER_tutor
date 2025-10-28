@@ -36,7 +36,7 @@ export default function LoginForm() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/auth/`, {
+      const response = await fetch(`/api/auth/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
