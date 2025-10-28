@@ -2,52 +2,23 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpen, LogOut, User } from "lucide-react"
+import { BookOpen, LogOut, RefreshCcw, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { TextbookLibrary } from "@/components/textbook-library"
+import useAuth from "@/hooks/use-auth"
 
 export default function HomePage() {
   const router = useRouter()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-
-  useEffect(() => {
-    fetch("/api/auth/status", {
-      method: "GET",
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.status === 200) {
-          setIsLoggedIn(true)
-        } else {
-          setIsLoggedIn(false)
-        }
-      })
-      .catch((error) => {
-        console.error("Error checking auth status:", error)
-        setIsLoggedIn(false)
-      })
-  }, [])
+  const { logout, isAuthenticated, } = useAuth()
 
   const handleLogin = () => {
     router.push("/auth")
   }
 
   const handleLogout = () => {
-    fetch("/api/auth/logout", {
-      method: "POST",
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.ok) {
-          window.location.href = '/'
-        } else {
-          console.error("Logout failed")
-        }
-      })
-      .catch((error) => {
-        console.error("Error during logout:", error)
-      })
+    logout()
+    window.location.href = '/' // force reload window to request with cleared cookie
   }
 
   return (
@@ -65,7 +36,7 @@ export default function HomePage() {
 
         {/* Right side - Auth buttons */}
         <div className="flex items-center gap-2">
-          {isLoggedIn ? (
+          {isAuthenticated? (
             <>
               <Button
                 variant="ghost"

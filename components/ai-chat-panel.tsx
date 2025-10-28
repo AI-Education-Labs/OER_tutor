@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Message, ChatContext, BranchCandidate, ChatSession } from "@/types/chat"
 import { formatMarkdown } from "@/utils/markdown"
+import { useAuth } from "@/hooks/use-auth"
 
 interface AiChatPanelProps {
   context?: ChatContext
@@ -152,7 +153,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const [messages, setMessages] = useState<Message[]>(initial.messages)
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const { isAuthenticated } = useAuth()
   const [messageCount, setMessageCount] = useState<number>(initial.messageCount)
   const [branchCandidates, setBranchCandidates] = useState<Record<string, BranchCandidate>>({})
   const [chats, setChats] = useState<ChatSession[]>([])
@@ -177,12 +178,6 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
   // Save chat
   useEffect(() => saveChatToSession(messages, messageCount), [messages, messageCount])
-
-  // Detect login
-  useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
-  }, [])
 
   // Load all chats for sidebar
   const fetchChats = async () => {
@@ -298,7 +293,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (!input.trim() || isLoading) return
-    if (!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST) return
+    if (!isAuthenticated && messageCount >= MAX_MESSAGES_GUEST) return
 
     const userMessage: Message = { id: Date.now().toString(), content: input, role: "user", timestamp: new Date() }
     const tempMessage: Message = { id: `temp-${Date.now()}`, content: "", role: "assistant", timestamp: new Date() }
@@ -312,8 +307,6 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     }, 0)
 
     try {
-      const token = localStorage.getItem("access_token")
-      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const body: any = { message: userMessage.content, textbook_id: textbookId, chapter_id: selectedChapterId }
       if (sessionIdRef.current) body.session_id = sessionIdRef.current
 
@@ -321,9 +314,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
       const controller = new AbortController()
       abortControllerRef.current = controller
 
-      const streamRes = await fetch(`${backendUrl}/chat/stream`, {
+      const streamRes = await fetch(`/api/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+        credentials: "include",
         body: JSON.stringify(body),
         signal: controller.signal,
       })
@@ -500,7 +493,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     await fetchChats()
   }
 
-  const canSend = isLoggedIn || messageCount < MAX_MESSAGES_GUEST
+  const canSend = isAuthenticated || messageCount < MAX_MESSAGES_GUEST
 
   const renderedMessages = useMemo(
     () =>
@@ -592,7 +585,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
         </div>
 
         {/* Message limit warning */}
-        {!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST && (
+        {!isAuthenticated&& messageCount >= MAX_MESSAGES_GUEST && (
           <div className="p-3 bg-[#2d2d30] border-t border-[#3e3e42] flex items-center gap-2 text-[#ce9178] text-sm">
             <AlertCircle className="w-4 h-4" /> You've reached the message limit. Sign in for unlimited chat!
           </div>

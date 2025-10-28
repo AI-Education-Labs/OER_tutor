@@ -130,12 +130,9 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
     setError(null)
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
-
       const [textbookResp, chaptersResp] = await Promise.all([
-        fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { headers }),
-        fetch(`/api/chapters/${encodeURIComponent(textbookId)}`, { headers }),
+        fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`),
+        fetch(`/api/textbooks/${encodeURIComponent(textbookId)}/chapters`),
       ])
 
       if (!textbookResp.ok || !chaptersResp.ok) {

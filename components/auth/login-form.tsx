@@ -9,11 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, User, Lock, Eye, EyeOff } from "lucide-react"
+import useAuth from "@/hooks/use-auth"
 
 export default function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false)
+  const { login, lastError } = useAuth()
+  const [loading, setLoading] = useState(false)
   const [loginData, setLoginData] = useState({ username: "", password: "" })
   const { toast } = useToast()
+  const [localError, setLocalError] = useState<string | null>(null)
   const [showLoginPassword, setShowLoginPassword] = useState(false)
 
   const readErrorMessage = async (response: Response, fallback: string): Promise<string> => {
@@ -32,48 +35,32 @@ export default function LoginForm() {
     setLoginData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/auth/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        credentials: "include",
-        body: new URLSearchParams({
+    setLoading(true)
+    setLocalError
+    const result = await login({
           username: loginData.username,
           password: loginData.password,
-        }),
       })
-
-      if (response.status === 401) {
-        const message = await readErrorMessage(response, "Invalid username or password")
-        throw new Error("Invalid username or password")
-      }
-      if (!response.ok) {
-        const message = await readErrorMessage(response, "Login failed")
-        throw new Error(message || "Login failed")
-      }
-
+    
+    setLoading(false)
+    if (result.success) {
       toast({
         title: "Login Successful",
         description: "You have been logged in successfully.",
       })
-
       // wait a second so http cookie can be applied
       setTimeout(() => window.location.href = "/", 2000) // TODO: Redirect with built in router? not sure whats needed for auth issues
-    } catch (error: any) {
-      console.error("Login error:", error)
+    }
+
+    if (result.error) {
       toast({
         title: "Login Failed",
-        description: error?.message || "The authentication service is currently unavailable. Please try again later.",
         variant: "destructive",
       })
-    } finally {
-      setIsLoading(false)
     }
+
   }
 
   return (
@@ -84,7 +71,7 @@ export default function LoginForm() {
           Enter your credentials to access your account
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleLogin}>
+      <form onSubmit={onSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="username" className="text-[#cccccc] text-sm font-medium">
@@ -134,9 +121,9 @@ export default function LoginForm() {
           <Button
             type="submit"
             className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white transition-colors"
-            disabled={isLoading}
+            disabled={loading}
           >
-            {isLoading ? (
+            {loading? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
@@ -150,5 +137,3 @@ export default function LoginForm() {
     </Card>
   )
 }
-
-

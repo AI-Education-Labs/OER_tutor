@@ -11,7 +11,7 @@ from backend.features.auth.service import hash_password, create_access_token
 
 router = APIRouter()
 
-@router.post("/token")
+@router.post("/login")
 async def assign_httponly_cookie(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Logs in a user and returns an http_only cookie.

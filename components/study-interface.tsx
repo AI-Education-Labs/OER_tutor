@@ -25,6 +25,7 @@ import { TabGroup } from "@/components/tab-group"
 import { DragDropProvider } from "@/components/drag-drop-provider"
 import { ToolGrid } from "@/components/tool-grid"
 import Link from "next/link"
+import useAuth from "@/hooks/use-auth"
 
 interface StudyInterfaceProps {
   textbookId?: string // Make optional since we can get from URL
@@ -48,13 +49,10 @@ export interface TabGroupData {
 
 export function StudyInterface({ textbookId: propTextbookId }: StudyInterfaceProps) {
   const params = useParams()
+  const { isAuthenticated, isLoading } = useAuth()
 
   // Get textbookId from props or URL params
   const textbookId = propTextbookId || (params?.id as string)
-
-  // Authentication state
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [authLoading, setAuthLoading] = useState(true)
 
   // Textbook metadata and progress state
   const [textbookData, setTextbookData] = useState<any>(null)
@@ -139,20 +137,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     }
     restore()
   }, [textbookId])
-
-  // Get user authentication on component mount
-  useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
-    setAuthLoading(false)
-
-    console.log("StudyInterface - Authentication check:", {
-      hasToken: !!token,
-      textbookId,
-      isLoggedIn: !!token,
-    })
-  }, [])
-
   // Flash animation effect for chapters
   const handleChaptersFlash = () => {
     if (leftPanelCollapsed) {
@@ -185,8 +169,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
   console.log("StudyInterface - Render state:", {
     textbookId,
-    isLoggedIn,
-    authLoading,
+    isAuthenticated,
+    isLoading,
   })
 
   const tutorTabs: TabItem[] = [
