@@ -6,11 +6,11 @@ from backend.features.sidebar_modules.models import *
 from backend.db.database import get_collection
 from backend.features.auth.service import validate_access_token
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
-import uuid, time
+from typing import Any, Dict, List 
+import uuid
+import time
 
 router = APIRouter()
-
 
 def get_openai_client() -> OpenAI:
     api_key = settings.OPENAI_API_KEY
@@ -24,25 +24,6 @@ def get_openai_client() -> OpenAI:
 @router.get("/health")
 async def health() -> dict:
     return {"ok": True}
-
-
-@router.post("/query_llm")
-async def query_llm(query: str, model: str = "gpt-4.1", system_prompt: str = None):
-    # Lazily initialize the client per request to avoid import-time failures
-    client = get_openai_client()
-
-    conversation_context = []
-    if system_prompt:
-        conversation_context.append({"role": "developer", "content": system_prompt})
-    if query:
-        conversation_context.append({"role": "user", "content": query})
-    
-    response = client.responses.create(
-        model=model,
-        input=conversation_context
-    )
-
-    return response.output_text
 
 @router.post("/api/quiz/generate")
 async def generate_quiz(body: QuizRequest, current_user = Depends(validate_access_token)):
