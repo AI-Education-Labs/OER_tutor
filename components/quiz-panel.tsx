@@ -125,7 +125,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       try {
         setPrevLoading(true)
         setPrevError("")
-        const resp = await fetch("/api/quizzes", { cache: "no-store" })
+        const resp = await fetch("/api/quiz/list", { credentials: "include" })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {

@@ -182,9 +182,8 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   // Load all chats for sidebar
   const fetchChats = async () => {
     try {
-      const token = localStorage.getItem("access_token")
       const res = await fetch(`api/chat/history`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: 'include',
       })
       const data = await res.json()
       setChats(data.chats || [])

@@ -10,6 +10,7 @@ from backend.routes.files import router as files_router
 from backend.routes.sidebar_modules import router as sidebar_modules_router
 from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.users import router as users_router
+from backend.routes.quiz import router as quiz_router
 from backend.routes.chat import router as chat_router
 from backend.routes.user_books import router as user_books_router
 import mangum
@@ -33,6 +34,7 @@ api_router = APIRouter(prefix="/api/v1")
 
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(llm_utils_router, prefix="/llm", tags=["llm-utils"])
+api_router.include_router(quiz_router, prefix="/quiz", tags=["quiz"])
 api_router.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-modules"])
 api_router.include_router(textbooks_router, prefix="/textbooks", tags=["textbooks"])
 api_router.include_router(files_router, tags=["files"])
