@@ -33,28 +33,25 @@ export function TextbookLibrary() {
   // Load available textbooks
   useEffect(() => {
     const loadTextbooks = async () => {
-      try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-        const resp = await fetch(`/api/textbooks`, {
-          cache: "no-store",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        })
-        if (!resp.ok) throw new Error(`Failed to fetch textbooks (${resp.status})`)
-        const data = await resp.json()
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
 
-        
-        // Backend returns { textbooks: [], is_authenticated: boolean, message?: string }
-        const payload = Array.isArray(data)
-          ? { textbooks: data, is_authenticated: true as boolean, message: null as string | null }
-          : (data as { textbooks?: any[]; is_authenticated?: boolean; message?: string | null })
+      const resp = await fetch(`/api/textbooks/list`, {
+        method: "GET",
+        credentials: "include",
+      })
+      if (resp.status === 401) {
+        console.log("TextbookLibrary: User is not authenticated")
+        setIsAuthenticated(false)
+        setMyTextbooks([])
+        setMessage("Sign in to see your textbooks!")
+        return
+      }
+      if (!resp.ok) {
+        console.error(`TextbookLibrary: Failed to fetch textbooks (${resp.status})`)
+      }
 
-        console.log("TextbookLibrary: inferred is_authenticated:", payload?.is_authenticated)
-        setIsAuthenticated(Boolean(payload?.is_authenticated))
-        setMessage(payload?.message ?? null)
-
-        const textbook_list: Textbook[] = (payload?.textbooks ?? []).map((t: any) => ({
+      const data = await resp.json()
+        const textbook_list: Textbook[] = (data?.textbooks ?? []).map((t: any) => ({
           id: String(t.id ?? ""),
           title: t.title ?? "Untitled",
           author: t.author ?? "",
@@ -64,10 +61,8 @@ export function TextbookLibrary() {
         }))
         console.log("TextbookLibrary: textbook_list:", textbook_list)
         setMyTextbooks(textbook_list)
-      } catch (error) {
-        console.error("TextbookLibrary: error loading textbooks:", error)
       }
-    }
+      setIsAuthenticated(true)
     loadTextbooks()
   }, [])
 

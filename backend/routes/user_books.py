@@ -3,7 +3,7 @@ from typing import Optional
 import logging
 from pydantic import BaseModel
 from backend.db.database import add_textbook_to_user, get_document_by_field
-from backend.features.auth.service import validate_access_token
+from backend.features.auth.service import validate_cookie_token
 
 class AddTextbookRequest(BaseModel):
     code: str
@@ -18,7 +18,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.post("/api/user_books/add", response_model=AddTextbookResponse)
-async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_access_token)):
+async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_cookie_token)):
     """Add a textbook to the authenticated user's library using a 6-char code."""
     textbook_code = (payload.code or "").strip().upper()
 

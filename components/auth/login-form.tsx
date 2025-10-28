@@ -41,20 +41,20 @@ export default function LoginForm() {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
+        credentials: "include",
         body: new URLSearchParams({
           username: loginData.username,
           password: loginData.password,
         }),
       })
 
+      if (response.status === 401) {
+        const message = await readErrorMessage(response, "Invalid username or password")
+        throw new Error("Invalid username or password")
+      }
       if (!response.ok) {
         const message = await readErrorMessage(response, "Login failed")
         throw new Error(message || "Login failed")
-      }
-      const data = await response.json()
-      const { access_token } = data
-      if (access_token) {
-        localStorage.setItem("access_token", access_token)
       }
 
       toast({
@@ -62,7 +62,8 @@ export default function LoginForm() {
         description: "You have been logged in successfully.",
       })
 
-      window.location.href = "/"
+      // wait a second so http cookie can be applied
+      setTimeout(() => window.location.href = "/", 2000) // TODO: Redirect with built in router? not sure whats needed for auth issues
     } catch (error: any) {
       console.error("Login error:", error)
       toast({

@@ -12,8 +12,21 @@ export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
+    fetch("/api/auth/status", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status === 200) {
+          setIsLoggedIn(true)
+        } else {
+          setIsLoggedIn(false)
+        }
+      })
+      .catch((error) => {
+        console.error("Error checking auth status:", error)
+        setIsLoggedIn(false)
+      })
   }, [])
 
   const handleLogin = () => {
@@ -21,9 +34,20 @@ export default function HomePage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token")
-    setIsLoggedIn(false)
-    window.location.reload()
+    fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.ok) {
+          window.location.href = '/'
+        } else {
+          console.error("Logout failed")
+        }
+      })
+      .catch((error) => {
+        console.error("Error during logout:", error)
+      })
   }
 
   return (

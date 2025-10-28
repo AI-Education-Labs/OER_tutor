@@ -1,23 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 import re
 import uuid
 from backend.features.users.models import UserWithPassword, UserCreate
-from backend.features.auth.models import Token
 from backend.config import settings
+from backend.features.auth.service import validate_cookie_token
 from backend.db.database import create_user_document, get_collection, get_user_by_username
 from backend.features.auth.service import hash_password, create_access_token
 
 router = APIRouter()
 
-@router.post("/token", response_model=Token)
-async def assign_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@router.post("/token")
+async def assign_httponly_cookie(form_data: OAuth2PasswordRequestForm = Depends()):
     """
-    Logs in a user and returns an access token.
+    Logs in a user and returns an http_only cookie.
     """
     user = await get_user_by_username(form_data.username)
     input_password_hash = await hash_password(form_data.password)
+    # Username Doesn't Exist 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -25,22 +26,33 @@ async def assign_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
     hashed_password = user.get("hashed_password")
-    
+
+    # Incorrect Password
     if hashed_password != input_password_hash:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
 
+    # create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     user_id = user.get("id")
     access_token = await create_access_token(
         data={"sub": user_id, "user_id": user_id}, expires_delta=access_token_expires
     )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    resp = Response()
+    resp.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False, #TODO:SEC CHANGE THIS BACK TO TRUE IN PRODUCTION
+        samesite="lax",
+        max_age=int(settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
+    )
+
+    return resp
 
 # Register a new user
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -78,7 +90,7 @@ async def register_user(user_create: UserCreate):
 
     hashed_password = await hash_password(user_create.password)
 
-    user_id = str(uuid.uuid4()) 
+    user_id = str(uuid.uuid4())
     user = UserWithPassword(
         id=user_id,
         username=user_create.username,
@@ -88,3 +100,21 @@ async def register_user(user_create: UserCreate):
     )
     await create_user_document(user)
     return {"message": "User registered successfully", "user": user}
+
+# Logout endpoint to clear the cookie
+@router.post("/logout")
+async def logout_user(response: Response):
+    """
+    Logs out a user by clearing the http_only cookie.
+    """
+    response.delete_cookie(key="access_token")
+    return {"message": "Logout successful"}
+
+@router.get("/status")
+async def auth_status(user: dict = Depends(validate_cookie_token)):
+    """
+    Endpoint to check authentication status.
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"is_authenticated": True, "user_uuid": user}

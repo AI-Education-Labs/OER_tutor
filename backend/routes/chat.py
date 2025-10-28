@@ -18,7 +18,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from backend.graph import get_system_prompt
 from backend.db.database import get_collection
 from backend.features.users.models import User
-from backend.features.auth.service import validate_access_token
+from backend.features.auth.service import validate_cookie_token 
 from backend.routes.textbooks import get_chapter_text
 
 
@@ -176,7 +176,7 @@ async def get_textbook_context(textbook_id: str, chapter_id: str) -> str:
 async def chat_message(
    request: Request,
    background_tasks: BackgroundTasks,
-   user_id: str = Depends(validate_access_token)
+   user_id: str = Depends(validate_cookie_token)
 ):
    data = await request.json()
    user_message = data.get("message")
@@ -218,7 +218,7 @@ async def chat_message(
 async def stream_chat(
    request: Request,
    background_tasks: BackgroundTasks,
-   user_id: str = Depends(validate_access_token)
+   user_id: str = Depends(validate_cookie_token)
 ):
    data = await request.json()
    user_message = data.get("message")
@@ -364,7 +364,7 @@ async def stream_chat(
 @router.get("/history")
 async def get_chat_history(
     session_id: Optional[str] = None,
-    user_id: str = Depends(validate_access_token)
+    user_id: str = Depends(validate_cookie_token)
 ):
     try:
         if session_id:

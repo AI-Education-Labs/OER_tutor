@@ -4,7 +4,7 @@ import logging
 from backend.features.textbooks.models import TextbookInfo
 from pydantic import BaseModel
 from backend.db.database import get_document, get_document_by_field
-from backend.features.auth.service import validate_access_token_optional
+from backend.features.auth.service import validate_cookie_token
 from botocore.exceptions import ClientError
 from starlette.concurrency import run_in_threadpool
 from backend.config import settings
@@ -14,8 +14,6 @@ S3_BUCKET = settings.S3_BUCKET
 
 class TextbookResponse(BaseModel):
     textbooks: List[TextbookInfo]
-    is_authenticated: bool
-    message: Optional[str] = None
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,17 +37,18 @@ async def get_chapter_text(textbook_uuid: str, chapter_id: str) -> str:
         logger.error(f"Error fetching chapter text from S3 for key {key}: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving chapter text: {str(e)}")
 
-@router.get("/api/textbooks")
-async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
+@router.get("/list")
+async def get_textbooks(user_uuid: str = Depends(validate_cookie_token)):
     """Get all available textbooks."""
     print(f"get_textbooks: user {user_uuid}")
-    # Check if user is authenticated
-    is_authenticated = False
-    available_textbooks = []
-    message = "Sign in to see your textbooks!"
+    # If user is unathenticated, return 401 unauthorized
+    if user_uuid is None:
+        message = "User is not authenticated. Returning public textbooks only."
+        raise HTTPException(status_code=401, detail=message)
 
     if user_uuid:
         is_authenticated = True
+        available_textbooks = []
         # Get the textbooks the user has access to
         user_textbooks_document = await get_document("user_books", user_uuid)
         if(user_textbooks_document is None):
@@ -80,12 +79,10 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
 
     return TextbookResponse(
         textbooks=available_textbooks,
-        is_authenticated=is_authenticated,
-        message=message
     )
 
 # TODO: These routes need to be protected
-@router.get("/api/textbooks/{textbook_uuid}")
+@router.get("/{textbook_uuid}")
 async def get_textbook_details(textbook_uuid: str):
     metadata = await get_document_by_field("textbooks", "_id", textbook_uuid)
     print(f"Textbook metadata: {metadata}")
@@ -94,7 +91,7 @@ async def get_textbook_details(textbook_uuid: str):
     return metadata
     
 
-@router.get("/api/textbooks/{textbook_uuid}/chapters")
+@router.get("/{textbook_uuid}/chapters")
 async def get_chapters(textbook_uuid: str):
     """Get available chapters for a textbook.
     and returns a consistent response shape: { "chapters": [...] }.
@@ -104,7 +101,7 @@ async def get_chapters(textbook_uuid: str):
 
     return {"chapters": chapters}
 
-@router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
+@router.get("/{textbook_uuid}/chapters/{chapter_id}/pdf")
 async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     """Return a presigned URL to the chapter PDF stored in S3."""
     print(f"Getting chapter PDF for {textbook_uuid} and {chapter_id}")

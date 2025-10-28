@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -32,64 +32,30 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
 
 # Verify access tokens
 # Authentication helper functions
-async def validate_access_token_optional(token: str = Depends(oauth2_scheme)):
-    """
-    Validates JWT token and returns the user id if valid, None if not.
-    Does not raise exceptions for unauthenticated requests.
-    """
+
+async def validate_cookie_token(request: Request, required: bool = False) -> Optional[str]:
+    # Extract token from cookies
+    token = request.cookies.get("access_token")
     if not token:
-        return None
-
-    try:
-        # Decode the token (verify its signature and expiration)
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("user_id")
-        if not user_id:
-            print(f"validate_access_token_optional: no user_id in payload")
-            return None
-
-        expiration = payload.get("exp")
-        if expiration and datetime.fromtimestamp(expiration, timezone.utc) < datetime.now(timezone.utc):
-            print(f"validate_access_token_optional: token expired")
-            return None
-
-        # user_id contains the user's id (uuid) according to token issuance
-        user = await get_user_by_id(user_id)
-        
-        print(f"validate_access_token_optional: user {user}")
-        if user is None or user.get("disabled") == True:
-            print(f"validate_access_token_optional: user {user} is None or disabled")
-            return None
-
-        return user.get("id",None)
-    except jwt.PyJWTError as e:
-        print(f"validate_access_token_optional: jwt error {e}")
-        return None
-    except Exception as e:
-        print(f"validate_access_token_optional: unexpected error {e}")
-        return None
-
-async def validate_access_token(token: str = Depends(oauth2_scheme)):
-    """
-    Validates JWT token and returns the user id.
-    Raises an HTTPException for unauthenticated requests.
-    """
-    if token == "":
-        raise HTTPException(
+        if required:
+            raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token is missing",
+                detail="Not authenticated",
+                headers={"WWW-Authenticate": "Bearer"},
             )
-        
+        return None
+
     try:
-        # Decode the token (verify its signature and expiration)
+        # Decode the token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")  # 'sub' is the typical key for user ID in JWT
-        if user_id == "":
+        user_id: str = payload.get("sub")
+        if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token is missing user information",
             )
 
+        # Check token expiration
         expiration = payload.get("exp")
         if expiration and datetime.fromtimestamp(expiration, timezone.utc) < datetime.now(timezone.utc):
             raise HTTPException(
@@ -97,14 +63,15 @@ async def validate_access_token(token: str = Depends(oauth2_scheme)):
                 detail="Token has expired",
             )
 
+        # Retrieve the user from the database
         user = await get_user_by_id(user_id)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
-        
-        if user.get("disabled") == True:
+
+        if user.get("disabled"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Inactive user",
@@ -112,12 +79,11 @@ async def validate_access_token(token: str = Depends(oauth2_scheme)):
 
         return user.get("id",None)
     except jwt.PyJWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        )
+        if required:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return None
+
