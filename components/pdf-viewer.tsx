@@ -96,7 +96,7 @@ export function PDFViewer({
       if (!token) return
       // Avoid duplicate sends for same payload
       const last = lastSentRef.current
-      if (last && last.percent <= percent && last.page <= page) return
+      if (last && last.percent === percent && last.page === page) return
 
       fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/chapter/${encodeURIComponent(String(currentChapterId))}`,
         {
