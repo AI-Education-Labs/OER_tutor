@@ -38,7 +38,7 @@ app = FastAPI(title="TextbookAI API")
 api_router = APIRouter(prefix="/api/v1")
 
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
-api_router.include_router(quiz_router, prefix="/quiz", tags=["quiz"])
+api_router.include_router(quiz_router, prefix="/quiz", tags=["quiz"]) # TODO: working through this and beyond for updating API schema and responses
 api_router.include_router(studyguide_router, prefix="/studyguide", tags=["studyguide"])
 api_router.include_router(flashcards_router, prefix="/flashcards", tags=["flashcards"])
 api_router.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-modules"])

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from backend.features.quiz.models import QuizRequest, GeneratedQuiz, QuizResultUpdate
+from backend.features.quiz.models import *
 from backend.routes.auth import validate_cookie_token
 from backend.db.database import get_collection
 from backend.routes.textbooks import get_chapter_text
@@ -28,11 +28,21 @@ def get_openai_client() -> OpenAI:
 
 
 
-@router.post("/generate")
-async def generate_quiz(body: QuizRequest, current_user = Depends(validate_cookie_token)):
-    context = body.context
+@router.post("/generate", response_model=GeneratedQuiz)
+async def generate_quiz(body: GenerateRequest, current_user = Depends(validate_cookie_token)):
+    """
+    Generate quiz from textbook chapter context using LLM.
+
+    Request Body:
+    - context: The context from the textbook chapter to generate the quiz from
+    - textbook_id: The ID of the textbook
+    - chapter: The chapter of the textbook to generate the quiz for
+    - num_questions: The number of questions to generate for the quiz
+    - hint: Optional hint or section focus for the quiz
+    """
+    context = body.context # TODO: Frontend should be untrusted for the content of the book, injectable
     textbook_id = body.textbook_id
-    chapter = body.chapter  # TODO: Frontend should be untrusted for the content of the book, injectable
+    chapter = body.chapter
     num_questions = body.num_questions
     hint = body.hint
     print("context:", context)
@@ -58,26 +68,20 @@ async def generate_quiz(body: QuizRequest, current_user = Depends(validate_cooki
         system_prompt += f"[End of Chapter]\nMake sure you are only working on the current section: {hint}"
 
     try:
-        response = client.responses.parse(
+        response = client.beta.chat.completions.parse(
             model="gpt-4.1",
-            input=[
+            messages=[
                 {"role": "developer", "content": system_prompt},
                 {"role": "user", "content": "Generate a quiz"}
             ],
-            text_format=GeneratedQuiz
+            response_format=GeneratedQuiz
         )
 
-        data = response.output[0].content[0].parsed
+        data = response.choices[0].message.parsed
 
-        quiz_list = []
-        for i, question in enumerate(data.questions):
-            quiz_list.append({
-                "question": question.question,
-                "choices": question.choices,
-                "answer": question.answer
-            })
-        print("QUIZ:", quiz_list)
-
+        if not data:
+            raise HTTPException(status_code=500, detail="Failed to parse quiz data from OpenAI response")
+        quiz_list: GeneratedQuiz = data
         # Persist quiz for the user
         try:
             user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
@@ -104,9 +108,14 @@ async def generate_quiz(body: QuizRequest, current_user = Depends(validate_cooki
     return quiz_list
 
 
-
-@router.get("/list", status_code=status.HTTP_200_OK)
+# TODO: this could get scoped down to the specific book they are working on
+@router.get("/list", status_code=status.HTTP_200_OK, response_model=List[QuizItem])
 async def list_user_quizzes(current_user = Depends(validate_cookie_token)):
+    """
+    List all quizzes for the current user.
+
+    user is obtained from the validated cookie token.
+    """
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
     try:
@@ -117,8 +126,11 @@ async def list_user_quizzes(current_user = Depends(validate_cookie_token)):
         raise HTTPException(status_code=500, detail=f"Error fetching quizzes: {e}")
 
 
-@router.get("/{item_id}", status_code=status.HTTP_200_OK)
+@router.get("/{item_id}", status_code=status.HTTP_200_OK, response_model=QuizItem)
 async def get_user_quiz(item_id: str, current_user = Depends(validate_cookie_token)):
+    """
+    Get a specific quiz for the current user by id.
+    """
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
     doc = await collection.find_one({"_id": item_id, "user": user_id})
@@ -127,8 +139,27 @@ async def get_user_quiz(item_id: str, current_user = Depends(validate_cookie_tok
     return doc
 
 
+@router.delete("/{item_id}", status_code=status.HTTP_200_OK, response_model=DeleteResponse)
+async def delete_user_quiz(item_id: str, current_user = Depends(validate_cookie_token)):
+    """
+    Delete a specific quiz for the current user.
+    """
+    user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
+    collection = await get_collection("user_quizzes")
+    result = await collection.delete_one({"_id": item_id, "user": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    return {"ok": True}
+
+
+#TODO: currently not used in frontend, Implement there and retype here
 @router.patch("/{item_id}/result", status_code=status.HTTP_200_OK)
 async def update_quiz_result(item_id: str, payload: QuizResultUpdate, current_user = Depends(validate_cookie_token)):
+    """
+    Update the quiz result for a specific quiz for the current user.
+
+    CURRENT IMPLEMENTATION DOESN'T EXIST IN FRONTEND YET! BACKEND QUESTIONABLE
+    """
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
     result = await collection.update_one(
@@ -138,14 +169,4 @@ async def update_quiz_result(item_id: str, payload: QuizResultUpdate, current_us
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Quiz not found")
     updated = await collection.find_one({"_id": item_id, "user": user_id})
-    return updated
-
-
-@router.delete("/{item_id}", status_code=status.HTTP_200_OK)
-async def delete_user_quiz(item_id: str, current_user = Depends(validate_cookie_token)):
-    user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
-    collection = await get_collection("user_quizzes")
-    result = await collection.delete_one({"_id": item_id, "user": user_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Quiz not found")
-    return {"ok": True}
+    return updated 
