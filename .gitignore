@@ -47,3 +47,15 @@ amplifyconfiguration*
 # AWS SAM
 .aws-sam/
 samconfig.toml
+
+# python environement
+.venv
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+storageState.json
