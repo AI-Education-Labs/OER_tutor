@@ -105,3 +105,31 @@ Existing addable textbooks are the following
 
 - `PSYCH1`
 - `PHYSIC`
+
+## Frontend End-to-End Testing (Playwright)
+
+Playwright is used for automated browser testing.
+
+1. **Install Playwright dependencies**
+
+If you haven't already, install all dependencies (including Playwright):
+
+```shell
+npm install --legacy-peer-deps
+```
+
+2. **Install Playwright browsers**
+
+```shell
+npx playwright install
+```
+
+3. **Run Playwright tests**
+
+```shell
+npm run test:e2e
+```
+
+This will execute all tests in the `tests/e2e` directory using Playwright.
+
+For more options, see [Playwright documentation](https://playwright.dev/docs/intro).
