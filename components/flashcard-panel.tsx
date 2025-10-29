@@ -80,7 +80,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       try {
         if (!textbookId || !selectedChapterId) return
         // 1) Load metadata to extract subchapters
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { credentials: "include" })
         if (metaResp.ok) {
           const meta = await metaResp.json()
           console.log("Meta:", meta);
@@ -126,7 +126,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       try {
         setPrevLoading(true)
         setPrevError("")
-        const resp = await fetch("/api/flashcards", { cache: "no-store" })
+        const resp = await fetch("/api/flashcards/list", { credentials: "include" })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {
@@ -160,7 +160,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     try {
       setPrevLoading(true)
       setPrevError("")
-      const resp = await fetch("/api/flashcards", { cache: "no-store" })
+      const resp = await fetch("/api/flashcards", { credentials: "include" })
       if (!resp.ok) {
         if (resp.status === 401 || resp.status === 403) {
           setPreviousDecks([])
@@ -210,7 +210,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
 
-      const resp = await fetch("/api/flashcard/generate", {
+      const resp = await fetch("/api/flashcards/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ context, hint: focusHint, num_flashcards: numCards, chapter: selectedChapterId, textbook_id: textbookId }),
