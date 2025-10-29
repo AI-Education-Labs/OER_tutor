@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from openai import OpenAI
 from backend.config import settings
-from pydantic import BaseModel
 from backend.features.auth.service import validate_cookie_token
 from backend.features.studyguide.models import StudyGuide, StudyGuideRequest
 from backend.db.database import get_collection
@@ -26,7 +25,7 @@ async def generate_study_guide(body: StudyGuideRequest, current_user = Depends(v
     context = body.context
     hint = body.hint
     textbook_id = body.textbook_id
-    chapter = body.chapter
+    chapter = body.chapter # TODO: Frontend should be untrusted for the content of the book, injectable
     print("context:", context)
     client = get_openai_client()
 

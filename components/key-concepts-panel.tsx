@@ -63,7 +63,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
     )
   }
 
-  // Load subchapters and simple context from chapter1 HTML (same approach as quiz/flashcards)
+  // Load subchapters and simple context from chapter1 HTML (same approach as quiz/flashcards) TODO: flashcards doesn't do this either
   useEffect(() => {
     let isCancelled = false
     const load = async () => {
@@ -77,29 +77,15 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
           ? meta.chapters.flatMap((c: any) => (Array.isArray(c?.sub_chapters) ? c.sub_chapters : []))
           : [];
           const uniqueSubs = Array.from(new Set(subs.filter((s) => typeof s === "string" && s.trim().length > 0)));
-  if (!isCancelled) setSubchapters(uniqueSubs);
-}
-
-        // 2) Load chapter1 HTML as base context
-        const htmlUrl = `/textbooks/${encodeURIComponent(textbookId)}/chapter1.html`;
-        const resp = await fetch(htmlUrl, { cache: "no-store" });
-        if (resp.ok) {
-          const html = await resp.text();
-          if (isCancelled) return;
-          const div = document.createElement("div");
-          div.innerHTML = html;
-          const textContent = div.textContent || "";
-          setContextText(textContent)
-        }
-      } catch {
-        // ignore
+        if (!isCancelled) setSubchapters(uniqueSubs);
       }
+    } catch (error) {
+      // Handle error if needed
     }
-    load()
-    return () => {
-      isCancelled = true
-    }
-  }, [textbookId])
+  };
+  load();
+  return () => { isCancelled = true };
+}, [textbookId]);
 
   // Load user's previous notes when in menu
   useEffect(() => {
@@ -339,5 +325,3 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
     </div>
   )
 }
-
-

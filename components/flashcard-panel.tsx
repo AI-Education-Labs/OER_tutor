@@ -207,7 +207,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   const startGeneration = async () => {
     setStage("loading")
     try {
-      const context = ""
+      const context = "" // TODO: im sorry what
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
 
       const resp = await fetch("/api/flashcards/generate", {

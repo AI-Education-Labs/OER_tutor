@@ -32,7 +32,7 @@ def get_openai_client() -> OpenAI:
 async def generate_quiz(body: QuizRequest, current_user = Depends(validate_cookie_token)):
     context = body.context
     textbook_id = body.textbook_id
-    chapter = body.chapter
+    chapter = body.chapter  # TODO: Frontend should be untrusted for the content of the book, injectable
     num_questions = body.num_questions
     hint = body.hint
     print("context:", context)
