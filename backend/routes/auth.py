@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
-from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 import re
 import uuid
@@ -8,11 +7,12 @@ from backend.config import settings
 from backend.features.auth.service import validate_cookie_token
 from backend.db.database import create_user_document, get_collection, get_user_by_username
 from backend.features.auth.service import hash_password, create_access_token
+from backend.features.auth.models import *
 
 router = APIRouter()
 
-@router.post("/login")
-async def assign_httponly_cookie(form_data: OAuth2PasswordRequestForm = Depends()):
+@router.post("/login", response_model=LoginResponse)
+async def assign_httponly_cookie(form_data: LoginRequest = Depends()):
     """
     Logs in a user and returns an http_only cookie.
     """
@@ -55,8 +55,11 @@ async def assign_httponly_cookie(form_data: OAuth2PasswordRequestForm = Depends(
     return resp
 
 # Register a new user
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register_user(user_create: UserCreate):
+@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=RegisterResponse)
+async def register_user(user_create: RegisterRequest):
+    """
+    Register New user
+    """
     # Username should only have alphanumeric characters
     if not user_create.username.isalnum():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username should only have alphanumeric characters")
@@ -102,15 +105,17 @@ async def register_user(user_create: UserCreate):
     return {"message": "User registered successfully", "user": user}
 
 # Logout endpoint to clear the cookie
-@router.post("/logout")
+@router.post("/logout", response_model=LogoutResponse)
 async def logout_user(response: Response):
     """
     Logs out a user by clearing the http_only cookie.
     """
     response.delete_cookie(key="access_token")
-    return {"message": "Logout successful"}
+    response.status_code = status.HTTP_200_OK
+    response.body = b'{"message": "Successfully logged out"}'
+    return response
 
-@router.get("/status")
+@router.get("/status", response_model=StatusResponse)
 async def auth_status(user: dict = Depends(validate_cookie_token)):
     """
     Endpoint to check authentication status.
