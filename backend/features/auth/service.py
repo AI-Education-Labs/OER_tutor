@@ -33,17 +33,15 @@ async def create_access_token(data: dict, expires_delta: Optional[timedelta] = N
 # Verify access tokens
 # Authentication helper functions
 
-async def validate_cookie_token(request: Request, required: bool = False) -> Optional[str]:
+async def validate_cookie_token(request: Request) -> Optional[str]:
     # Extract token from cookies
     token = request.cookies.get("access_token")
     if not token:
-        if required:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not authenticated",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return None
 
     try:
         # Decode the token
