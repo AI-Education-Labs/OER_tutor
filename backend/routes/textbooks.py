@@ -7,7 +7,7 @@ from backend.db.database import get_document, get_document_by_field
 from backend.features.auth.service import validate_cookie_token
 from botocore.exceptions import ClientError
 from starlette.concurrency import run_in_threadpool
-from backend.config import settings
+from backend.config.settings import settings
 from backend.db.s3_service import generate_presigned_get_url, head_object, get_client, get_object_bytes
 
 S3_BUCKET = settings.S3_BUCKET

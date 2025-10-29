@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
-from backend.config import settings
+from backend.config.settings import settings
 from backend.db.database import get_user_by_id
 import hashlib
 

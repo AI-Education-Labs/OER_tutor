@@ -3,7 +3,7 @@ from datetime import timedelta
 import re
 import uuid
 from backend.features.users.models import UserWithPassword, UserCreate
-from backend.config import settings
+from backend.config.settings import settings
 from backend.features.auth.service import validate_cookie_token
 from backend.db.database import create_user_document, get_collection, get_user_by_username
 from backend.features.auth.service import hash_password, create_access_token

@@ -18,6 +18,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi import status
 import mangum
+from backend.config.openapi import custom_openapi
 from pathlib import Path
 from backend.db.database import ensure_mongo_connection
 import os
@@ -64,8 +65,11 @@ app.add_middleware(
 async def validation_exception_handler(request, exc):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={"detail": exc.errors(), "body": exc.body},
+        content={"detail": "Inproper request format."},
     )
+
+# Set custom OpenAPI schema
+app.openapi = lambda: custom_openapi(app)
 
 # Mangum handler
 handler = mangum.Mangum(app)

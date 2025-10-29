@@ -3,7 +3,7 @@ from typing import Optional, Any, Dict
 from backend.features.users.models import UserWithPassword
 import asyncio
 
-from backend.config import settings
+from backend.config.settings import settings
 
 MONGO_URI = settings.MONGO_URI
 MONGO_DB_NAME = settings.MONGO_DB_NAME

@@ -3,7 +3,7 @@ import logging
 from typing import Optional, Dict, Any, List, Tuple
 from botocore.exceptions import ClientError
 from botocore.config import Config
-from backend.config import settings
+from backend.config.settings import settings
 
 S3_BUCKET = settings.S3_BUCKET
 AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID

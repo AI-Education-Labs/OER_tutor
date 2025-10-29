@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 # Quiz Models
-from backend.config import settings
+from backend.config.settings import settings
 from openai import OpenAI
 
 

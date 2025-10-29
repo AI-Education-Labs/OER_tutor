@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from openai import OpenAI
-from backend.config import settings
+from backend.config.settings import settings
 from backend.features.auth.service import validate_cookie_token
 from backend.features.studyguide.models import StudyGuide, StudyGuideRequest
 from backend.db.database import get_collection

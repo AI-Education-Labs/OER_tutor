@@ -4,7 +4,7 @@ from backend.features.auth.service import validate_cookie_token
 from backend.db.database import get_collection
 from typing import Any, Dict, List
 from backend.features.flashcards.models import FlashcardRequest, FlashcardDeck
-from backend.config import settings
+from backend.config.settings import settings
 from backend.routes.textbooks import get_chapter_text
 import uuid
 
