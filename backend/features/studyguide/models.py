@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, List
+from pydantic import BaseModel, Field
+from typing import Optional
 
 class StudyGuide(BaseModel):
     study_guide: str = Field(description="A study guide for the student to review their material")

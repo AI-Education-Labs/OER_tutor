@@ -70,25 +70,25 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       try {
         if (!textbookId) return
         // 1) Load metadata to extract subchapters
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" });
         if (metaResp.ok) {
-          const meta = await metaResp.json()
+          const meta = await metaResp.json();
           const subs: string[] = Array.isArray(meta?.chapters)
-            ? meta.chapters.flatMap((c: any) => (Array.isArray(c?.sub_chapters) ? c.sub_chapters : []))
-            : []
-          const uniqueSubs = Array.from(new Set(subs.filter((s) => typeof s === "string" && s.trim().length > 0)))
-          if (!isCancelled) setSubchapters(uniqueSubs)
-        }
+          ? meta.chapters.flatMap((c: any) => (Array.isArray(c?.sub_chapters) ? c.sub_chapters : []))
+          : [];
+          const uniqueSubs = Array.from(new Set(subs.filter((s) => typeof s === "string" && s.trim().length > 0)));
+  if (!isCancelled) setSubchapters(uniqueSubs);
+}
 
         // 2) Load chapter1 HTML as base context
-        const htmlUrl = `/textbooks/${encodeURIComponent(textbookId)}/chapter1.html`
-        const resp = await fetch(htmlUrl, { cache: "no-store" })
+        const htmlUrl = `/textbooks/${encodeURIComponent(textbookId)}/chapter1.html`;
+        const resp = await fetch(htmlUrl, { cache: "no-store" });
         if (resp.ok) {
-          const html = await resp.text()
-          if (isCancelled) return
-          const div = document.createElement("div")
-          div.innerHTML = html
-          const textContent = div.textContent || ""
+          const html = await resp.text();
+          if (isCancelled) return;
+          const div = document.createElement("div");
+          div.innerHTML = html;
+          const textContent = div.textContent || "";
           setContextText(textContent)
         }
       } catch {
@@ -109,7 +109,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       try {
         setPrevLoading(true)
         setPrevError("")
-        const resp = await fetch("/api/notes", { cache: "no-store" })
+        const resp = await fetch("/api/studyguide/list", { cache: "no-store" })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {
@@ -174,6 +174,42 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       setStage("menu")
     }
   }
+
+  // Load structured data for chapter content
+  useEffect(() => {
+    let isCancelled = false;
+    const load = async () => {
+      try {
+        if (!textbookId || !selectedChapterId) return;
+
+        // Fetch structured data for the chapter content
+        const resp = await fetch(`/api/key-concept/chapter-content`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ textbook_id: textbookId, chapter_id: selectedChapterId }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (!isCancelled) {
+            const textContent = data?.content || "";
+            setContextText(textContent);
+          }
+        } else {
+          throw new Error(`Failed to fetch chapter content (${resp.status})`);
+        }
+      } catch {
+        if (!isCancelled) {
+          setContextText("");
+        }
+      }
+    };
+
+    load();
+    return () => {
+      isCancelled = true;
+    };
+  }, [textbookId, selectedChapterId]);
 
   const hasSubchapters = subchapters.length > 0
   const canGenerate = Boolean(contextText)

@@ -1,12 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from openai import OpenAI
 from backend.config import settings
-from backend.routes.textbooks import get_chapter_text
-from backend.features.sidebar_modules.models import *
-from backend.db.database import get_collection
-from backend.features.auth.service import validate_cookie_token
 from pydantic import BaseModel
-from typing import Any, Dict, List 
+from backend.features.auth.service import validate_cookie_token
+from backend.features.studyguide.models import StudyGuide, StudyGuideRequest
+from backend.db.database import get_collection
+from typing import Any, Dict, List
 import uuid
 import time
 
@@ -20,12 +19,9 @@ def get_openai_client() -> OpenAI:
         return OpenAI()
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"OpenAI client init failed: {exc}")
+# STUDY GUIDES ARE STORED IN USER_NOTES FOR SOME FUCKING REASON, COULD NOT TELL YOU WHY
 
-@router.get("/health")
-async def health() -> dict:
-    return {"ok": True}
-
-@router.post("/api/key-concept/generate")
+@router.post("/generate")
 async def generate_study_guide(body: StudyGuideRequest, current_user = Depends(validate_cookie_token)):
     context = body.context
     hint = body.hint
@@ -76,13 +72,7 @@ async def generate_study_guide(body: StudyGuideRequest, current_user = Depends(v
     return data.study_guide
 
 
-# -----------------------
-# Fetch and update routes
-# -----------------------
-
-
-
-@router.get("/api/notes", status_code=status.HTTP_200_OK)
+@router.get("/list", status_code=status.HTTP_200_OK)
 async def list_user_notes(current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_notes")
@@ -94,7 +84,7 @@ async def list_user_notes(current_user = Depends(validate_cookie_token)):
         raise HTTPException(status_code=500, detail=f"Error fetching notes: {e}")
 
 
-@router.get("/api/notes/{item_id}", status_code=status.HTTP_200_OK)
+@router.get("/{item_id}", status_code=status.HTTP_200_OK)
 async def get_user_note(item_id: str, current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_notes")
@@ -104,7 +94,7 @@ async def get_user_note(item_id: str, current_user = Depends(validate_cookie_tok
     return doc
 
 
-@router.delete("/api/notes/{item_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{item_id}", status_code=status.HTTP_200_OK)
 async def delete_user_note(item_id: str, current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_notes")
@@ -112,4 +102,3 @@ async def delete_user_note(item_id: str, current_user = Depends(validate_cookie_
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Note not found")
     return {"ok": True}
-    

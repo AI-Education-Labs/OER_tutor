@@ -526,7 +526,6 @@ export function PDFViewer({
       setLoading(true)
       setError(null)
 
-      console.log(`/api/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`)
       const response = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`, { credentials: "include" })
 
       if (!response.ok) {
