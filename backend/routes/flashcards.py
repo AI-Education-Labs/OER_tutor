@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from backend.features.auth.service import validate_cookie_token
 from backend.db.database import get_collection
 from typing import Any, Dict, List
-from backend.features.flashcards.models import FlashcardRequest, FlashcardDeck
+from backend.features.flashcards.models import *
 from backend.config.settings import settings
 from backend.routes.textbooks import get_chapter_text
 import uuid
@@ -24,20 +24,26 @@ def get_openai_client() -> OpenAI:
         raise HTTPException(status_code=500, detail=f"OpenAI client init failed: {exc}")
 
 
-@router.get("/list", status_code=status.HTTP_200_OK)
+@router.get("/list", status_code=status.HTTP_200_OK, response_model=List[FlashcardModal])
 async def list_user_flashcards(current_user = Depends(validate_cookie_token)):
+    """
+    List all flashcard decks for the current user.
+    """
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_flashcards")
     try:
         cursor = collection.find({"user": user_id}).sort("created_time", -1)
-        cards: List[Dict[str, Any]] = [doc async for doc in cursor]
+        cards: List[FlashcardModal] = [doc async for doc in cursor]
         return cards
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching flashcards: {e}")
 
 
-@router.get("/{item_id}", status_code=status.HTTP_200_OK)
+@router.get("/{item_id}", status_code=status.HTTP_200_OK, response_model=FlashcardModal)
 async def get_user_flashcard(item_id: str, current_user = Depends(validate_cookie_token)):
+    """
+    Get a specific flashcard deck by ID for the current user.
+    """
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_flashcards")
     doc = await collection.find_one({"_id": item_id, "user": user_id})
@@ -46,8 +52,11 @@ async def get_user_flashcard(item_id: str, current_user = Depends(validate_cooki
     return doc
 
 
-@router.delete("/{item_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{item_id}", status_code=status.HTTP_200_OK, response_model=DeleteResponse)
 async def delete_user_flashcard(item_id: str, current_user = Depends(validate_cookie_token)):
+    """
+    Delete a specific flashcard deck by ID for the current user.
+    """
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_flashcards")
     result = await collection.delete_one({"_id": item_id, "user": user_id})
@@ -56,8 +65,18 @@ async def delete_user_flashcard(item_id: str, current_user = Depends(validate_co
     return {"ok": True}
 
 
-@router.post("/generate")
+@router.post("/generate", response_model=FlashcardDeck, status_code=status.HTTP_200_OK)
 async def generate_flashcard(body: FlashcardRequest, current_user = Depends(validate_cookie_token)):
+    """
+    Generate a flashcard deck
+
+    Request Body:
+    - context: text from the textbook chapter to generate flashcards from #TODO: ideally we fetch this server side, not pass from client
+    - textbook_id: the id of the textbook
+    - chapter: the chapter to generate flashcards for
+    - num_flashcards: number of flashcards to generate (default: 5)
+    - hint: optional hint to focus on a specific section or topic
+    """
     context = body.context
     textbook_id = body.textbook_id
     chapter = body.chapter
@@ -88,16 +107,16 @@ async def generate_flashcard(body: FlashcardRequest, current_user = Depends(vali
         system_prompt += f"[End of Chapter]\nFocus only on this section/topic if applicable: {hint}"
 
     try:
-        response = client.responses.parse(
+        response = client.beta.chat.completions.parse(
             model="gpt-4.1",
-            input=[
+            messages=[
                 {"role": "developer", "content": system_prompt},
                 {"role": "user", "content": "Generate a flashcard deck"}
             ],
-            text_format=FlashcardDeck
+            response_format=FlashcardDeck
         )
 
-        data = response.output[0].content[0].parsed
+        data = response.choices[0].message.parsed
 
     except Exception as e:
         print("error:", e)
@@ -112,7 +131,7 @@ async def generate_flashcard(body: FlashcardRequest, current_user = Depends(vali
         doc = {
             "_id": str(uuid.uuid4()),
             "user": user_id,
-            "flashcard": data.model_dump(),
+            "flashcard": data,
             "created_time": int(time.time()),
             "hint": hint,
             "textbook_id": textbook_id,
