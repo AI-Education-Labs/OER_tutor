@@ -133,3 +133,24 @@ npm run test:e2e
 This will execute all tests in the `tests/e2e` directory using Playwright.
 
 For more options, see [Playwright documentation](https://playwright.dev/docs/intro).
+
+UI can be launched via
+
+```shell
+npx playwright test --ui
+```
+
+### Launching UI mode from remote development
+
+make sure you have a X-server lcient installed
+ssh into your remote machine with `-X` option
+
+```shell
+ssh -X user@host
+```
+
+run whatever command you need to x-11 forward
+
+```shell
+npx playwright test --ui
+```
