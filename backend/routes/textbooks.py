@@ -40,7 +40,6 @@ async def get_chapter_text(textbook_uuid: str, chapter_id: str) -> str:
 @router.get("/list")
 async def get_textbooks(user_uuid: str = Depends(validate_cookie_token)):
     """Get all available textbooks."""
-    print(f"get_textbooks: user {user_uuid}")
     # If user is unathenticated, return 401 unauthorized
     if user_uuid is None:
         message = "User is not authenticated. Returning public textbooks only."
@@ -55,7 +54,6 @@ async def get_textbooks(user_uuid: str = Depends(validate_cookie_token)):
             user_textbooks_document = {}
 
         user_textbook_ids = user_textbooks_document.get("textbooks", [])
-        print(f"User {user_uuid} has the following textbooks -> {user_textbook_ids}")
 
         try:
             for textbook_id in user_textbook_ids:
@@ -85,7 +83,6 @@ async def get_textbooks(user_uuid: str = Depends(validate_cookie_token)):
 @router.get("/{textbook_uuid}")
 async def get_textbook_details(textbook_uuid: str):
     metadata = await get_document_by_field("textbooks", "_id", textbook_uuid)
-    print(f"Textbook metadata: {metadata}")
     if metadata is None:
         raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
     return metadata
@@ -104,7 +101,6 @@ async def get_chapters(textbook_uuid: str):
 @router.get("/{textbook_uuid}/chapters/{chapter_id}/pdf")
 async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     """Return a presigned URL to the chapter PDF stored in S3."""
-    print(f"Getting chapter PDF for {textbook_uuid} and {chapter_id}")
     try:
         # --- keep your metadata lookup ---
         textbook_metadata = await get_textbook_details(textbook_uuid)
@@ -124,7 +120,6 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
 
         # --- S3 path ---
         key = f"{textbook_uuid}/{pdf_filename}"
-        print(f"Searching for PDF in S3 at key: {key}")
 
         # Generate a presigned URL so the browser can open the PDF inline
         url = generate_presigned_get_url(
@@ -134,7 +129,6 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
             response_content_disposition=f'inline; filename="{pdf_filename}"',
             expires_in_seconds=3600,
         )
-        print(f"Generated presigned URL for {pdf_filename}: {url}")
 
         return {
             "pdf_url": url,

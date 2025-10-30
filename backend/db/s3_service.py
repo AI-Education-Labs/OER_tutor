@@ -1,6 +1,14 @@
 import boto3
 import logging
 from typing import Optional, Dict, Any, List, Tuple
+from mypy_boto3_s3 import S3Client
+from mypy_boto3_s3.type_defs import (
+	HeadObjectOutputTypeDef,
+	PutObjectOutputTypeDef,
+	DeleteObjectOutputTypeDef,
+	CopyObjectOutputTypeDef,
+	DeleteObjectsOutputTypeDef,
+)
 from botocore.exceptions import ClientError
 from botocore.config import Config
 from backend.config.settings import settings
@@ -20,6 +28,7 @@ _endpoint_url = None
 if S3_CLIENT_REGION:
 	_endpoint_url = f"https://s3.{S3_CLIENT_REGION}.amazonaws.com"
 
+s3: S3Client
 if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and not IS_LAMBDA:
 	# Use static keys only outside Lambda
 	s3 = boto3.client(
@@ -29,7 +38,7 @@ if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and not IS_LAMBDA:
 		aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
 		endpoint_url=_endpoint_url,
 		config=S3_SIGV4_CONFIG,
-	)
+	)  # type: ignore
 else:
 	# Default chain (role creds in Lambda), force regional endpoint and SigV4
 	s3 = boto3.client(
@@ -37,12 +46,12 @@ else:
 		region_name=S3_CLIENT_REGION,
 		endpoint_url=_endpoint_url,
 		config=S3_SIGV4_CONFIG,
-	)
+	)  # type: ignore
 
 logger = logging.getLogger(__name__)
 
 
-def get_client():
+def get_client() -> S3Client:
 	"""Return the configured boto3 S3 client."""
 	return s3
 
@@ -82,7 +91,7 @@ def generate_presigned_get_url(
 		params["ResponseContentDisposition"] = response_content_disposition
 	# Log presign context (no secrets)
 	try:
-		_session = boto3.session.Session()
+		_session = boto3.Session()
 		_creds_obj = _session.get_credentials()
 		_has_session_token = False
 		if _creds_obj:
@@ -160,7 +169,7 @@ def object_exists(key: str, bucket: Optional[str] = None) -> bool:
 		raise
 
 
-def head_object(key: str, bucket: Optional[str] = None) -> Dict[str, Any]:
+def head_object(key: str, bucket: Optional[str] = None) -> HeadObjectOutputTypeDef:
 	"""Return object metadata (headers)."""
 	bucket_name = get_bucket(bucket)
 	return s3.head_object(Bucket=bucket_name, Key=key)
@@ -183,7 +192,7 @@ def upload_bytes(
 	bucket: Optional[str] = None,
 	content_type: Optional[str] = None,
 	extra_args: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> PutObjectOutputTypeDef:
 	"""Upload raw bytes to S3 using put_object."""
 	bucket_name = get_bucket(bucket)
 	kwargs: Dict[str, Any] = {"Bucket": bucket_name, "Key": key, "Body": data}
@@ -211,11 +220,13 @@ def get_object_bytes(key: str, bucket: Optional[str] = None) -> bytes:
 	return resp["Body"].read()
 
 
-def delete_object(key: str, bucket: Optional[str] = None) -> Dict[str, Any]:
+def delete_object(key: str, bucket: Optional[str] = None) -> DeleteObjectOutputTypeDef:
 	"""Delete a single object."""
 	bucket_name = get_bucket(bucket)
 	return s3.delete_object(Bucket=bucket_name, Key=key)
 
+
+from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef
 
 def delete_prefix(prefix: str, bucket: Optional[str] = None) -> Tuple[int, List[str]]:
 	"""Delete up to 1000 objects under a prefix in a single request.
@@ -227,8 +238,8 @@ def delete_prefix(prefix: str, bucket: Optional[str] = None) -> Tuple[int, List[
 	keys = [item["key"] for item in listed["items"]]
 	if not keys:
 		return 0, []
-	objects = [{"Key": k} for k in keys]
-	resp = s3.delete_objects(Bucket=bucket_name, Delete={"Objects": objects, "Quiet": True})
+	objects: List[ObjectIdentifierTypeDef] = [{"Key": k} for k in keys]
+	resp: DeleteObjectsOutputTypeDef = s3.delete_objects(Bucket=bucket_name, Delete={"Objects": objects, "Quiet": True})
 	deleted = resp.get("Deleted", [])
 	return len(deleted), [d.get("Key", "") for d in deleted]
 
@@ -239,7 +250,7 @@ def copy_object(
 	source_bucket: Optional[str] = None,
 	destination_bucket: Optional[str] = None,
 	extra_args: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> CopyObjectOutputTypeDef:
 	"""Copy an object within/between buckets."""
 	src_bucket = get_bucket(source_bucket)
 	dst_bucket = get_bucket(destination_bucket or source_bucket)
@@ -255,7 +266,7 @@ def update_object_metadata(
 	metadata: Dict[str, str],
 	bucket: Optional[str] = None,
 	content_type: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> CopyObjectOutputTypeDef:
 	"""Update object metadata by issuing a self-copy with MetadataDirective='REPLACE'.
 
 	If content_type is not provided, attempts to preserve the existing ContentType.

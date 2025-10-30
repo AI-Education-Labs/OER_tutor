@@ -77,12 +77,11 @@ async def generate_flashcard(body: FlashcardRequest, current_user = Depends(vali
     - num_flashcards: number of flashcards to generate (default: 5)
     - hint: optional hint to focus on a specific section or topic
     """
-    context = body.context
     textbook_id = body.textbook_id
     chapter = body.chapter
     num_flashcards = body.num_flashcards
     hint = body.hint
-    print("chapter:", chapter)
+    context = await get_chapter_text(textbook_id, chapter)
     client = get_openai_client()
 
     system_prompt = f"You are a helpful tutor for a student currently studying a textbook. Help create a deck of flashcards quiz for the student. You will represent the flashcard deck in two arrays of equal size, one representing the front sides of the flashcards and one representing the backside of the flashcard. Use the flashcards to help the student learn and understand keywords, terms, and condensed concepts. Be sure to keep the order for the front and the back of the flashcard arrays respective of each other, e.g. Index 1 of the front array should correspond to the answer of Index 1 of the back array. Generate a deck of flashcards with {num_flashcards} flashcards based on the current chapter: "
