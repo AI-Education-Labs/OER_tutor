@@ -2,6 +2,7 @@ from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import asyncio
+from beanie import init_beanie
 from dotenv import load_dotenv
 from backend.routes.auth import router as auth_router
 from backend.routes.textbooks import router as textbooks_router
@@ -20,7 +21,7 @@ from fastapi import status
 import mangum
 from backend.config.openapi import custom_openapi
 from pathlib import Path
-from backend.db.database import ensure_mongo_connection
+from backend.db.mongo_service import init as initDb
 import os
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
@@ -38,18 +39,28 @@ app = FastAPI(title="TextbookAI API")
 api_router = APIRouter(prefix="/api/v1")
 
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
-api_router.include_router(quiz_router, prefix="/quiz", tags=["quiz"]) # TODO: working through this and beyond for updating API schema and responses
-api_router.include_router(studyguide_router, prefix="/studyguide", tags=["studyguide"])
-api_router.include_router(flashcards_router, prefix="/flashcards", tags=["flashcards"])
-api_router.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-modules"])
-api_router.include_router(textbooks_router, prefix="/textbooks", tags=["textbooks"])
-api_router.include_router(files_router, tags=["files"])
-api_router.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
-api_router.include_router(users_router, prefix="/users", tags=["users"])
-api_router.include_router(chat_router, prefix="/chat", tags=["chat"])
-api_router.include_router(user_books_router, tags=["user-books"]) 
+# api_router.include_router(quiz_router, prefix="/quiz", tags=["quiz"]) # TODO: working through this and beyond for updating API schema and responses
+# api_router.include_router(studyguide_router, prefix="/studyguide", tags=["studyguide"])
+# api_router.include_router(flashcards_router, prefix="/flashcards", tags=["flashcards"])
+# api_router.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-modules"])
+# api_router.include_router(textbooks_router, prefix="/textbooks", tags=["textbooks"])
+# api_router.include_router(files_router, tags=["files"])
+# api_router.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
+# api_router.include_router(users_router, prefix="/users", tags=["users"])
+# api_router.include_router(chat_router, prefix="/chat", tags=["chat"])
+# api_router.include_router(user_books_router, tags=["user-books"]) 
 
 app.include_router(api_router)
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await initDb()
+    yield
+
+# Create FastAPI app
+app = FastAPI(title="TextbookAI API", lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -78,4 +89,3 @@ handler = mangum.Mangum(app)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
-    asyncio.run(ensure_mongo_connection())
