@@ -13,12 +13,15 @@ class BookProgress(BaseModel):
     last_visited_chapter: int = Field(..., description="Last visited chapter index")
     last_visited_page: int = Field(..., description="Last visited page within the chapter")
 
+class Book(BaseModel):
+    textbook_id: str = Field(..., description="The ID of the textbook")
+    progress: BookProgress = Field(..., description="The user's progress in the textbook")
+
 class User(Document):
     username: str = Field(..., description="Username of the user")
     email: str = Field(..., description="Email address of the user")
     hashed_password: str = Field(..., description="Hashed password of the user")
-    books: list[str] = Field(default_factory=list, description="List of textbook IDs associated with the user")
-    book_progress: dict = Field(default_factory=dict, description="Mapping of textbook IDs to user's progress data")
+    books: list[Book] = Field(default_factory=list, description="List of textbooks associated with the user")
 
     class Settings:
         name = "users"
