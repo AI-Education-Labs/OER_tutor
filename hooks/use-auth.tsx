@@ -19,7 +19,7 @@ type AuthContextType = {
   user: User
   lastError: AuthError
   refresh: () => Promise<void>
-  login: (payload?: Record<string, unknown>) => Promise<LoginResult>
+  login: (payload: { username: string; password: string }) => Promise<LoginResult>
   logout: () => Promise<void>
 }
 
@@ -61,20 +61,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(
     async (payload: { username: string; password: string }): Promise<LoginResult> => {
       try {
-        const body = new URLSearchParams({
-          grant_type: "password", // Required by the backend
+        const params = new URLSearchParams({
           username: payload.username,
           password: payload.password,
-          scope: "", // Optional, can be omitted if not used
-          client_id: "", // Optional, can be omitted if not used
-          client_secret: "", // Optional, can be omitted if not used
         })
 
-        const res = await fetch("/api/auth/login", {
+        const res = await fetch(`/api/auth/login`, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          credentials: "include", // Ensure cookies are included
-          body,
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params.toString(),
         })
 
         if (res.ok) {

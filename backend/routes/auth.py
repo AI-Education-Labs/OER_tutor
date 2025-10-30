@@ -5,9 +5,10 @@ import uuid
 from backend.features.users.models import UserWithPassword, UserCreate
 from backend.config.settings import settings
 from backend.features.auth.service import validate_cookie_token
-from backend.db.database import create_user_document, get_collection, get_user_by_username
 from backend.features.auth.service import hash_password, create_access_token
 from backend.features.auth.models import *
+from backend.db.models import User
+from typing import Optional
 
 router = APIRouter()
 
@@ -16,28 +17,22 @@ async def assign_httponly_cookie(form_data: LoginRequest = Depends()):
     """
     Logs in a user and returns an http_only cookie.
     """
-    user = await get_user_by_username(form_data.username)
+    # Always hash the password, even if the user does not exist
     input_password_hash = await hash_password(form_data.password)
-    # Username Doesn't Exist 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    hashed_password = user.get("hashed_password")
+    user: Optional[User] = await User.find_one(User.username == form_data.username)
 
-    # Incorrect Password
-    if hashed_password != input_password_hash:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # Use a dummy hash if user does not exist to prevent timing attacks
+    stored_password_hash = user.hashed_password if user else await hash_password("dummy_password")
+
+    # Constant-time comparison
+    import hmac
+    if not user or not hmac.compare_digest(stored_password_hash, input_password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
 
     # create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    user_id = user.get("id")
+
+    user_id = str(user.id)
     access_token = await create_access_token(
         data={"sub": user_id, "user_id": user_id}, expires_delta=access_token_expires
     )
@@ -83,26 +78,23 @@ async def register_user(user_create: RegisterRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password should be less than 100 characters")
 
     # Ensure unique username and email
-    users = await get_collection("users")
-    existing = await users.find_one({"username": user_create.username})
+    existing = await User.find_one({"username": user_create.username})
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
-    existing = await users.find_one({"email": user_create.email})
+    existing = await User.find_one({"email": user_create.email})
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
     hashed_password = await hash_password(user_create.password)
 
-    user_id = str(uuid.uuid4())
-    user = UserWithPassword(
-        id=user_id,
-        username=user_create.username,
-        email=user_create.email,
-        hashed_password=hashed_password,
-        disabled=0,
+    user = User(username=user_create.username, email=user_create.email, hashed_password=hashed_password, books=[])
+    await user.create()
+
+    return RegisterResponse(
+        id=str(user.id),
+        username=user.username,
+        message="User registered successfully",
     )
-    await create_user_document(user)
-    return {"message": "User registered successfully", "user": user}
 
 # Logout endpoint to clear the cookie
 @router.post("/logout", response_model=LogoutResponse)
