@@ -1,6 +1,6 @@
 from backend.db.database import get_document_by_field
 from fastapi import HTTPException
-from db.s3_service import get_client
+from backend.db.s3_service import get_client
 from backend.config.settings import settings
 
 async def get_textbook_metadata(textbook_id: str):

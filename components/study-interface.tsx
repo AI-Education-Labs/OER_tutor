@@ -72,7 +72,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
   const [mobileChaptersOpen, setMobileChaptersOpen] = useState(false)
 
-  const [selectedChapterId, setSelectedChapterId] = useState<string | undefined>(undefined)
+  const [selectedChapterId, setSelectedChapterId] = useState<string>("")
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
   const [rightPanelWidth, setRightPanelWidth] = useState(400)
@@ -137,6 +137,22 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     }
     restore()
   }, [textbookId])
+
+  useEffect(() => {
+    if (!textbookData || selectedChapterId) {
+      return
+    }
+
+    const chapters = Array.isArray(textbookData.chapters) ? textbookData.chapters : []
+    if (chapters.length === 0) {
+      return
+    }
+
+    const firstChapterId = chapters[0]?.id
+    if (firstChapterId !== undefined && firstChapterId !== null) {
+      setSelectedChapterId(String(firstChapterId))
+    }
+  }, [textbookData, selectedChapterId])
   // Flash animation effect for chapters
   const handleChaptersFlash = () => {
     if (leftPanelCollapsed) {
@@ -524,6 +540,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                 onSplitGroup={(direction) => splitTabGroup(group.id, direction)}
                 onRemoveGroup={() => removeTabGroup(group.id)}
                 isNarrowPanel={isRightPanelNarrow}
+                textbookId={textbookId}
+                selectedChapterId={selectedChapterId}
                 style={{ minHeight: "200px" }}
               />
             ))}

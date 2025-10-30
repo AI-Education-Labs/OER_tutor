@@ -8,18 +8,18 @@ import logging
 
 from fastapi import APIRouter, Depends, Request, BackgroundTasks, HTTPException, status
 from fastapi.responses import JSONResponse
+from openai import chat
 from sse_starlette.sse import EventSourceResponse
 
-
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 
 from backend.graph import get_system_prompt
 from backend.db.database import get_collection
 from backend.features.users.models import User
-from backend.features.auth.service import validate_cookie_token 
-from backend.routes.textbooks import get_chapter_text
+from backend.features.auth.service import validate_cookie_token
+from backend.features.textbooks.service import get_textbook_chapter_txt
+from backend.features.chat.models import *
 
 
 router = APIRouter()
@@ -55,158 +55,47 @@ class MongoChatMessageHistory:
        return messages
 
 
-
-
-# ----------------------------
-# Conversation Summary / Title
-# ----------------------------
-async def update_conversation_summary(user_id: str, session_id: str):
-   try:
-       llm_msgs = []
-
-       history = MongoChatMessageHistory(session_id=session_id)
-       messages = await history.get_messages(limit=10)
-
-       important_messages_collection = MongoChatMessageHistory(session_id=session_id, collection_name="important_messages")
-       important_messages = await important_messages_collection.get_messages(limit=20)
-
-       llm_msgs.append(SystemMessage(content="Important messages from the conversation:"))
-       if important_messages:
-           for msg in important_messages:
-               if msg["role"] == "user":
-                   llm_msgs.append(HumanMessage(content=msg["content"]))
-               elif msg["role"] == "assistant":
-                   llm_msgs.append(AIMessage(content=msg["content"]))
-
-
-       llm_msgs.append(SystemMessage(content="Recent messages:"))
-       for msg in messages:
-           if msg["role"] == "user":
-               llm_msgs.append(HumanMessage(content=msg["content"]))
-           elif msg["role"] == "assistant":
-               llm_msgs.append(AIMessage(content=msg["content"]))
-
-
-       system_prompt = SystemMessage(
-           content="Generate a detailed conversation summary, a one-line title, and decide if the recent messages need to be added to important messages."
-       )
-       llm_msgs.insert(0, system_prompt)
-
-
-       summary_llm = ChatOpenAI(model="gpt-5-mini", temperature=0, tags=["summary-updater"], reasoning_effort="low", )
-
-
-       prompt_content = "\n".join([
-           f"{'user' if isinstance(m, HumanMessage) else 'assistant' if isinstance(m, AIMessage) else 'system'}: {m.content}"
-           for m in llm_msgs
-       ])
-
-
-       result = await summary_llm.ainvoke(
-           f"""
-You are an assistant that summarizes conversations and can find detailed important messages.
-
-Return valid JSON with exactly these keys:
-- "title": a concise, one-line title summarizing the conversation.
-- "summary": a detailed summary of the conversation, including key points, decisions, and outcomes.
-- "important_messages": a list of truly important messages. Each message must be an object:
-    - "role": either "user" or "assistant"
-    - "content": the full, verbatim text of the message.
-
-Guidelines for selecting "important_messages":
-
-1. Only include messages that contain **essential information, insights, or turning points** that should be remembered long-term.
-2. Exclude greetings, filler, polite phrases, or temporary procedural messages unless they contain key content.
-3. Any message that contains **detailed instructions, structured learning plans, step-by-step guidance, strategies, or decisions** must be included in full, **as one single message**, exactly as it appears. Do not summarize, shorten, or replace it with placeholders like "[detailed plan provided]".
-4. User messages that express **commitment, goals, or instructions for the assistant to act on knowledge or plans** are important and should also be included verbatim.
-5. Do not split long messages into smaller pieces; each important message should remain intact.
-6. Never remove or abbreviate content that contains actionable knowledge or structured guidance.
-7. If no messages meet the criteria, return an empty list for "important_messages". DO NOT INCLUDE MESSAGES LIKE 'the sky is blue' or 'i had eggs for breakfat', be intelligent and DONT CLOG THE IMPORTANT MESSAGES STORAGE.
-8. Do not include duplicate messages; each important message should be unique. IF ITS ALREADY IN THE IMPORTANT MESSAGES: PROMPT DONT ADD IT AGAIN.
-
-Data:
-            {prompt_content}
-            """
-        )
-
-
-       try:
-           summary_json = json.loads(result.content)
-           title = summary_json.get("title", "Chat Session")
-           summary = summary_json.get("summary", "")
-           important_msgs = summary_json.get("important_messages", None)
-       except Exception:
-           title = "Chat Session"
-           summary = result.content
-
-       if isinstance(important_msgs, list):
-           for msg in important_msgs:
-                if isinstance(msg, dict) and "role" in msg and "content" in msg:
-                    await important_messages_collection.add_message(msg["role"], msg["content"])
-           
-       collection = await get_collection("conversation_summaries")
-       await collection.update_one(
-           {"session_id": session_id, "user_id": user_id},
-           {"$set": {"title": title, "summary": summary, "updated_at": datetime.utcnow()}},
-           upsert=True
-       )
-   except Exception as e:
-       print(f"Error updating conversation summary: {e}")
-
-
-
-
-async def get_textbook_context(textbook_id: str, chapter_id: str) -> str:
-# TODO S3 textbook content retrieval
-#    try:
-#        pdf_path = f"./public/textbooks/{textbook_id}/chapter{chapter_id}.pdf"
-#        text = text_extract(pdf_path)
-#        return text
-#    except Exception as e:
-#        print(f"Error retrieving textbook context: {e}")
-   return ""
-
-
-
-
 # ----------------------------
 # Non-Streaming POST Chat
 # ----------------------------
 @router.post("/message")
-async def chat_message(
-   request: Request,
-   background_tasks: BackgroundTasks,
-   user_id: str = Depends(validate_cookie_token)
-):
-   data = await request.json()
-   user_message = data.get("message")
-   session_id = data.get("session_id") or str(uuid.uuid4())
-   if not user_message:
+async def chat_message(chat: ChatRequest, user_id: str = Depends(validate_cookie_token)):
+    """
+    Handle a single non-streaming chat message from an authenticated user.
+
+    Parameters:
+    - user_message (str): The text message from the user. Required. If empty, the function raises HTTPException(status_code=400).
+    - textbook_id (str): The ID of the textbook being referenced
+    - chapter_id (str): The ID of the chapter being referenced
+    - session_id (Optional[str]): An existing session identifier to continue a conversation. If omitted or falsy, a new UUID4 session_id is generated and returned. This value is used to scope message history in MongoChatMessageHistory.
+    """
+    
+    user_message = chat.user_message
+    session_id = chat.session_id or str(uuid.uuid4())
+    if not user_message:
        raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-   history = MongoChatMessageHistory(session_id=session_id)
-   await history.add_message("user", user_message)
+    history = MongoChatMessageHistory(session_id=session_id)
+    await history.add_message("user", user_message)
 
+    recent_msgs = await history.get_messages(limit=10)
+    llm_msgs: list[BaseMessage] = []
+    llm_msgs.append(SystemMessage(content=str(get_system_prompt())))
+    for msg in recent_msgs:
+        if msg["role"] == "user":
+            llm_msgs.append(HumanMessage(content=str(msg["content"])))
+        elif msg["role"] == "assistant":
+            llm_msgs.append(AIMessage(content=str(msg["content"])))
+    llm_msgs.append(HumanMessage(content=str(user_message)))
 
-   recent_msgs = await history.get_messages(limit=10)
-   llm_msgs = [SystemMessage(content=get_system_prompt())]
-   for msg in recent_msgs:
-       if msg["role"] == "user":
-           llm_msgs.append(HumanMessage(content=msg["content"]))
-       elif msg["role"] == "assistant":
-           llm_msgs.append(AIMessage(content=msg["content"]))
-   llm_msgs.append(HumanMessage(content=user_message))
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    ai_response = await llm.ainvoke(llm_msgs)
+    ai_content = ai_response.content if hasattr(ai_response, 'content') else ai_response
+    if not isinstance(ai_content, str):
+        ai_content = str(ai_content)
+    await history.add_message("assistant", ai_content)
 
-
-   llm = ChatOpenAI(model="gpt-4o", temperature=0)
-   ai_response = await llm.ainvoke(llm_msgs)
-   await history.add_message("assistant", ai_response.content)
-
-
-   background_tasks.add_task(update_conversation_summary, user_id, session_id)
-
-
-   return {"session_id": session_id, "ai_response": ai_response.content}
+    return {"session_id": session_id, "ai_response": ai_response.content}
 
 
 
@@ -214,146 +103,172 @@ async def chat_message(
 # ----------------------------
 # Streaming POST
 # ----------------------------
-@router.post("/stream")
-async def stream_chat(
-   request: Request,
-   background_tasks: BackgroundTasks,
-   user_id: str = Depends(validate_cookie_token)
-):
-   data = await request.json()
-   user_message = data.get("message")
-   textbook_id = data.get("textbook_id")
-   chapter_id = data.get("chapter_id")
-   session_id = data.get("session_id")
-   
-   if not user_message:
-       raise HTTPException(status_code=400, detail="Message cannot be empty")
+@router.post("/stream", )
+async def stream_chat(chat: ChatRequest, user_id: str = Depends(validate_cookie_token)):
+    """
+    Handle a single non-streaming chat message from an authenticated user.
+
+    Parameters:
+    - user_message (str): The text message from the user. Required. If empty, the function raises HTTPException(status_code=400).
+    - textbook_id (str): The ID of the textbook being referenced
+    - chapter_id (str): The ID of the chapter being referenced
+    - session_id (Optional[str]): An existing session identifier to continue a conversation. If omitted or falsy, a new UUID4 session_id is generated and returned. This value is used to scope message history in MongoChatMessageHistory.
+    """
+    if not chat.user_message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    # Only generate new session if none is provided
+    if not chat.session_id:
+        chat.session_id = str(uuid.uuid4())
+
+    history = MongoChatMessageHistory(session_id=chat.session_id)
+    await history.add_message("user", chat.user_message)
+    print(f"Added user message to history for session {chat.session_id}.")
+    important_messages_collection = MongoChatMessageHistory(session_id=chat.session_id, collection_name="important_messages")
+    important_msgs = await important_messages_collection.get_messages(limit=20)
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        collected_chunks: list[str] = []
+        try:
+            recent_msgs = await history.get_messages(limit=10)
+
+            # Include textbook context & prior summary
+            collection = await get_collection("conversation_summaries")
+            summary_doc = await collection.find_one({"session_id": chat.session_id, "user_id": user_id})
+            print(f"Fetched conversation summary: {summary_doc}")
+            summary_text = summary_doc.get("summary") if summary_doc else ""
 
 
-   # Only generate new session if none is provided
-   if not session_id:
-       session_id = str(uuid.uuid4())
-       print(f"Generated new session ID: {session_id}")
+            llm_msgs: list[BaseMessage] = [get_system_prompt()]
 
-   history = MongoChatMessageHistory(session_id=session_id)
-   await history.add_message("user", user_message)
-   print(f"Added user message to history for session {session_id}.")
-   important_messages_collection = MongoChatMessageHistory(session_id=session_id, collection_name="important_messages")
-   important_msgs = await important_messages_collection.get_messages(limit=20)
+            if important_msgs:
+                llm_msgs.append(SystemMessage(content="Important messages from the conversation:"))
+                for msg in important_msgs:
+                    if msg["role"] == "user":
+                        llm_msgs.append(HumanMessage(content=msg["content"]))
+                    elif msg["role"] == "assistant":
+                        llm_msgs.append(AIMessage(content=msg["content"]))
 
-
-   async def event_generator() -> AsyncGenerator[str, None]:
-       collected_chunks: list[str] = []
-       try:
-           recent_msgs = await history.get_messages(limit=10)
-
-
-           # Include textbook context & prior summary
-           collection = await get_collection("conversation_summaries")
-           summary_doc = await collection.find_one({"session_id": session_id, "user_id": user_id})
-           print(f"Fetched conversation summary: {summary_doc}")
-           summary_text = summary_doc.get("summary") if summary_doc else ""
-
-
-           llm_msgs = [get_system_prompt()]
-
-           if important_msgs:
-               llm_msgs.append(SystemMessage(content="Important messages from the conversation:"))
-               for msg in important_msgs:
-                   if msg["role"] == "user":
-                       llm_msgs.append(HumanMessage(content=msg["content"]))
-                   elif msg["role"] == "assistant":
-                       llm_msgs.append(AIMessage(content=msg["content"]))
-
-           textbook_text = await get_textbook_context(textbook_id, chapter_id) if (textbook_id and chapter_id) else None
-           if textbook_text:
-               llm_msgs.append(SystemMessage(content=f"Textbook context: {textbook_text}"))
-               print("Fine 1: Added textbook context to system message.")
-           if summary_text:
+            try:
+                textbook_text = await get_textbook_chapter_txt(chat.textbook_id, chat.chapter_id)
+                print(textbook_text)
+                if textbook_text:
+                    llm_msgs.append(SystemMessage(content=f"Textbook context: {textbook_text}"))
+                    print("Fine 1: Added textbook context to system message.")
+            except Exception as e:
+                print(f"Error fetching textbook chapter text: {e}")
+                # Optionally, you can append a system message indicating missing context
+                llm_msgs.append(SystemMessage(content="Textbook context unavailable."))
+            if summary_text:
                 llm_msgs.append(SystemMessage(content=f"Conversation so far (summary): {summary_text}"))
                 print("Fine 2: Added conversation summary to system message.")
 
 
-           for msg in recent_msgs:
-               if msg["role"] == "user":
-                   llm_msgs.append(HumanMessage(content=str(msg["content"])))
-                   print(f"Fine 3: Added user message to history: {msg['content'][:30]}...")
-               elif msg["role"] == "assistant":
-                   llm_msgs.append(AIMessage(content=str(msg["content"])))
-                   print(f"Fine 4: Added assistant message to history: {msg['content'][:30]}...")
+            for msg in recent_msgs:
+                if msg["role"] == "user":
+                    llm_msgs.append(HumanMessage(content=str(msg["content"])))
+                    print(f"Fine 3: Added user message to history: {msg['content'][:30]}...")
+                elif msg["role"] == "assistant":
+                    llm_msgs.append(AIMessage(content=str(msg["content"])))
+                    print(f"Fine 4: Added assistant message to history: {msg['content'][:30]}...")
 
 
-           llm_msgs.append(HumanMessage(content=str(user_message)))
-           print(f"Fine 5: Added current user message: {user_message[:30]}...")
-           llm = ChatOpenAI(model="gpt-5-mini", temperature=0, streaming=True, tags=["Chatter"], reasoning_effort="minimal")#, use_responses_api=True)
+            llm_msgs.append(HumanMessage(content=str(chat.user_message)))
+            print(f"Fine 5: Added current user message: {chat.user_message[:30]}...")
+            llm = ChatOpenAI(model="gpt-5-mini", temperature=0, streaming=True, tags=["Chatter"], reasoning_effort="minimal")#, use_responses_api=True)
 
 
-           async for chunk in llm.astream(llm_msgs):
-               if chunk.content:
-                   if isinstance(chunk.content, list):
-                       text_parts = [item["text"] for item in chunk.content if isinstance(item, dict) and "text" in item]
-                       chunk_text = "".join(text_parts)
-                   else:
-                       chunk_text = str(chunk.content)
-                   collected_chunks.append(chunk_text)
-                   yield json.dumps({'text': chunk_text, 'session_id': session_id})
+            async for chunk in llm.astream(llm_msgs):
+                if chunk.content:
+                    if isinstance(chunk.content, list):
+                        text_parts = [item["text"] for item in chunk.content if isinstance(item, dict) and "text" in item]
+                        chunk_text = "".join(text_parts)
+                    else:
+                        chunk_text = str(chunk.content)
+                    collected_chunks.append(chunk_text)
+                    yield json.dumps({'text': chunk_text, 'session_id': chat.session_id})
 
 
-           full_response = "".join(collected_chunks)
-           await history.add_message("assistant", full_response)
-           background_tasks.add_task(update_conversation_summary, user_id, session_id)
+            full_response = "".join(collected_chunks)
+            await history.add_message("assistant", full_response)
 
 
-           # --- Branch decision ---
-           try:
-               detector_llm = ChatOpenAI(model="gpt-5-mini", temperature=0, tags = ["branch-detector"], reasoning_effort="low", )
-               recent = await history.get_messages(limit=10)
-               conv_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent])
-               detector_prompt = (
-                   'Decide whether the last user message starts a new topic. '
-                   'Respond ONLY with JSON: {"start_new_chat": true/false, "suggested_title": string}'
-                   f'\nConversation:\n{conv_text}'
-               )
-               result = await detector_llm.ainvoke(detector_prompt)
-               print("===================================================")
-               print("Branch detector response:", result.content)
-               print("===================================================")
-               decision = json.loads(result.content)
-           except Exception:
-               decision = {"start_new_chat": False}
+            # --- Branch decision ---
+            try:
+                detector_llm = ChatOpenAI(model="gpt-5-mini", temperature=0, tags=["branch-detector"], reasoning_effort="low", )
+                recent = await history.get_messages(limit=10)
+                conv_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent])
+                detector_prompt = (
+                    'Decide whether the last user message starts a new topic. '
+                    'Respond ONLY with JSON: {"start_new_chat": true/false, "suggested_title": string}'
+                    f'\nConversation:\n{conv_text}'
+                )
+                result = await detector_llm.ainvoke(detector_prompt)
+                print("===================================================")
+                print("Branch detector response:", result.content)
+                print("===================================================")
+                # Simplified normalization and parsing
+                content = result.content
+                decision = None
+                if isinstance(content, dict):
+                    decision = content
+                elif isinstance(content, str):
+                    try:
+                        decision = json.loads(content)
+                    except Exception:
+                        decision = {"start_new_chat": False}
+                elif isinstance(content, list):
+                    # If list of dicts, merge them; if list of strings, join and parse
+                    if all(isinstance(item, dict) for item in content):
+                        # Merge dicts (last one wins)
+                        merged = {}
+                        for item in content:
+                            # Guard the merge at runtime so static type checkers don't complain
+                            if isinstance(item, dict):
+                                merged = {**merged, **item}
+                        decision = merged
+                    elif all(isinstance(item, str) for item in content):
+                        try:
+                            decision = json.loads("".join(content))
+                        except Exception:
+                            decision = {"start_new_chat": False}
+                    else:
+                        decision = {"start_new_chat": False}
+                else:
+                    decision = {"start_new_chat": False}
+            except Exception:
+                decision = {"start_new_chat": False}
 
 
-           if decision.get("start_new_chat"):
-               print("==================================================")
-               print("Starting new chat session as per LLM decision.")
-               print("==================================================")
-               new_session_id = str(uuid.uuid4())
-               new_history = MongoChatMessageHistory(session_id=new_session_id)
-               await new_history.add_message("user", user_message)
-               await new_history.add_message("assistant", full_response)
-               background_tasks.add_task(update_conversation_summary, user_id, new_session_id)
+            if decision.get("start_new_chat"):
+                print("==================================================")
+                print("Starting new chat session as per LLM decision.")
+                print("==================================================")
+                new_session_id = str(uuid.uuid4())
+                new_history = MongoChatMessageHistory(session_id=new_session_id)
+                await new_history.add_message("user", chat.user_message)
+                await new_history.add_message("assistant", full_response)
 
 
-               yield json.dumps({
-                   'start_new_chat': True,
-                   'new_session_id': new_session_id,
-                   'suggested_title': decision.get("suggested_title", "New Chat")
-               })
-           else:
-               print("unable to parse json")
-               print("Response content:", result.content)
-               print("Desicion:", decision)
-               print("==================================================")
+                yield json.dumps({
+                    'start_new_chat': True,
+                    'new_session_id': new_session_id,
+                    'suggested_title': decision.get("suggested_title", "New Chat")
+                })
+            else:
+                print("unable to parse json")
+                print("Response content:", result.content)
+                print("Desicion:", decision)
+                print("==================================================")
 
 
-           yield json.dumps({'done': True, 'session_id': session_id})
+            yield json.dumps({'done': True, 'session_id': chat.session_id})
 
 
-       except Exception as e:
-           yield json.dumps({'done': True, 'error': str(e), 'session_id': session_id})
+        except Exception as e:
+            yield json.dumps({'done': True, 'error': str(e), 'session_id': chat.session_id})
 
-
-   return EventSourceResponse(event_generator())
+    return EventSourceResponse(event_generator())
 
 
 

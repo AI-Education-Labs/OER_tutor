@@ -27,8 +27,8 @@ import { KeyConceptsPanel } from "@/components/key-concepts-panel"
 
 interface TutorPanelProps {
   activeTab: string
-  textbookId?: string
-  selectedChapterId?: string
+  textbookId: string
+  selectedChapterId: string
 }
 
 interface DialogueNode {
@@ -65,11 +65,7 @@ interface StudyNote {
 export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPanelProps) {
   const [userInput, setUserInput] = useState("")
   const [activeTree, setActiveTree] = useState<string>("limits")
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
-  const [hoveredTreeId, setHoveredTreeId] = useState<string | null>(null)
-  const [hoveredHighlightId, setHoveredHighlightId] = useState<string | null>(null)
-  const [hoveredQuestionIndex, setHoveredQuestionIndex] = useState<string | null>(null)
-  const [tooltipInfo, setTooltipInfo] = useState<{
+    const [tooltipInfo, setTooltipInfo] = useState<{
     id: string
     text: string
     position: { x: number; y: number }

@@ -17,8 +17,8 @@ interface TabGroupProps {
   onRemoveGroup: () => void
   isNarrowPanel?: boolean
   style?: React.CSSProperties
-  textbookId?: string
-  selectedChapterId?: string
+  textbookId: string
+  selectedChapterId: string
 }
 
 export function TabGroup({

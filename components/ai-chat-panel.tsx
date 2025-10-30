@@ -10,9 +10,9 @@ import { formatMarkdown } from "@/utils/markdown"
 import { useAuth } from "@/hooks/use-auth"
 
 interface AiChatPanelProps {
-  context?: ChatContext
-  textbookId?: string
-  selectedChapterId?: string
+  context: ChatContext
+  textbookId: string
+  selectedChapterId: string
 }
 
 type StreamTextData = {
@@ -33,6 +33,13 @@ type StreamDoneData = {
 
 type StreamErrorData = {
   error: string
+}
+
+interface ChatRequestBody {
+  user_message: string
+  textbook_id: string
+  chapter_id: string
+  session_id?: string
 }
 
 type StreamData = StreamTextData | StreamBranchData | StreamDoneData | StreamErrorData
@@ -170,6 +177,14 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const MAX_MESSAGES_GUEST = 100
   const MESSAGE_TILL_TITLE_UPDATE = 2
   const [messageSinceTitleUpdate, setMessageSinceTitleUpdate] = useState(0);
+  const hasChapterContext = Boolean(textbookId && selectedChapterId)
+  const canSendWithQuota = isAuthenticated || messageCount < MAX_MESSAGES_GUEST
+  const canSend = hasChapterContext && canSendWithQuota
+  const inputPlaceholder = !hasChapterContext
+    ? "Select a chapter to start chatting"
+    : canSendWithQuota
+      ? "Ask me anything..."
+      : "Sign in to continue chatting"
 
   // Scroll on new message
   // useEffect(() => {
@@ -196,7 +211,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
-      const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
+      const res = await fetch(`/chat/history?session_id=${sessionId}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       const data = await res.json()
@@ -292,6 +307,10 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (!input.trim() || isLoading) return
+    if (!hasChapterContext) {
+      console.warn("Attempted to send a chat message without textbook or chapter context.")
+      return
+    }
     if (!isAuthenticated && messageCount >= MAX_MESSAGES_GUEST) return
 
     const userMessage: Message = { id: Date.now().toString(), content: input, role: "user", timestamp: new Date() }
@@ -306,8 +325,13 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     }, 0)
 
     try {
-      const body: any = { message: userMessage.content, textbook_id: textbookId, chapter_id: selectedChapterId }
-      if (sessionIdRef.current) body.session_id = sessionIdRef.current
+      const body: ChatRequestBody = {
+        user_message: userMessage.content,
+        textbook_id: textbookId,
+        chapter_id: `${selectedChapterId}`,
+        ...(sessionIdRef.current ? { session_id: sessionIdRef.current } : {}),
+      }
+      console.log(body)
 
       abortControllerRef.current?.abort()
       const controller = new AbortController()
@@ -316,6 +340,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
       const streamRes = await fetch(`/api/chat/stream`, {
         method: "POST",
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
         signal: controller.signal,
       })
@@ -457,10 +484,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     }
     setMessageSinceTitleUpdate(0)
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
       const sessionId = sessionIdRef.current
-      const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
+      const res = await fetch(`/chat/history?session_id=${sessionId}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       const data = await res.json()
@@ -491,8 +517,6 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     // Refresh chat list to show the new chat
     await fetchChats()
   }
-
-  const canSend = isAuthenticated || messageCount < MAX_MESSAGES_GUEST
 
   const renderedMessages = useMemo(
     () =>
@@ -584,7 +608,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
         </div>
 
         {/* Message limit warning */}
-        {!isAuthenticated&& messageCount >= MAX_MESSAGES_GUEST && (
+        {!isAuthenticated && messageCount >= MAX_MESSAGES_GUEST && (
           <div className="p-3 bg-[#2d2d30] border-t border-[#3e3e42] flex items-center gap-2 text-[#ce9178] text-sm">
             <AlertCircle className="w-4 h-4" /> You've reached the message limit. Sign in for unlimited chat!
           </div>
@@ -602,7 +626,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
                   handleSendMessage()
                 }
               }}
-              placeholder={canSend ? "Ask me anything..." : "Sign in to continue chatting"}
+              placeholder={inputPlaceholder}
               className="flex-1 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc] min-h-[40px] max-h-[120px] resize-none overflow-auto"
               disabled={!canSend || isLoading}
               rows={1}
@@ -617,6 +641,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
             </Button>
           </form>
           {canSend && <div className="text-xs text-[#969696] mt-2">Press Enter to send, Shift+Enter for new line</div>}
+          {!hasChapterContext && (
+            <div className="text-xs text-[#ce9178] mt-2">Select a chapter to enable chat.</div>
+          )}
         </div>
       </div>
     </div>
