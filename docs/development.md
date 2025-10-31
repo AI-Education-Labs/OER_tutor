@@ -154,3 +154,18 @@ run whatever command you need to x-11 forward
 ```shell
 npx playwright test --ui
 ```
+
+## Backend Testing (pytest)
+
+make sure the python venv from earlier is activated
+
+```shell
+# run tests
+pytest
+```
+
+if you want tests to rerun on load, use
+
+```shell
+ptw
+```
