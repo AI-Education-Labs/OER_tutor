@@ -13,13 +13,13 @@ from typing import Optional
 router = APIRouter()
 
 @router.post("/login", response_model=LoginResponse)
-async def assign_httponly_cookie(form_data: LoginRequest = Depends()):
+async def assign_httponly_cookie(body: LoginRequest):
     """
     Logs in a user and returns an http_only cookie.
     """
-    # Always hash the password, even if the user does not exist
-    input_password_hash = await hash_password(form_data.password)
-    user: Optional[User] = await User.find_one(User.username == form_data.username)
+    # Always hash the password, even if the user does not exist. Prevents timing attacks
+    input_password_hash = await hash_password(body.password)
+    user: Optional[User] = await User.find_one(User.username == body.username)
 
     # Use a dummy hash if user does not exist to prevent timing attacks
     stored_password_hash = user.hashed_password if user else await hash_password("dummy_password")

@@ -1,5 +1,6 @@
 "use client"
 
+import PageLoader from "next/dist/client/page-loader";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react"
 
 type User = { uuid?: string; email?: string } | null
@@ -61,18 +62,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(
     async (payload: { username: string; password: string }): Promise<LoginResult> => {
       try {
-        const params = new URLSearchParams({
-          username: payload.username,
-          password: payload.password,
-        })
-
-        const res = await fetch(`/api/auth/login`, {
+        const res = await fetch("/api/auth/login", {
           method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: params.toString(),
+          headers: { "Content-Type": "application/json" }, // THIS IS REQUIRED!!! I SPENT 40 minutes crashing out about why my login fetch was failing until I realized this
+          credentials: "include", // important to include cookies
+          body: JSON.stringify(payload),
         })
 
         if (res.ok) {
