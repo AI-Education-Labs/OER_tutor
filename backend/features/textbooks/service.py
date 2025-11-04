@@ -25,7 +25,7 @@ async def get_textbook_chapter_pdf(textbook_id: str, chapter_id: str):
     )
     return response["Body"].read()
 
-async def get_textbook_chapter_txt(textbook_id: str, chapter_id: str) -> str:
+async def get_textbook_chapter_txt(textbook_id: str, chapter_id: int) -> str:
     s3 = get_client()
     response = s3.get_object(
         Bucket=settings.S3_BUCKET,

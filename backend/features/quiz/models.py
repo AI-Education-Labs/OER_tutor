@@ -16,9 +16,8 @@ class QuizItem(BaseModel):
 class GenerateRequest(BaseModel):
     context: str = Field(description="The context from the textbook chapter to generate the quiz from")
     textbook_id: str = Field(description="The ID of the textbook")
-    chapter: str = Field(description="The chapter of the textbook to generate the quiz for")
+    chapter: int = Field(description="The chapter of the textbook to generate the quiz for")
     num_questions: int = Field(description="The number of questions to generate for the quiz", default=5)
-    hint: Optional[str] = Field(None, description="Optional hint or section focus for the quiz")
 
 # JSON format for gpt to return, aswell as used for response model
 class GeneratedQuiz(BaseModel):
