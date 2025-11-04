@@ -1,8 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-import asyncio
-from beanie import init_beanie
 from dotenv import load_dotenv
 from backend.routes.auth import router as auth_router
 from backend.routes.textbooks import router as textbooks_router

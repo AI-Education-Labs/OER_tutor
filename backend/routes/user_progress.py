@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.db.database import get_collection, get_document
 from backend.features.auth.service import validate_cookie_token
 
 logger = logging.getLogger(__name__)

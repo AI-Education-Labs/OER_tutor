@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from backend.db import mongo_service
 
-
+# helper function for seting up Beanie (mongodb ORM) with mongomock
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def init_beanie_mock_db():
     """Initialize the Beanie document models against an in-memory mongomock DB.

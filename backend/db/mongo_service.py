@@ -38,7 +38,6 @@ async def init():
         mongo_client = AsyncMongoClient(MONGO_URI)
         await init_beanie(database=mongo_client[MONGO_DB_NAME], document_models=[User, Textbook, UserConversation, UserQuiz, UserFlashcards])
 
-# LEFTOFF: mocking mongo for tests, writing #test_auth.py
 async def close():
     global mongo_client
     if mongo_client is not None:
