@@ -120,11 +120,11 @@ export function PDFViewer({
   }
 
   const scheduleDebouncedProgressUpdate = (percent: number, page: number) => {
-    pendingServerUpdateRef.current = { percent, page }
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     debounceTimerRef.current = setTimeout(() => {
+      pendingServerUpdateRef.current = { percent, page }
       flushProgressUpdate()
-    }, 3000)
+    }, 1000)
   }
 
   useEffect(() => {
@@ -196,6 +196,7 @@ export function PDFViewer({
       if (maxScrollable <= 0) return
       const rawPercent = (container.scrollTop / maxScrollable) * 100
       const clampedPercent = Math.max(0, Math.min(100, Math.round(rawPercent)))
+      // write function here that calculates better clampedPercent based on quizzes and stuff
 
       const newCurrentPage = Math.min(
         Math.max(1, Math.ceil((container.scrollTop / maxScrollable) * totalPages)),
