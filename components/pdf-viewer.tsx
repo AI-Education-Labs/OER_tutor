@@ -176,6 +176,37 @@ export function PDFViewer({
     }
   }, [textbookId, selectedChapterId, pdfJsLoaded])
 
+  // Handle targetPage navigation after PDF is fully loaded
+  useEffect(() => {
+    if (!targetPage || !pdfDoc || totalPages === 0) return
+    
+    // Jump to target page with a small delay to ensure rendering is complete
+    const timer = setTimeout(() => {
+      if (targetPage >= 1 && targetPage <= totalPages) {
+        const container = scrollContainerRef.current
+        if (!container) return
+        
+        // Find the page element by looking for elements with data-page-number or by order
+        const pageElements = container.querySelectorAll('[data-page-number], .pdf-page')
+        if (pageElements.length === 0) {
+          // Fallback: calculate approximate position assuming uniform page heights
+          const approximatePageHeight = 800 // Approximate height per page
+          const targetScrollTop = (targetPage - 1) * approximatePageHeight
+          container.scrollTo({
+            top: targetScrollTop,
+            behavior: "smooth",
+          })
+        } else if (targetPage <= pageElements.length) {
+          // Scroll to specific page element
+          const pageElement = pageElements[targetPage - 1]
+          pageElement.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      }
+    }, 150)
+    
+    return () => clearTimeout(timer)
+  }, [targetPage, pdfDoc, totalPages])
+
   useEffect(() => {
     if (!currentChapterId || !textbookId) return
 
@@ -388,7 +419,8 @@ export function PDFViewer({
         const viewport = page.getViewport({ scale: 1.5 })
 
         const pageContainer = document.createElement("div")
-        pageContainer.className = "relative mb-4"
+        pageContainer.className = "relative mb-4 pdf-page"
+        pageContainer.setAttribute("data-page-number", String(pageNum))
         pageContainer.style.display = "inline-block"
 
         pageContainer.addEventListener("mouseup", (e) => {
