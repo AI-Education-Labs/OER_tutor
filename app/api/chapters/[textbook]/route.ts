@@ -13,7 +13,7 @@ export async function GET(
 
     // Forward the request to the FastAPI backend
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-    const response = await fetch(`${backendUrl}/api/textbooks/${textbook}/chapters`)
+    const response = await fetch(`${backendUrl}/api/v1/textbooks/${textbook}/chapters`)
 
     if (!response.ok) {
       console.log(`Backend responded with status: ${response.status}`)

@@ -528,12 +528,8 @@ export function PDFViewer({
       setError(null)
 
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      console.log("[v0] Backend URL:", backendUrl)
 
-      const fullUrl = `${backendUrl}/api/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`
-      console.log("[v0] Fetching PDF from:", fullUrl)
-
-      const response = await fetch(fullUrl)
+      const response = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`)
 
       if (!response.ok) {
         throw new Error(`Failed to get chapter PDF: ${response.status}`)
