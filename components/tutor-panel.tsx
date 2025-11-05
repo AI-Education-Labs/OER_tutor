@@ -24,9 +24,11 @@ import type { ChatContext } from "@/types/chat"
 import { QuizPanel } from "@/components/quiz-panel"
 import { FlashcardPanel } from "@/components/flashcard-panel"
 import { KeyConceptsPanel } from "@/components/key-concepts-panel"
+import type { components } from "@/types/api"
 
 interface TutorPanelProps {
   activeTab: string
+  textbook?: components["schemas"]["Textbook"] | null
   textbookId: string
   selectedChapterId: string
 }
@@ -62,7 +64,7 @@ interface StudyNote {
   tags: string[]
 }
 
-export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPanelProps) {
+export function TutorPanel({ activeTab, textbook, textbookId, selectedChapterId }: TutorPanelProps) {
   const [userInput, setUserInput] = useState("")
   const [activeTree, setActiveTree] = useState<string>("limits")
     const [tooltipInfo, setTooltipInfo] = useState<{
@@ -613,7 +615,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
 
   const renderQuizTab = () => <QuizPanel textbookId={textbookId} selectedChapterId={selectedChapterId} />
 
-  const renderFlashcardsTab = () => <FlashcardPanel textbookId={textbookId} selectedChapterId={selectedChapterId} />
+  const renderFlashcardsTab = () => <FlashcardPanel textbook={textbook} selectedChapterId={selectedChapterId} />
 
   const renderNotesTab = () => (
     <div className="h-full flex flex-col relative">

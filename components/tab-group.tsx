@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { TutorPanel } from "@/components/tutor-panel"
 import { useDragDrop } from "@/components/drag-drop-provider"
 import type { TabGroupData, TabItem } from "@/components/study-interface"
+import type { components } from "@/types/api"
 
 interface TabGroupProps {
   group: TabGroupData
@@ -17,6 +18,7 @@ interface TabGroupProps {
   onRemoveGroup: () => void
   isNarrowPanel?: boolean
   style?: React.CSSProperties
+  textbook?: components["schemas"]["Textbook"] | null
   textbookId: string
   selectedChapterId: string
 }
@@ -28,6 +30,7 @@ export function TabGroup({
   onRemoveGroup,
   isNarrowPanel = true,
   style,
+  textbook,
   textbookId,
   selectedChapterId,
 }: TabGroupProps) {
@@ -203,7 +206,7 @@ export function TabGroup({
       <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
         <div className="flex-1 overflow-auto pr-1 pb-2">
           {activeTab && (
-            <TutorPanel activeTab={activeTab.content} textbookId={textbookId} selectedChapterId={selectedChapterId} />
+            <TutorPanel activeTab={activeTab.content} textbook={textbook} textbookId={textbookId} selectedChapterId={selectedChapterId} />
           )}
         </div>
       </div>

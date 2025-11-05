@@ -7,28 +7,42 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "@/components/ui/use-toast"
-
-interface Flashcard {
-  front: string
-  back: string
-}
+import type { components } from "@/types/api"
 
 interface FlashcardPanelProps {
-  textbookId?: string
+  textbook?: components["schemas"]["Textbook"] | null
   selectedChapterId?: string
 }
 
-export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanelProps) {
+// Types matching backend/features/flashcards/models.py
+// TODO: These should be generated in api.ts from OpenAPI spec
+interface FlashcardDeck {
+  flashcards_front: string[]
+  flashcards_back: string[]
+}
+
+interface FlashcardModal {
+  _id: string
+  user: string
+  flashcard: FlashcardDeck
+  created_time: number
+  hint?: string
+  textbook_id: string
+  chapter: string
+}
+
+
+export function FlashcardPanel({ textbook, selectedChapterId }: FlashcardPanelProps) {
   const [stage, setStage] = useState<"menu" | "loading" | "study">("menu")
   const [subchapters, setSubchapters] = useState<string[]>([])
   const [selectedSubchapter, setSelectedSubchapter] = useState<string>("")
   const [contextText, setContextText] = useState<string>("")
-  const [cards, setCards] = useState<Flashcard[]>([])
+  const [deck, setDeck] = useState<FlashcardDeck | null>(null)
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const [showBack, setShowBack] = useState<boolean>(false)
   const [defaultFront, setDefaultFront] = useState<boolean>(true) // true = Original(front), false = Flipped(back)
   const [numCards, setNumCards] = useState<number>(5)
-  const [previousDecks, setPreviousDecks] = useState<any[]>([])
+  const [previousDecks, setPreviousDecks] = useState<FlashcardModal[]>([])
   const [prevLoading, setPrevLoading] = useState<boolean>(false)
   const [prevError, setPrevError] = useState<string>("")
 
@@ -73,50 +87,31 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     )
   }
 
-  // Load subchapters for the currently selected chapter
+  // Load subchapters for the currently selected chapter from textbook prop
   useEffect(() => {
-    let isCancelled = false
-    const load = async () => {
-      try {
-        if (!textbookId || !selectedChapterId) return
-        // 1) Load metadata to extract subchapters
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { credentials: "include" })
-        if (metaResp.ok) {
-          const meta = await metaResp.json()
-          console.log("Meta:", meta);
-          let current_chapter: any = null;
-          const chapters = Array.isArray(meta?.chapters) ? meta.chapters : []
-          for (const chapter of chapters) {
-            if (String(chapter?.id) === String(selectedChapterId)) {
-              current_chapter = chapter;
-              break;
-            }
-          }
-          const rawSubs = current_chapter?.sub_chapters ?? []
-          const sub_chapters: string[] = Array.isArray(rawSubs)
-            ? rawSubs.map((s: any) => (typeof s === "string" ? (s === "Introduction" ? '' : s) 
-            : String(s?.title === "Introduction" ? "" : String(s?.title ?? "")))).filter((s: string) => s)
-            : []
-          console.log("Subs:", sub_chapters);
-          if (!isCancelled) {
-            setSubchapters(sub_chapters)
-            // Enable generation UI by marking context as available for this chapter
-            setContextText(`context-ready:${selectedChapterId}`)
-            // Default select first subchapter if none selected
-            // if (!selectedSubchapter && sub_chapters.length > 0) {
-            //   setSelectedSubchapter(sub_chapters[0])
-            // }
-          }
-        }
-      } catch {
-        // ignore
-      }
+    if (!textbook || !selectedChapterId) {
+      setSubchapters([])
+      setContextText("")
+      return
     }
-    load()
-    return () => {
-      isCancelled = true
+
+    const chapters = Array.isArray(textbook.chapters) ? textbook.chapters : []
+    const currentChapter = chapters.find((ch) => String(ch.id) === String(selectedChapterId))
+    
+    if (!currentChapter) {
+      setSubchapters([])
+      setContextText("")
+      return
     }
-  }, [textbookId, selectedChapterId])
+
+    const sections = Array.isArray(currentChapter.sections) ? currentChapter.sections : []
+    const subChapterTitles = sections
+      .map((s) => s.title)
+      .filter((title) => title && title !== "Introduction")
+
+    setSubchapters(subChapterTitles)
+    setContextText(`context-ready:${selectedChapterId}`)
+  }, [textbook, selectedChapterId])
 
   // Load user's previously generated decks when entering menu
   useEffect(() => {
@@ -155,44 +150,18 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     }
   }, [stage])
 
-  const reloadPrev = async () => {
-    setStage((s) => s) // noop to keep stage
-    try {
-      setPrevLoading(true)
-      setPrevError("")
-      const resp = await fetch("/api/flashcards", { credentials: "include" })
-      if (!resp.ok) {
-        if (resp.status === 401 || resp.status === 403) {
-          setPreviousDecks([])
-          setPrevError("Your session has expired. Please log in again.")
-          return
-        }
-        throw new Error()
-      }
-      const data = await resp.json()
-      setPreviousDecks(Array.isArray(data) ? data : [])
-    } catch {
-      setPreviousDecks([])
-      setPrevError("Could not load previous decks. Make sure you are logged in.")
-    } finally {
-      setPrevLoading(false)
+  const loadDeck = (modal: FlashcardModal) => {
+    if (!modal.flashcard || 
+        !Array.isArray(modal.flashcard.flashcards_front) || 
+        !Array.isArray(modal.flashcard.flashcards_back) ||
+        modal.flashcard.flashcards_front.length === 0 ||
+        modal.flashcard.flashcards_back.length === 0) {
+      return
     }
-  }
-
-  const loadDeck = (doc: any) => {
-    try {
-      const fronts: string[] = Array.isArray(doc?.flashcard?.flashcards_front) ? doc.flashcard.flashcards_front : []
-      const backs: string[] = Array.isArray(doc?.flashcard?.flashcards_back) ? doc.flashcard.flashcards_back : []
-      const length = Math.min(fronts.length, backs.length)
-      if (length === 0) return
-      const nextCards: Flashcard[] = Array.from({ length }, (_, i) => ({ front: String(fronts[i] ?? ""), back: String(backs[i] ?? "") }))
-      setCards(nextCards)
-      setCurrentIndex(0)
-      setShowBack(!defaultFront)
-      setStage("study")
-    } catch {
-      // ignore
-    }
+    setDeck(modal.flashcard)
+    setCurrentIndex(0)
+    setShowBack(!defaultFront)
+    setStage("study")
   }
 
   const formatWhen = (ts?: number) => {
@@ -205,47 +174,41 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   }
 
   const startGeneration = async () => {
+    if (!textbook?._id) {
+      toast({ title: "Error", description: "No textbook selected" })
+      return
+    }
+
     setStage("loading")
     try {
-      const context = "" // TODO: im sorry what
+      const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
 
       const resp = await fetch("/api/flashcards/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context, hint: focusHint, num_flashcards: numCards, chapter: selectedChapterId, textbook_id: textbookId }),
+        body: JSON.stringify({ 
+          context, 
+          hint: focusHint, 
+          num_flashcards: numCards, 
+          chapter: selectedChapterId, 
+          textbook_id: String(textbook._id) 
+        }),
       })
 
       if (!resp.ok) {
         throw new Error(`Failed to generate flashcards (${resp.status})`)
       }
 
-      const payload = await resp.json()
-      // Accept multiple shapes and normalize to fronts/backs arrays
-      const fronts: string[] = Array.isArray(payload?.front)
-        ? payload.front
-        : Array.isArray(payload?.flashcards_front)
-          ? payload.flashcards_front
-          : Array.isArray(payload?.data?.front)
-            ? payload.data.front
-            : Array.isArray(payload?.data?.flashcards_front)
-              ? payload.data.flashcards_front
-              : []
-      const backs: string[] = Array.isArray(payload?.back)
-        ? payload.back
-        : Array.isArray(payload?.flashcards_back)
-          ? payload.flashcards_back
-          : Array.isArray(payload?.data?.back)
-            ? payload.data.back
-            : Array.isArray(payload?.data?.flashcards_back)
-              ? payload.data.flashcards_back
-              : []
+      const generatedDeck: FlashcardDeck = await resp.json()
+      
+      if (!Array.isArray(generatedDeck.flashcards_front) || 
+          !Array.isArray(generatedDeck.flashcards_back) ||
+          generatedDeck.flashcards_front.length === 0) {
+        throw new Error("Flashcard generation returned no cards")
+      }
 
-      const length = Math.min(fronts.length, backs.length)
-      if (length === 0) throw new Error("Flashcard generation returned no cards")
-
-      const nextCards: Flashcard[] = Array.from({ length }, (_, i) => ({ front: String(fronts[i] ?? ""), back: String(backs[i] ?? "") }))
-      setCards(nextCards)
+      setDeck(generatedDeck)
       setCurrentIndex(0)
       setShowBack(!defaultFront)
       setStage("study")
@@ -254,8 +217,13 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     }
   }
 
+  const cardCount = useMemo(() => {
+    if (!deck) return 0
+    return Math.min(deck.flashcards_front.length, deck.flashcards_back.length)
+  }, [deck])
+
   const canPrev = currentIndex > 0
-  const canNext = currentIndex < cards.length - 1
+  const canNext = currentIndex < cardCount - 1
 
   const goPrev = () => {
     if (!canPrev) return
@@ -265,18 +233,23 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
 
   const goNext = () => {
     if (!canNext) return
-    setCurrentIndex((i) => Math.min(cards.length - 1, i + 1))
+    setCurrentIndex((i) => Math.min(cardCount - 1, i + 1))
     setShowBack(!defaultFront)
   }
 
   const shuffleDeck = () => {
-    setCards((prev) => {
-      const copy = [...prev]
-      for (let i = copy.length - 1; i > 0; i -= 1) {
+    if (!deck) return
+    setDeck((prev) => {
+      if (!prev) return prev
+      const indices = Array.from({ length: cardCount }, (_, i) => i)
+      for (let i = indices.length - 1; i > 0; i -= 1) {
         const j = Math.floor(Math.random() * (i + 1))
-        ;[copy[i], copy[j]] = [copy[j], copy[i]]
+        ;[indices[i], indices[j]] = [indices[j], indices[i]]
       }
-      return copy
+      return {
+        flashcards_front: indices.map((i) => prev.flashcards_front[i]),
+        flashcards_back: indices.map((i) => prev.flashcards_back[i]),
+      }
     })
     setCurrentIndex(0)
     setShowBack(!defaultFront)
@@ -285,13 +258,18 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   const toggleDefaultSide = () => {
     setDefaultFront((prev) => {
       const next = !prev
-      // When switching default, also update current shown side to match the new default
       setShowBack(!next)
       return next
     })
   }
 
-  const currentCard = useMemo(() => cards[currentIndex], [cards, currentIndex])
+  const currentCard = useMemo(() => {
+    if (!deck || currentIndex >= cardCount) return { front: "", back: "" }
+    return {
+      front: deck.flashcards_front[currentIndex] || "",
+      back: deck.flashcards_back[currentIndex] || "",
+    }
+  }, [deck, currentIndex, cardCount])
 
   if (stage === "menu") {
     return (
@@ -359,7 +337,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
               <div className="text-xs text-[#969696]">No saved decks yet</div>
             ) : (
               <div className="space-y-2 max-h-60 overflow-auto pr-1 show-scrollbar">
-              {previousDecks.map((d, idx) => {
+              {previousDecks.map((d: FlashcardModal, idx: number) => {
                   const count = Math.min(
                     Array.isArray(d?.flashcard?.flashcards_front) ? d.flashcard.flashcards_front.length : 0,
                     Array.isArray(d?.flashcard?.flashcards_back) ? d.flashcard.flashcards_back.length : 0
@@ -385,8 +363,8 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
                               id={d?._id}
                               kind="flashcards"
                               item={d}
-                              onOptimisticRemove={(id) => setPreviousDecks((prev) => prev.filter((x) => x?._id !== id))}
-                              onFailureRestore={(id, item) => setPreviousDecks((prev) => [item, ...prev])}
+                              onOptimisticRemove={(_id: string) => setPreviousDecks((prev: FlashcardModal[]) => prev.filter((x) => x?._id !== _id))}
+                              onFailureRestore={(_id: string, item: FlashcardModal) => setPreviousDecks((prev: FlashcardModal[]) => [item, ...prev])}
                             />
                           </div>
                         </div>
@@ -495,7 +473,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
               Previous
             </Button>
             <div className="text-sm text-[#cccccc] py-1">
-              Card {cards.length > 0 ? currentIndex + 1 : 0} of {cards.length}
+              Card {cardCount > 0 ? currentIndex + 1 : 0} of {cardCount}
             </div>
             <Button
               size="sm"

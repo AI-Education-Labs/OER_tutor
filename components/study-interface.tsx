@@ -545,6 +545,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                         onSplitGroup={(direction) => splitTabGroup(group.id, direction)}
                         onRemoveGroup={() => removeTabGroup(group.id)}
                         isNarrowPanel={isRightPanelNarrow}
+                        textbook={textbookData}
                         textbookId={textbookId}
                         selectedChapterId={selectedChapterId}
                         style={{
@@ -595,6 +596,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   onSplitGroup={(direction) => splitTabGroup(group.id, direction)}
                   onRemoveGroup={() => removeTabGroup(group.id)}
                   isNarrowPanel={isRightPanelNarrow}
+                  textbook={textbookData}
                   textbookId={textbookId}
                   selectedChapterId={selectedChapterId}
                   style={{ minHeight: "200px" }}
