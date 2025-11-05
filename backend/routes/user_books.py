@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
 import logging
 from pydantic import BaseModel
-from backend.db.database import add_textbook_to_user, get_document_by_field
 from backend.features.auth.service import validate_cookie_token
 
 class AddTextbookRequest(BaseModel):

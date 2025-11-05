@@ -7,24 +7,36 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "@/components/ui/use-toast"
+import type { components } from "@/types/api"
 
-interface GeneratedQuestion {
+interface QuizPanelProps {
+  textbook?: components["schemas"]["Textbook"] | null
+  selectedChapterId?: string
+}
+
+// Types matching backend/features/quiz/models.py
+// TODO: These should be generated in api.ts from OpenAPI spec
+interface QuizQuestion {
   question: string
   choices: string[]
   answer: number
 }
 
-interface QuizPanelProps {
-  textbookId?: string
-  selectedChapterId?: string
+interface QuizItem {
+  _id: string
+  user: string
+  quiz: QuizQuestion[]
+  created_time: number
+  hint?: string
+  quiz_result: Record<string, any>
 }
 
-export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
+export function QuizPanel({ textbook, selectedChapterId }: QuizPanelProps) {
   const [stage, setStage] = useState<"menu" | "loading" | "quiz" | "summary">("menu")
   const [subchapters, setSubchapters] = useState<string[]>([])
   const [selectedSubchapter, setSelectedSubchapter] = useState<string>("")
   const [contextText, setContextText] = useState<string>("")
-  const [questions, setQuestions] = useState<GeneratedQuestion[]>([])
+  const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [answers, setAnswers] = useState<number[]>([])
   const [showCorrectAnswers, setShowCorrectAnswers] = useState<boolean>(false)
   const [timedEnabled, setTimedEnabled] = useState<boolean>(false)
@@ -32,7 +44,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
   const [timeSeconds, setTimeSeconds] = useState<number>(0)
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
   const [numQuestions, setNumQuestions] = useState<number>(5)
-  const [previousQuizzes, setPreviousQuizzes] = useState<any[]>([])
+  const [previousQuizzes, setPreviousQuizzes] = useState<QuizItem[]>([])
   const [prevLoading, setPrevLoading] = useState<boolean>(false)
   const [prevError, setPrevError] = useState<string>("")
 
@@ -76,46 +88,31 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
     )
   }
 
-  // Load subchapters for the currently selected chapter
+  // Load subchapters for the currently selected chapter from textbook prop
   useEffect(() => {
-    let isCancelled = false
-    const load = async () => {
-      try {
-        if (!textbookId || !selectedChapterId) return
-        // 1) Load metadata for subchapters of selected chapter
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
-        if (metaResp.ok) {
-          const meta = await metaResp.json()
-          let current_chapter: any = null
-          const chapters = Array.isArray(meta?.chapters) ? meta.chapters : []
-          for (const chapter of chapters) {
-            if (String(chapter?.id) === String(selectedChapterId)) {
-              current_chapter = chapter
-              break
-            }
-          }
-          const rawSubs = current_chapter?.sub_chapters ?? []
-          const subs: string[] = Array.isArray(rawSubs)
-            ? rawSubs.map((s: any) => (typeof s === "string" ? (s === "Introduction" ? '' : s) 
-            : String(s?.title === "Introduction" ? "" : String(s?.title ?? "")))).filter((s: string) => s)
-            : []
-          if (!isCancelled) {
-            setSubchapters(subs)
-            setContextText(`context-ready:${selectedChapterId}`)
-            // if (!selectedSubchapter && subs.length > 0) {
-            //   setSelectedSubchapter(subs[0])
-            // }
-          }
-        }
-      } catch {
-        // ignore
-      }
+    if (!textbook || !selectedChapterId) {
+      setSubchapters([])
+      setContextText("")
+      return
     }
-    load()
-    return () => {
-      isCancelled = true
+
+    const chapters = Array.isArray(textbook.chapters) ? textbook.chapters : []
+    const currentChapter = chapters.find((ch) => String(ch.id) === String(selectedChapterId))
+    
+    if (!currentChapter) {
+      setSubchapters([])
+      setContextText("")
+      return
     }
-  }, [textbookId, selectedChapterId])
+
+    const sections = Array.isArray(currentChapter.sections) ? currentChapter.sections : []
+    const subChapterTitles = sections
+      .map((s) => s.title)
+      .filter((title) => title && title !== "Introduction")
+
+    setSubchapters(subChapterTitles)
+    setContextText(`context-ready:${selectedChapterId}`)
+  }, [textbook, selectedChapterId])
 
   // Load user's previous quizzes when in menu
   useEffect(() => {
@@ -151,17 +148,21 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
     return () => { isCancelled = true }
   }, [stage])
 
-  const loadQuiz = (doc: any) => {
-    try {
-      const list = Array.isArray(doc?.quiz) ? doc.quiz : []
-      if (!list.length) return
-      setQuestions(list)
-      setAnswers(new Array(list.length).fill(-1))
-      setStage("quiz")
-    } catch {}
+  const loadQuiz = (item: QuizItem) => {
+    if (!item.quiz || !Array.isArray(item.quiz) || item.quiz.length === 0) {
+      return
+    }
+    setQuestions(item.quiz)
+    setAnswers(new Array(item.quiz.length).fill(-1))
+    setStage("quiz")
   }
 
   const startGeneration = async () => {
+    if (!textbook?._id) {
+      toast({ title: "Error", description: "No textbook selected" })
+      return
+    }
+
     setStage("loading")
     try {
       const context = ""
@@ -170,7 +171,13 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       const resp = await fetch("/api/quiz/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context, hint: focusHint, num_questions: numQuestions, chapter: selectedChapterId, textbook_id: textbookId }),
+        body: JSON.stringify({ 
+          context, 
+          hint: focusHint, 
+          num_questions: numQuestions, 
+          chapter: selectedChapterId, 
+          textbook_id: String(textbook._id) 
+        }),
       })
 
       if (!resp.ok) {
@@ -178,22 +185,20 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       }
 
       const payload = await resp.json()
-      const data: GeneratedQuestion[] = Array.isArray(payload)
-        ? payload
+      const questionList: QuizQuestion[] = Array.isArray(payload?.questions)
+        ? payload.questions
         : Array.isArray(payload?.quiz)
           ? payload.quiz
-          : Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload?.raw)
-              ? payload.raw
-              : []
+          : Array.isArray(payload)
+            ? payload
+            : []
 
-      if (!Array.isArray(data) || data.length === 0) {
+      if (!Array.isArray(questionList) || questionList.length === 0) {
         throw new Error("Quiz generation returned no questions")
       }
 
-      setQuestions(data as GeneratedQuestion[])
-      setAnswers(new Array(data.length).fill(-1))
+      setQuestions(questionList)
+      setAnswers(new Array(questionList.length).fill(-1))
       setStage("quiz")
     } catch {
       setStage("menu")
@@ -351,7 +356,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
             <div className="text-xs text-[#969696]">No saved quizzes yet</div>
           ) : (
             <div className="space-y-2 max-h-60 overflow-auto pr-1 show-scrollbar">
-              {previousQuizzes.map((d, idx) => (
+              {previousQuizzes.map((d: QuizItem, idx: number) => (
                 <div key={d?._id || idx} className="group relative">
                   <div
                     role="button"
@@ -372,8 +377,8 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
                             id={d?._id}
                             kind="quizzes"
                             item={d}
-                            onOptimisticRemove={(id) => setPreviousQuizzes((prev) => prev.filter((x) => x?._id !== id))}
-                            onFailureRestore={(id, item) => setPreviousQuizzes((prev) => [item, ...prev])}
+                            onOptimisticRemove={(_id: string) => setPreviousQuizzes((prev: QuizItem[]) => prev.filter((x) => x?._id !== _id))}
+                            onFailureRestore={(_id: string, item: QuizItem) => setPreviousQuizzes((prev: QuizItem[]) => [item, ...prev])}
                           />
                         </div>
                       </div>

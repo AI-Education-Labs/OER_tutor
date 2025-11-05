@@ -613,7 +613,7 @@ export function TutorPanel({ activeTab, textbook, textbookId, selectedChapterId 
     </div>
   )
 
-  const renderQuizTab = () => <QuizPanel textbookId={textbookId} selectedChapterId={selectedChapterId} />
+  const renderQuizTab = () => <QuizPanel textbook={textbook} selectedChapterId={selectedChapterId} />
 
   const renderFlashcardsTab = () => <FlashcardPanel textbook={textbook} selectedChapterId={selectedChapterId} />
 

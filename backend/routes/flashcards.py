@@ -1,11 +1,10 @@
 import time
 from fastapi import APIRouter, Depends, HTTPException, status
 from backend.features.auth.service import validate_cookie_token
-from backend.db.database import get_collection
 from typing import Any, Dict, List
 from backend.features.flashcards.models import *
 from backend.config.settings import settings
-from backend.routes.textbooks import get_chapter_text
+from backend.features.textbooks.service import get_textbook_chapter_txt
 import uuid
 
 router = APIRouter()

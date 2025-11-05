@@ -15,7 +15,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, BaseMessage
 
 from backend.graph import get_system_prompt
-from backend.db.database import get_collection
 from backend.features.users.models import User
 from backend.features.auth.service import validate_cookie_token
 from backend.features.textbooks.service import get_textbook_chapter_txt

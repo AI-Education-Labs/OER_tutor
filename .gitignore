@@ -50,6 +50,7 @@ samconfig.toml
 
 # python environement
 .venv
+venv
 
 # Playwright
 node_modules/
@@ -59,3 +60,6 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 storageState.json
+
+# local aws s3 buckets
+s3/

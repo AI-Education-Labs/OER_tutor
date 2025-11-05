@@ -3,7 +3,6 @@ from openai import OpenAI
 from backend.config.settings import settings
 from backend.features.auth.service import validate_cookie_token
 from backend.features.studyguide.models import StudyGuide, StudyGuideRequest
-from backend.db.database import get_collection
 from typing import Any, Dict, List
 import uuid
 import time
