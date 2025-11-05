@@ -465,12 +465,12 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
       if (!token) return
       // Fire-and-forget last visit using keepalive for page-close safety
-      fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/last-visit`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ chapter: Number(selectedChapterId), page: currentPage || 1 }),
-        keepalive: true,
-      }).catch(() => {})
+      // fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/last-visit`, {
+      //   method: "PATCH",
+      //   headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+      //   body: JSON.stringify({ chapter: Number(selectedChapterId), page: currentPage || 1 }),
+      //   keepalive: true,
+      // }).catch(() => {})
     } catch {
       // noop
     }
