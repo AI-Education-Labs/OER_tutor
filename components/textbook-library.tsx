@@ -1,5 +1,4 @@
 "use client"
-
 import { useEffect, useState } from "react"
 import { Search, Plus, BookOpen, Star, Clock, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,11 +13,7 @@ interface Textbook {
   id: string
   title: string
   author: string
-  subject: string
-  cover: string
-  progress?: number
-  lastAccessed?: string
-  starred?: boolean
+  cover_url: string
 }
 
 export function TextbookLibrary() {
@@ -33,8 +28,6 @@ export function TextbookLibrary() {
   // Load available textbooks
   useEffect(() => {
     const loadTextbooks = async () => {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-
       const resp = await fetch(`/api/textbooks/list`, {
         method: "GET",
         credentials: "include",
@@ -51,17 +44,20 @@ export function TextbookLibrary() {
       }
 
       const data = await resp.json()
-        const textbook_list: Textbook[] = (data?.textbooks ?? []).map((t: any) => ({
-          id: String(t.id ?? ""),
-          title: t.title ?? "Untitled",
-          author: t.author ?? "",
-          subject: t.subject ?? "",
-          cover: t.cover ?? "/Physics_cover.png",
-          progress: 0,
-        }))
-        console.log("TextbookLibrary: textbook_list:", textbook_list)
-        setMyTextbooks(textbook_list)
-      }
+      let textbooks: Textbook[] = []
+      data.forEach((t: { textbookInfo: { _id: string; title: string; author: string, cover_url: string, chapters: object[], userProgress: {last_visited_chapter: number} } }) => {
+        textbooks.push({
+          id: t.textbookInfo._id,
+          title: t.textbookInfo.title,
+          author: t.textbookInfo.author,
+          cover_url: t.textbookInfo.cover_url,
+        })
+      })
+    
+      console.log(textbooks)
+      
+      setMyTextbooks(textbooks)
+    }
       setIsAuthenticated(true)
     loadTextbooks()
   }, [])
@@ -71,8 +67,7 @@ export function TextbookLibrary() {
     if (!q) return true
     return (
       book.title.toLowerCase().includes(q) ||
-      book.author.toLowerCase().includes(q) ||
-      book.subject.toLowerCase().includes(q)
+      book.author.toLowerCase().includes(q)
     )
   })
 
@@ -130,7 +125,7 @@ export function TextbookLibrary() {
                   <CardContent className="p-4">
                     <div className="relative mb-3">
                       <img
-                        src={book.cover}
+                        src={book.cover_url}
                         alt={book.title}
                         className="w-100 h-32 object-cover rounded group-hover:scale-105 transition-transform"
                       />
@@ -204,7 +199,6 @@ export function TextbookLibrary() {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
-                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
                           },
                           body: JSON.stringify({ code: v.toUpperCase() }),
                         })
