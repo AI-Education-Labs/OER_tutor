@@ -6,11 +6,17 @@ export async function GET(request: NextRequest) {
   try {
     const upstream = `${BACKEND_URL}/api/textbooks`
     const token = request.headers.get("authorization") || undefined
+
+    // If no token, return empty array (not logged in)
+    if (!token) {
+      return NextResponse.json([], { status: 200 })
+    }
+
     const response = await fetch(upstream, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: token } : {}),
+        Authorization: token,
       },
       cache: "no-store",
     })

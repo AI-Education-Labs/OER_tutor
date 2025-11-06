@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from "react"
-import { Send, User, Bot, AlertCircle, Menu } from "lucide-react"
+import { Send, User, Bot, AlertCircle, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
@@ -294,6 +294,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     setCurrentChatTitle("New Chat")
     sessionIdRef.current = null
     removeChatSession()
+    setShowSidebar(false)
   }
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -517,12 +518,23 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   )
 
   return (
-    <div className="h-full flex bg-[#252526]">
-      {/* Sidebar */}
+    <div className="h-full flex bg-[#252526] relative">
+      {/* Full-Screen Sidebar Overlay */}
       {showSidebar && (
-        <div className="w-64 bg-[#1e1e1e] border-r border-[#3e3e42] flex flex-col">
+        <div className="absolute inset-0 z-50 bg-[#1e1e1e] flex flex-col">
+          <div className="p-3 border-b border-[#3e3e42] flex items-center justify-between">
+            <div className="font-bold text-white">Chat History</div>
+            <Button
+              onClick={() => setShowSidebar(false)}
+              size="sm"
+              variant="ghost"
+              className="text-[#969696] hover:text-white hover:bg-[#2d2d30]"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
           <div className="p-3 border-b border-[#3e3e42]">
-            <div className="font-bold text-white mb-2">Chats</div>
             <Button onClick={clearChat} size="sm" className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white">
               New Chat
             </Button>
