@@ -534,38 +534,40 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <div className="p-3 border-b border-[#3e3e42]">
-            <Button onClick={clearChat} size="sm" className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white">
+          <div className="p-4 border-b border-[#3e3e42] flex justify-center">
+            <Button onClick={clearChat} size="sm" className="max-w-md w-full bg-[#007acc] hover:bg-[#005a9e] text-white shadow-md">
               New Chat
             </Button>
           </div>
-          <div className="flex-1 overflow-auto relative">
-            {chats.map((c) => (
-              <div key={c.session_id} className="relative">
-                <button
-                  className={`block w-full text-left px-3 py-2 hover:bg-[#2d2d30] text-sm border-b border-[#3e3e42] transition-colors ${
-                    sessionIdRef.current === c.session_id ? "bg-[#2d2d30] text-white" : "text-[#cccccc]"
-                  }`}
-                  onClick={() => loadChat(c.session_id, c.title || "Untitled Chat")}
-                  onMouseEnter={() => handleChatHover(c.session_id, c.summary || "")}
-                  onMouseLeave={handleChatLeave}
-                >
-                  <div className="font-medium">{c.title || "Untitled Chat"}</div>
-                  <div className="text-xs text-[#969696] mt-1">{new Date(c.updated_at).toLocaleDateString()}</div>
-                </button>
-
-                {showSummary === c.session_id && c.summary && (
-                  <div
-                    className="absolute left-full top-0 ml-2 z-50 bg-[#1e1e1e] border border-[#3e3e42] rounded-md p-3 shadow-lg max-w-xs pointer-events-auto"
-                    onMouseEnter={handleTooltipEnter}
-                    onMouseLeave={handleTooltipLeave}
+          <div className="flex-1 overflow-auto">
+            <div className="max-w-2xl mx-auto">
+              {chats.map((c) => (
+                <div key={c.session_id} className="relative group">
+                  <button
+                    className={`block w-full text-left px-4 py-3 hover:bg-[#2d2d30] text-sm border-b border-[#3e3e42] transition-colors ${
+                      sessionIdRef.current === c.session_id ? "bg-[#2d2d30] text-white" : "text-[#cccccc]"
+                    }`}
+                    onClick={() => loadChat(c.session_id, c.title || "Untitled Chat")}
+                    onMouseEnter={() => handleChatHover(c.session_id, c.summary || "")}
+                    onMouseLeave={handleChatLeave}
                   >
-                    <div className="text-xs text-[#cccccc] font-medium mb-1">Summary:</div>
-                    <div className="text-xs text-[#969696] leading-relaxed">{c.summary}</div>
-                  </div>
-                )}
-              </div>
-            ))}
+                    <div className="font-medium truncate">{c.title || "Untitled Chat"}</div>
+                    <div className="text-xs text-[#969696] mt-1">{new Date(c.updated_at).toLocaleDateString()}</div>
+                  </button>
+
+                  {showSummary === c.session_id && c.summary && (
+                    <div
+                      className="absolute left-0 right-0 top-full mt-1 mx-4 z-50 bg-[#2d2d30] border border-[#007acc] rounded-md p-4 shadow-2xl pointer-events-auto"
+                      onMouseEnter={handleTooltipEnter}
+                      onMouseLeave={handleTooltipLeave}
+                    >
+                      <div className="text-xs text-[#4ec9b0] font-semibold mb-2 uppercase tracking-wide">Summary</div>
+                      <div className="text-sm text-[#d4d4d4] leading-relaxed">{c.summary}</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
