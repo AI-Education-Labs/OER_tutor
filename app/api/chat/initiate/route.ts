@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-// TODO: pretty sure this route doesn't do shit
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     console.log("Forwarding to backend /chat/initiate...")
 
-    const backendResponse = await fetch(`${backendUrl}/api/v1/chat/initiate`, {
+    const backendResponse = await fetch(`${backendUrl}/chat/initiate`, {
       method: "POST",
       headers,
       body: JSON.stringify({

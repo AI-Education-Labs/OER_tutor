@@ -15,7 +15,7 @@ export async function GET(
     }
 
     const response = await fetch(
-      `${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbook)}/chapters/${encodeURIComponent(chapterId)}/pdf`,
+      `${backendUrl}/api/textbooks/${encodeURIComponent(textbook)}/chapters/${encodeURIComponent(chapterId)}/pdf`,
     )
 
     if (!response.ok) {

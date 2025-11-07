@@ -109,7 +109,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       try {
         setPrevLoading(true)
         setPrevError("")
-        const resp = await fetch("/api/notes", { cache: "no-store" }) // TODO: no backend route for this anywhere
+        const resp = await fetch("/api/notes", { cache: "no-store" })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {

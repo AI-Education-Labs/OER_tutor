@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (token) headers["Authorization"] = `Bearer ${token}`
 
-    const resp = await fetch(`${backendUrl}/api/v1/study-guide/generate`, {
+    const resp = await fetch(`${backendUrl}/llm/api/key-concept/generate`, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),

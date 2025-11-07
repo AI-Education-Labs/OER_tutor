@@ -12,7 +12,7 @@ export async function GET(
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-    const response = await fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbook)}`, {
+    const response = await fetch(`${backendUrl}/progress/${encodeURIComponent(textbook)}`, {
       headers: { Authorization: auth },
       cache: "no-store",
     })
