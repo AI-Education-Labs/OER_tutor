@@ -289,16 +289,33 @@ export function PDFViewer({
     const pageHeight = container.scrollHeight / totalPages
     const targetScrollTop = (pageNumber - 1) * pageHeight
 
+    // Temporarily suppress tracking to avoid false progress updates during navigation
+    suppressTrackingRef.current = true
+
     container.scrollTo({
       top: targetScrollTop,
       behavior: "smooth",
     })
 
-    setCurrentPage(pageNumber)
-    onPageChange?.(pageNumber, totalPages)
+    // Re-enable tracking after scroll animation completes
+    setTimeout(() => {
+      suppressTrackingRef.current = false
+      setCurrentPage(pageNumber)
+      onPageChange?.(pageNumber, totalPages)
+    }, 500)
   }
 
-  // Disable auto-jump to targetPage for now to avoid jumping before pages finish rendering
+  // Effect to handle targetPage changes
+  useEffect(() => {
+    if (targetPage !== undefined && pdfDoc && totalPages > 0) {
+      // Wait a bit for pages to render before scrolling
+      const scrollTimer = setTimeout(() => {
+        scrollToPage(targetPage)
+      }, 300)
+
+      return () => clearTimeout(scrollTimer)
+    }
+  }, [targetPage, pdfDoc, totalPages])
 
   const handleTextSelection = (e: React.MouseEvent<HTMLDivElement>) => {
     const selection = window.getSelection()
