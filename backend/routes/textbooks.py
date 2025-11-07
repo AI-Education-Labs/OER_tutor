@@ -3,8 +3,8 @@ from typing import List, Optional
 import logging
 from backend.features.textbooks.models import TextbookInfo
 from pydantic import BaseModel
-from backend.db.database import get_document, get_document_by_field, add_textbook_to_user, get_document_by_field
-from backend.features.auth.service import validate_access_token_optional, validate_access_token
+from backend.db.database import get_document, get_document_by_field
+from backend.features.auth.service import validate_access_token_optional
 from botocore.exceptions import ClientError
 from starlette.concurrency import run_in_threadpool
 from backend.config import settings
@@ -39,7 +39,7 @@ async def get_chapter_text(textbook_uuid: str, chapter_id: str) -> str:
         logger.error(f"Error fetching chapter text from S3 for key {key}: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving chapter text: {str(e)}")
 
-@router.get("/list")
+@router.get("/api/textbooks")
 async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
     """Get all available textbooks."""
     print(f"get_textbooks: user {user_uuid}")
@@ -85,7 +85,7 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
     )
 
 # TODO: These routes need to be protected
-@router.get("/{textbook_uuid}")
+@router.get("/api/textbooks/{textbook_uuid}")
 async def get_textbook_details(textbook_uuid: str):
     metadata = await get_document_by_field("textbooks", "_id", textbook_uuid)
     print(f"Textbook metadata: {metadata}")
@@ -94,7 +94,7 @@ async def get_textbook_details(textbook_uuid: str):
     return metadata
     
 
-@router.get("/{textbook_uuid}/chapters")
+@router.get("/api/textbooks/{textbook_uuid}/chapters")
 async def get_chapters(textbook_uuid: str):
     """Get available chapters for a textbook.
     and returns a consistent response shape: { "chapters": [...] }.
@@ -104,7 +104,7 @@ async def get_chapters(textbook_uuid: str):
 
     return {"chapters": chapters}
 
-@router.get("/{textbook_uuid}/chapters/{chapter_id}/pdf")
+@router.get("/api/textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf")
 async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     """Return a presigned URL to the chapter PDF stored in S3."""
     print(f"Getting chapter PDF for {textbook_uuid} and {chapter_id}")
@@ -149,34 +149,3 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     except Exception as e:
         logger.error(f"Error getting chapter PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving chapter PDF: {str(e)}")
-    
-
-
-class AddTextbookRequest(BaseModel):
-    code: str
-
-class AddTextbookResponse(BaseModel):
-    ok: bool
-    textbook_id: Optional[str] = None
-    title: Optional[str] = None
-    error: Optional[str] = None
-
-logger = logging.getLogger(__name__)
-
-@router.post("/add", response_model=AddTextbookResponse)
-async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_access_token)):
-    """Add a textbook to the authenticated user's library using a 6-char code."""
-    textbook_code = (payload.code or "").strip().upper()
-
-    # Check if the textbook ID is valid
-    valid_textbook = await get_document_by_field("textbooks", "code", textbook_code)
-    if(valid_textbook is None):
-        # If no textbook exists, let the user know
-        raise HTTPException(status_code=404, detail="Textbook not found")
-    else:
-        # If the textbook exists, add it to the user's books
-        textbook_id = valid_textbook.get("_id")
-        textbook_title = valid_textbook.get("title")
-        print(f"Adding Textbook {textbook_title} ({textbook_id}) to user {user_id}")
-        await add_textbook_to_user(user_id, textbook_id)
-        return AddTextbookResponse(ok=True, textbook_id=textbook_id, title=textbook_title)

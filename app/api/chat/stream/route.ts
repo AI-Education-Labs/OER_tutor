@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server"
-// TODO: this isn't used anymore by the frontend, it directly uses backend
+
 export async function POST(req: NextRequest) {
   try {
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-    const streamUrl = `${backendUrl}/api/v1/chat/stream`
+    const streamUrl = `${backendUrl}/chat/stream`
 
     // Pass through auth header if present
     const authHeader = req.headers.get("authorization")

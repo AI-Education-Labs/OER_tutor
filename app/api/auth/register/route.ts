@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     }
 
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-    const upstream = await fetch(`${backendUrl}/api/v1/auth/register`, {
+    const upstream = await fetch(`${backendUrl}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, email, password }),
