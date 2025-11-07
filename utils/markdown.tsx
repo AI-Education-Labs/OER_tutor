@@ -25,12 +25,34 @@ export const formatMarkdown = (text: string): React.ReactNode => {
     // Inline code - Beautiful with accent color
     html = html.replace(/`([^`]+)`/g, '<code class="bg-[#2d2d30] px-2 py-1 rounded text-sm text-[#4ec9b0] font-mono border border-[#007acc]/20 shadow-sm">$1</code>');
 
-    // Bold, italic, strikethrough - Enhanced with colors
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
-    html = html.replace(/\*(.*?)\*/g, '<em class="italic text-[#ce9178]">$1</em>');
-    html = html.replace(/~~(.*?)~~/g, '<del class="text-gray-500 line-through">$1</del>');
+    // Bold, italic, strikethrough - Enhanced with colors (process before other rules)
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-white">$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em class="italic text-[#ce9178]">$1</em>');
+    html = html.replace(/~~(.+?)~~/g, '<del class="text-gray-500 line-through">$1</del>');
 
-    // Blockquotes - Beautiful with accent and background
+    // Semantic Callout Blocks (GitHub-style) - Parse [!TYPE] syntax with multi-line support
+    html = html.replace(/^> \[!NOTE\]\s*\n((?:> .+\n?)+)/gm, (_match, content) => {
+      const text = content.replace(/^> /gm, '').trim();
+      return '<div class="border-l-4 border-[#4ec9b0] bg-[#1e3a3a] pl-4 pr-4 py-3 my-4 rounded-r-md shadow-md"><div class="flex items-center gap-2 mb-2"><svg class="w-4 h-4 text-[#4ec9b0]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg><span class="font-bold text-[#4ec9b0] text-sm uppercase tracking-wide">Note</span></div><div class="text-[#d4d4d4] text-sm leading-relaxed">' + text + '</div></div>';
+    });
+    html = html.replace(/^> \[!TIP\]\s*\n((?:> .+\n?)+)/gm, (_match, content) => {
+      const text = content.replace(/^> /gm, '').trim();
+      return '<div class="border-l-4 border-[#5dc9a6] bg-[#1a3a2e] pl-4 pr-4 py-3 my-4 rounded-r-md shadow-md"><div class="flex items-center gap-2 mb-2"><svg class="w-4 h-4 text-[#5dc9a6]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg><span class="font-bold text-[#5dc9a6] text-sm uppercase tracking-wide">Tip</span></div><div class="text-[#d4d4d4] text-sm leading-relaxed">' + text + '</div></div>';
+    });
+    html = html.replace(/^> \[!IMPORTANT\]\s*\n((?:> .+\n?)+)/gm, (_match, content) => {
+      const text = content.replace(/^> /gm, '').trim();
+      return '<div class="border-l-4 border-[#f48771] bg-[#3a2020] pl-4 pr-4 py-3 my-4 rounded-r-md shadow-md"><div class="flex items-center gap-2 mb-2"><svg class="w-4 h-4 text-[#f48771]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg><span class="font-bold text-[#f48771] text-sm uppercase tracking-wide">Important</span></div><div class="text-[#d4d4d4] text-sm leading-relaxed">' + text + '</div></div>';
+    });
+    html = html.replace(/^> \[!WARNING\]\s*\n((?:> .+\n?)+)/gm, (_match, content) => {
+      const text = content.replace(/^> /gm, '').trim();
+      return '<div class="border-l-4 border-[#f5c763] bg-[#3a3420] pl-4 pr-4 py-3 my-4 rounded-r-md shadow-md"><div class="flex items-center gap-2 mb-2"><svg class="w-4 h-4 text-[#f5c763]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg><span class="font-bold text-[#f5c763] text-sm uppercase tracking-wide">Warning</span></div><div class="text-[#d4d4d4] text-sm leading-relaxed">' + text + '</div></div>';
+    });
+    html = html.replace(/^> \[!CAUTION\]\s*\n((?:> .+\n?)+)/gm, (_match, content) => {
+      const text = content.replace(/^> /gm, '').trim();
+      return '<div class="border-l-4 border-[#ff6b6b] bg-[#3a1f1f] pl-4 pr-4 py-3 my-4 rounded-r-md shadow-md"><div class="flex items-center gap-2 mb-2"><svg class="w-4 h-4 text-[#ff6b6b]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"/></svg><span class="font-bold text-[#ff6b6b] text-sm uppercase tracking-wide">Caution</span></div><div class="text-[#d4d4d4] text-sm leading-relaxed">' + text + '</div></div>';
+    });
+
+    // Regular blockquotes (fallback for quotes without callout syntax)
     html = html.replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-[#4ec9b0] bg-[#2d2d30] pl-4 pr-3 py-3 my-4 italic text-[#d4d4d4] rounded-r-md shadow-sm">$1</blockquote>');
 
 
@@ -44,14 +66,15 @@ export const formatMarkdown = (text: string): React.ReactNode => {
       return `<ol class="list-decimal pl-6 my-4 marker:text-[#4ec9b0] marker:font-semibold">${items}</ol>`;
     });
 
-    // Unordered lists - Beautiful with custom bullets
-    html = html.replace(/(?:^[-*+]\s.+\n?)+/gm, (match) => {
+    // Unordered lists - Beautiful with custom bullets (handles both multi-line and single-line)
+    html = html.replace(/(?:^[-*+]\s.+(?:\n|$))+/gm, (match) => {
       const items = match
         .trim()
         .split("\n")
-        .map((line) => line.replace(/^[-*+]\s(.+)/, '<li class="ml-3 mb-2 text-[#d4d4d4] leading-relaxed pl-1">$1</li>'))
+        .filter(line => line.trim())
+        .map((line) => line.replace(/^[-*+]\s(.+)/, '<li class="flex items-start gap-2 mb-2.5 text-[#d4d4d4] leading-relaxed"><span class="text-[#007acc] font-bold mt-0.5">•</span><span>$1</span></li>'))
         .join("");
-      return `<ul class="list-disc pl-6 my-4 marker:text-[#007acc] marker:text-lg">${items}</ul>`;
+      return `<ul class="list-none pl-0 my-4">${items}</ul>`;
     });
 
     // Links - Beautiful hover effects
@@ -63,8 +86,8 @@ export const formatMarkdown = (text: string): React.ReactNode => {
     // Horizontal rules - Beautiful gradient
     html = html.replace(/^---$/gm, '<hr class="my-6 border-0 h-px bg-gradient-to-r from-transparent via-[#007acc] to-transparent" />');
 
-    // Paragraphs - Enhanced readability
-    html = html.replace(/^(?!<h\d|<pre|<blockquote|<ul|<ol|<li|<img|<hr|<p)(.+)$/gm, '<p class="text-[#d4d4d4] leading-relaxed my-2.5 text-[15px]">$1</p>');
+    // Paragraphs - Enhanced readability with better spacing
+    html = html.replace(/^(?!<h\d|<pre|<blockquote|<ul|<ol|<li|<img|<hr|<p|<div)(.+)$/gm, '<p class="text-[#d4d4d4] leading-relaxed my-3 text-[15px]">$1</p>');
 
     // Line breaks - Only convert double newlines to prevent excessive spacing
     html = html.replace(/\n\n+/g, "<br />");
@@ -76,7 +99,7 @@ export const formatMarkdown = (text: string): React.ReactNode => {
   while ((match = codeBlockRegex.exec(text)) !== null) {
     // Text before the code block
     if (match.index > lastIndex) {
-      parts.push(formatInlineMarkdown(text.slice(lastIndex, match.index)));
+      parts.push(<div key={`text-${lastIndex}`}>{formatInlineMarkdown(text.slice(lastIndex, match.index))}</div>);
     }
 
     const language = match[1] || "text";
@@ -84,7 +107,7 @@ export const formatMarkdown = (text: string): React.ReactNode => {
 
     // Code block with beautiful styling and language badge
     parts.push(
-      <div key={match.index} className="my-4 rounded-lg overflow-hidden border border-[#3e3e42] shadow-lg">
+      <div key={`code-${match.index}`} className="my-4 rounded-lg overflow-hidden border border-[#3e3e42] shadow-lg">
         {language && (
           <div className="bg-[#2d2d30] px-4 py-2 text-xs font-semibold text-[#4ec9b0] border-b border-[#3e3e42] flex items-center justify-between">
             <span className="uppercase tracking-wider">{language}</span>
@@ -117,7 +140,7 @@ export const formatMarkdown = (text: string): React.ReactNode => {
 
   // Remaining text after last code block
   if (lastIndex < text.length) {
-    parts.push(formatInlineMarkdown(text.slice(lastIndex)));
+    parts.push(<div key={`text-${lastIndex}-end`}>{formatInlineMarkdown(text.slice(lastIndex))}</div>);
   }
 
   return parts.length > 1 ? <>{parts}</> : parts[0] || text;
