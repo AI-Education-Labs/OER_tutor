@@ -189,7 +189,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
-      const res = await fetch(`${backendUrl}/chat/history`, {
+      const res = await fetch(`${backendUrl}/api/v1/chat/history`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       const data = await res.json()
@@ -203,7 +203,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
-      const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
+      const res = await fetch(`${backendUrl}/api/v1/chat/history?session_id=${sessionId}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       const data = await res.json()
@@ -322,7 +322,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
       const controller = new AbortController()
       abortControllerRef.current = controller
 
-      const streamRes = await fetch(`${backendUrl}/chat/stream`, {
+      const streamRes = await fetch(`${backendUrl}/api/v1/chat/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
         body: JSON.stringify(body),
@@ -469,7 +469,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const token = localStorage.getItem("access_token")
       const sessionId = sessionIdRef.current
-      const res = await fetch(`${backendUrl}/chat/history?session_id=${sessionId}`, {
+      const res = await fetch(`${backendUrl}/api/v1/chat/history?session_id=${sessionId}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       })
       const data = await res.json()
