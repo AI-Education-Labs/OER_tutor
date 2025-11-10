@@ -269,15 +269,72 @@ async def get_user_quiz(item_id: str, current_user = Depends(validate_access_tok
 
 @router.patch("/api/quizzes/{item_id}/result", status_code=status.HTTP_200_OK)
 async def update_quiz_result(item_id: str, payload: QuizResultUpdate, current_user = Depends(validate_access_token)):
+    """
+    Update quiz result and sync to student context for personalized tutoring.
+    """
+    from backend.features.student_context.service import add_quiz_attempt
+    from backend.features.student_context.models import QuizAttempt
+    from datetime import datetime
+
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
+
+    # Update quiz result
     result = await collection.update_one(
         {"_id": item_id, "user": user_id},
         {"$set": {"quiz_result": payload.quiz_result}}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Quiz not found")
+
     updated = await collection.find_one({"_id": item_id, "user": user_id})
+
+    # Extract quiz data for student context
+    quiz_data = updated.get("quiz", {})
+    quiz_result = payload.quiz_result
+    textbook_id = quiz_data.get("textbook_id")
+    chapter_id = quiz_data.get("chapter_id")
+
+    # Sync to student context if we have textbook/chapter info
+    if textbook_id and chapter_id and quiz_result:
+        try:
+            # Calculate quiz metrics
+            questions = quiz_data.get("questions", [])
+            total_questions = len(questions)
+            correct_answers = quiz_result.get("correct_count", 0)
+            score = (correct_answers / total_questions * 100) if total_questions > 0 else 0
+
+            # Identify missed concepts from incorrect answers
+            missed_concepts = []
+            incorrect_indices = quiz_result.get("incorrect_indices", [])
+            for idx in incorrect_indices:
+                if idx < len(questions):
+                    question = questions[idx]
+                    # Try to extract concept from question or use question text
+                    concept = question.get("concept") or question.get("question", "")[:50]
+                    if concept and concept not in missed_concepts:
+                        missed_concepts.append(concept)
+
+            # Create quiz attempt record
+            quiz_attempt = QuizAttempt(
+                quiz_id=item_id,
+                score=score,
+                total_questions=total_questions,
+                correct_answers=correct_answers,
+                attempted_at=datetime.utcnow(),
+                missed_concepts=missed_concepts,
+                time_spent_seconds=quiz_result.get("time_spent_seconds")
+            )
+
+            # Add to student context
+            await add_quiz_attempt(user_id, textbook_id, str(chapter_id), quiz_attempt)
+
+            logger.info(f"Synced quiz {item_id} to student context: {score:.1f}% ({correct_answers}/{total_questions})")
+
+        except Exception as e:
+            logger.error(f"Error syncing quiz to student context: {e}")
+            # Don't fail the request if student context update fails
+
     return updated
 
 
