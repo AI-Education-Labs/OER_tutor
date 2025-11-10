@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     // Forward to backend with auth if provided
     const token = request.headers.get("authorization") || undefined
-    const upstream = await fetch(`${BACKEND_URL}/api/user_books/add`, {
+    const upstream = await fetch(`${BACKEND_URL}/api/v1/textbooks/add`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

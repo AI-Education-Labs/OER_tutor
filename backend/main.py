@@ -1,16 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import asyncio
 from dotenv import load_dotenv
 
 from backend.routes.auth import router as auth_router
-from backend.routes.llm_utils import router as llm_utils_router
 from backend.routes.textbooks import router as textbooks_router
-from backend.routes.files import router as files_router
-from backend.routes.sidebar_modules import router as sidebar_modules_router
+from backend.routes.flashcards import router as flashcards_router
+from backend.routes.quiz import router as quiz_router
+from backend.routes.studyguide import router as study_guide_router
 from backend.routes.user_progress import router as textbook_progress_router
-from backend.routes.users import router as users_router
 from backend.routes.chat import router as chat_router
 from backend.routes.user_books import router as user_books_router
 from backend.features.observability.service import setup_observability
@@ -37,19 +36,22 @@ logger = logging.getLogger(__name__)
 
 
 # Create FastAPI app
+
+api_router = APIRouter(prefix="/api/v1")
+
 app = FastAPI(title="TextbookAI API")
 # Add observability middleware (e.g., OpenTelemetry) if needed
 setup_observability(app)
 # Include routers
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
-app.include_router(llm_utils_router, prefix="/llm", tags=["llm-utils"])
-app.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-modules"])
-app.include_router(textbooks_router, tags=["textbooks"])
-app.include_router(files_router, tags=["files"])
-app.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
-app.include_router(users_router, prefix="/users", tags=["users"])
-app.include_router(chat_router, prefix="/chat", tags=["chat"])
-app.include_router(user_books_router, tags=["user-books"])
+api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+api_router.include_router(textbooks_router, prefix="/textbooks", tags=["textbooks"])
+api_router.include_router(flashcards_router, prefix="/flashcards", tags=["flashcards"])
+api_router.include_router(quiz_router, prefix="/quiz", tags=["quizzes"])
+api_router.include_router(study_guide_router, prefix="/study-guide", tags=["study-guide"])
+api_router.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
+api_router.include_router(chat_router, prefix="/chat", tags=["chat"])
+
+app.include_router(api_router)
 
 # Add CORS middleware
 app.add_middleware(

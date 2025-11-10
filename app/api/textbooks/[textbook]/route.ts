@@ -9,7 +9,7 @@ export async function GET(
     const { textbook } = resolved
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
     const token = request.headers.get("authorization") || undefined
-    const response = await fetch(`${backendUrl}/api/textbooks/${encodeURIComponent(textbook)}`, {
+    const response = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbook)}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

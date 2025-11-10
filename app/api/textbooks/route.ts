@@ -4,7 +4,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export async function GET(request: NextRequest) {
   try {
-    const upstream = `${BACKEND_URL}/api/textbooks`
+    const upstream = `${BACKEND_URL}/api/v1/textbooks/list`
     const token = request.headers.get("authorization") || undefined
     const response = await fetch(upstream, {
       method: "GET",
