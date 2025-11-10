@@ -13,6 +13,7 @@ from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.users import router as users_router
 from backend.routes.chat import router as chat_router
 from backend.routes.user_books import router as user_books_router
+from backend.features.observability.service import setup_observability
 
 import mangum
 
@@ -33,8 +34,13 @@ if not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+
 # Create FastAPI app
 app = FastAPI(title="TextbookAI API")
+# Add observability middleware (e.g., OpenTelemetry) if needed
+setup_observability(app)
+# Include routers
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(llm_utils_router, prefix="/llm", tags=["llm-utils"])
 app.include_router(sidebar_modules_router, prefix="/sidebar", tags=["sidebar-modules"])
@@ -43,7 +49,7 @@ app.include_router(files_router, tags=["files"])
 app.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
 app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(chat_router, prefix="/chat", tags=["chat"])
-app.include_router(user_books_router, tags=["user-books"]) 
+app.include_router(user_books_router, tags=["user-books"])
 
 # Add CORS middleware
 app.add_middleware(
