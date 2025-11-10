@@ -12,7 +12,7 @@ export async function GET(
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (token) headers["Authorization"] = `Bearer ${token}`
 
-    const resp = await fetch(`${backendUrl}/llm/api/notes/${encodeURIComponent(id)}`, { headers, cache: "no-store" })
+    const resp = await fetch(`${backendUrl}/api/v1/study-guide/${encodeURIComponent(id)}`, { headers, cache: "no-store" })
     const text = await resp.text()
     try {
       const parsed = JSON.parse(text)
@@ -37,7 +37,7 @@ export async function DELETE(
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (token) headers["Authorization"] = `Bearer ${token}`
 
-    const resp = await fetch(`${backendUrl}/llm/api/notes/${encodeURIComponent(id)}`, { method: "DELETE", headers })
+    const resp = await fetch(`${backendUrl}/api/v1/study-guide/${encodeURIComponent(id)}`, { method: "DELETE", headers })
     const text = await resp.text()
     try {
       const parsed = JSON.parse(text)

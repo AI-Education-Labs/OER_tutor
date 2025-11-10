@@ -210,7 +210,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
 
-      const resp = await fetch("/api/flashcard/generate", {
+      const resp = await fetch("/api/flashcards/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ context, hint: focusHint, num_flashcards: numCards, chapter: selectedChapterId, textbook_id: textbookId }),
