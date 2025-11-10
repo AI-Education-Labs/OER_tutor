@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (token) headers["Authorization"] = `Bearer ${token}`
 
-    const resp = await fetch(`${backendUrl}/llm/api/flashcard/generate`, {
+    const resp = await fetch(`${backendUrl}/api/v1/flashcards/generate`, {
       method: "POST",
       headers,
       body: JSON.stringify(payload),

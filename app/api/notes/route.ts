@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (token) headers["Authorization"] = `Bearer ${token}`
 
-    const resp = await fetch(`${backendUrl}/llm/api/notes`, { headers, cache: "no-store" })
+    const resp = await fetch(`${backendUrl}/api/v1/study-guide/list`, { headers, cache: "no-store" })
     const text = await resp.text()
     try {
       const parsed = JSON.parse(text)

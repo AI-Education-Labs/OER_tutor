@@ -14,7 +14,7 @@ export async function PATCH(
     const body = await req.json().catch(() => ({}))
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
     const response = await fetch(
-      `${backendUrl}/progress/${encodeURIComponent(textbook)}/chapter/${encodeURIComponent(chapter)}`,
+      `${backendUrl}/api/v1/progress/${encodeURIComponent(textbook)}/chapter/${encodeURIComponent(chapter)}`,
       {
         method: "PATCH",
         headers: { "content-type": "application/json", Authorization: auth },
