@@ -7,7 +7,10 @@ from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from backend.features.auth.service import validate_access_token
-from backend.features.learning_plan.service import get_or_generate_learning_plan
+from backend.features.learning_plan.service import (
+    get_or_generate_learning_plan,
+    get_meaningful_progress_summary
+)
 from backend.db.database import get_collection
 
 router = APIRouter()
@@ -122,3 +125,33 @@ async def generate_plan_background(textbook_id: str, chapter_id: str):
 
     except Exception as e:
         logger.error(f"Background: Error generating learning plan: {e}", exc_info=True)
+
+
+@router.get("/api/learning-plan/progress/{textbook_id}/{chapter_id}")
+async def get_student_progress_depth(
+    textbook_id: str,
+    chapter_id: str,
+    user_id: str = Depends(validate_access_token)
+):
+    """
+    Get meaningful progress data that shows depth of learning, not just exposure.
+
+    Returns:
+    - What concepts the student CAN EXPLAIN (demonstrated understanding)
+    - What concepts the student CAN APPLY (applied to new situations)
+    - What concepts were only discussed (exposure but no demonstration)
+    - Learning events (explained concepts, answered questions, etc.)
+    - Questions answered with accuracy
+    - Misconceptions corrected
+    - Active practice completed
+    - Human-readable progress narrative
+
+    This replaces simple message counts with actual learning metrics.
+    """
+    try:
+        progress = await get_meaningful_progress_summary(user_id, textbook_id, chapter_id)
+        return progress
+
+    except Exception as e:
+        logger.error(f"Error getting progress summary: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get progress summary")

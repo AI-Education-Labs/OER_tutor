@@ -1,12 +1,13 @@
-import json
 import uuid
 import hashlib
 import time
+import json
 from datetime import datetime, date
 from typing import Optional, AsyncGenerator, List, Dict
 
 from bson import ObjectId
 import logging
+from pydantic import BaseModel, Field
 
 from fastapi import APIRouter, Depends, Request, BackgroundTasks, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -32,7 +33,6 @@ from backend.features.learning_plan.service import (
     analyze_learning_from_conversation,
     update_student_progress_from_analysis
 )
-from backend.features.logging.service import ChatLogger
 
 
 router = APIRouter()
@@ -40,10 +40,27 @@ router = APIRouter()
 # Logger setup
 logger = logging.getLogger(__name__)
 
+
 # ----------------------------
-# Detailed Logging Toggle
+# Structured Output Models
 # ----------------------------
-ENABLE_DETAILED_LOGGING = True  # Set to False to disable detailed chat logging
+class ImportantMessage(BaseModel):
+    """Schema for important message in conversation"""
+    role: str
+    content: str
+
+
+class ConversationSummaryOutput(BaseModel):
+    """Schema for LLM-generated conversation summary"""
+    title: str
+    summary: str
+    important_messages: List[ImportantMessage] = Field(default_factory=list)
+
+
+class BranchDetectorOutput(BaseModel):
+    """Schema for LLM-generated branch detection"""
+    start_new_chat: bool
+    suggested_title: Optional[str] = None
 
 
 # ----------------------------
@@ -160,14 +177,16 @@ async def update_conversation_summary(user_id: str, session_id: str):
        ])
 
 
-       result = await summary_llm.ainvoke(
+       summary_structured = summary_llm.with_structured_output(ConversationSummaryOutput)
+
+       result: ConversationSummaryOutput = await summary_structured.ainvoke(
            f"""
 You are an assistant that summarizes conversations and can find detailed important messages.
 
-Return valid JSON with exactly these keys:
+Provide:
 - "title": a concise, one-line title summarizing the conversation.
 - "summary": a detailed summary of the conversation, including key points, decisions, and outcomes.
-- "important_messages": a list of truly important messages. Each message must be an object:
+- "important_messages": a list of truly important messages. Each message must have:
     - "role": either "user" or "assistant"
     - "content": the full, verbatim text of the message.
 
@@ -187,28 +206,20 @@ Data:
             """
         )
 
-
-       try:
-           summary_json = json.loads(result.content)
-           title = summary_json.get("title", "Chat Session")
-           summary = summary_json.get("summary", "")
-           important_msgs = summary_json.get("important_messages", None)
-       except Exception:
-           title = "Chat Session"
-           summary = result.content
+       title = result.title
+       summary = result.summary
+       important_msgs = result.important_messages
 
        # Add important messages with deduplication
-       if isinstance(important_msgs, list):
-           added_count = 0
-           for msg in important_msgs:
-                if isinstance(msg, dict) and "role" in msg and "content" in msg:
-                    was_added = await important_messages_collection.add_message_if_unique(
-                        msg["role"],
-                        msg["content"]
-                    )
-                    if was_added:
-                        added_count += 1
-           logger.info(f"Added {added_count} new important messages (skipped {len(important_msgs) - added_count} duplicates)")
+       added_count = 0
+       for msg in important_msgs:
+           was_added = await important_messages_collection.add_message_if_unique(
+               msg.role,
+               msg.content
+           )
+           if was_added:
+               added_count += 1
+       logger.info(f"Added {added_count} new important messages (skipped {len(important_msgs) - added_count} duplicates)")
            
        collection = await get_collection("conversation_summaries")
        await collection.update_one(
@@ -244,8 +255,7 @@ async def build_chat_context(
     user_id: str,
     textbook_id: Optional[str],
     chapter_id: Optional[str],
-    user_message: str,
-    chat_logger: Optional[ChatLogger] = None
+    user_message: str
 ) -> List[SystemMessage | HumanMessage | AIMessage]:
     """
     Build complete context for LLM including:
@@ -260,10 +270,6 @@ async def build_chat_context(
     - Current user message
     """
     llm_msgs = [get_system_prompt()]
-
-    # Log system prompt
-    if chat_logger:
-        chat_logger.add_context_layer("system_prompt", get_system_prompt().content)
 
     # 1. Add learning plan context (non-blocking check)
     if textbook_id and chapter_id:
@@ -300,8 +306,6 @@ Learning Objectives:
                 logger.info("Added learning plan to chat")
 
                 # Log it
-                if chat_logger:
-                    chat_logger.add_context_layer("learning_plan", plan_text)
             else:
                 # No plan exists - don't block chat waiting for generation
                 logger.info(f"Learning plan not found for chapter {chapter_id}, chat will proceed without it")
@@ -311,13 +315,9 @@ Learning Objectives:
                     content="Note: Focus on helping the student understand the chapter content thoroughly."
                 ))
 
-                if chat_logger:
-                    chat_logger.add_context_layer("learning_plan", "Not yet generated - using fallback")
 
         except Exception as e:
             logger.warning(f"Could not load learning plan: {e}")
-            if chat_logger:
-                chat_logger.add_error(f"Learning plan error: {e}")
 
     # 2. Add student progress against learning plan
     if textbook_id and chapter_id:
@@ -375,13 +375,6 @@ Student Progress on Learning Plan:
             llm_msgs.append(SystemMessage(content=f"Textbook Chapter Content:\n{textbook_text}"))
             logger.info("Added textbook context to chat")
 
-            # Log textbook content (but truncated to avoid huge logs)
-            if chat_logger:
-                chat_logger.add_context_layer(
-                    "textbook_content",
-                    f"[Chapter content: {len(textbook_text)} characters - NOT LOGGED TO SAVE SPACE]"
-                )
-
     # 4. Add conversation summary
     collection = await get_collection("conversation_summaries")
     summary_doc = await collection.find_one({"session_id": session_id, "user_id": user_id})
@@ -413,6 +406,7 @@ async def detect_topic_branch(session_id: str) -> Dict:
     """
     Detect if the conversation has shifted to a new topic.
     Returns decision dict with start_new_chat and suggested_title.
+    Uses structured output to guarantee valid response.
     """
     try:
         detector_llm = ChatOpenAI(
@@ -421,6 +415,7 @@ async def detect_topic_branch(session_id: str) -> Dict:
             tags=["branch-detector"],
             reasoning_effort="low"
         )
+        structured_detector = detector_llm.with_structured_output(BranchDetectorOutput)
 
         history = MongoChatMessageHistory(session_id=session_id)
         recent = await history.get_messages(limit=10)
@@ -429,14 +424,14 @@ async def detect_topic_branch(session_id: str) -> Dict:
 
         detector_prompt = (
             'Decide whether the last user message starts a new topic. '
-            'Respond ONLY with JSON: {"start_new_chat": true/false, "suggested_title": string}'
+            'Provide start_new_chat (true/false) and suggested_title (string if new topic, null otherwise).'
             f'\nConversation:\n{conv_text}'
         )
 
-        result = await detector_llm.ainvoke(detector_prompt)
-        logger.debug(f"Branch detector response: {result.content}")
+        result: BranchDetectorOutput = await structured_detector.ainvoke(detector_prompt)
+        logger.debug(f"Branch detector response: start_new_chat={result.start_new_chat}")
 
-        return json.loads(result.content)
+        return {"start_new_chat": result.start_new_chat, "suggested_title": result.suggested_title}
 
     except Exception as e:
         logger.warning(f"Branch detection failed: {e}")
@@ -572,17 +567,6 @@ async def stream_chat(
         session_id = str(uuid.uuid4())
         logger.info(f"Generated new session ID: {session_id}")
 
-    # Initialize detailed logger (if enabled)
-    chat_logger = None
-    if ENABLE_DETAILED_LOGGING:
-        chat_logger = ChatLogger(
-            session_id=session_id,
-            user_id=user_id,
-            textbook_id=textbook_id,
-            chapter_id=chapter_id
-        )
-        chat_logger.set_user_message(user_message)
-
     # Save user message
     history = MongoChatMessageHistory(session_id=session_id)
     await history.add_message("user", user_message)
@@ -609,15 +593,10 @@ async def stream_chat(
                 user_id=user_id,
                 textbook_id=textbook_id,
                 chapter_id=chapter_id,
-                user_message=user_message,
-                chat_logger=chat_logger  # Pass logger
+                user_message=user_message
             )
 
             logger.info(f"Built context with {len(llm_msgs)} messages")
-
-            # Log full context sent to LLM (if logging enabled)
-            if chat_logger:
-                chat_logger.set_full_context(llm_msgs)
 
             # Stream LLM response
             llm = ChatOpenAI(
@@ -627,14 +606,6 @@ async def stream_chat(
                 tags=["Chatter"],
                 reasoning_effort="minimal"
             )
-
-            # Log LLM call details (if logging enabled)
-            if chat_logger:
-                chat_logger.set_llm_call_details(
-                    model="gpt-5-mini",
-                    temperature=0,
-                    streaming=True
-                )
 
             async for chunk in llm.astream(llm_msgs):
                 if chunk.content:
@@ -657,11 +628,6 @@ async def stream_chat(
             response_time = time.time() - start_time
             logger.info(f"Completed response: {len(full_response)} characters in {response_time:.2f}s")
 
-            # Log response (if logging enabled)
-            if chat_logger:
-                chat_logger.set_assistant_response(full_response)
-                chat_logger.llm_call_details.response_time_seconds = response_time
-
             # Analyze learning progress from this conversation
             if textbook_id and chapter_id:
                 # Do analysis synchronously so we can log it
@@ -683,10 +649,6 @@ async def stream_chat(
                         current_progress=current_progress
                     )
 
-                    # Log analysis (if logging enabled)
-                    if chat_logger:
-                        chat_logger.set_learning_analysis(analysis)
-
                     # Update progress in background
                     if analysis.concepts_discussed or analysis.understanding_demonstrated:
                         background_tasks.add_task(
@@ -701,15 +663,9 @@ async def stream_chat(
 
                 except Exception as e:
                     logger.error(f"Error in learning analysis: {e}")
-                    if chat_logger:
-                        chat_logger.add_error(f"Learning analysis error: {e}")
 
             # Update conversation summary in background
             background_tasks.add_task(update_conversation_summary, user_id, session_id)
-
-            # Save detailed log to MongoDB (if logging enabled)
-            if chat_logger:
-                background_tasks.add_task(chat_logger.save)
 
             # Detect topic branching
             decision = await detect_topic_branch(session_id)
@@ -806,35 +762,3 @@ def convert_timestamps_to_iso(messages):
     for m in messages:
         if isinstance(m["timestamp"], (datetime, date)):
             m["timestamp"] = m["timestamp"].isoformat()
-
-
-# ----------------------------
-# GET Detailed Chat Logs (For Debugging/Analysis)
-# ----------------------------
-@router.get("/logs")
-async def get_detailed_chat_logs(
-    session_id: Optional[str] = None,
-    limit: int = 5,
-    user_id: str = Depends(validate_access_token)
-):
-    """
-    Retrieve detailed chat logs with full context, analysis, etc.
-    Returns formatted logs ready to copy/paste for analysis.
-    """
-    from backend.features.logging.service import get_chat_logs
-
-    try:
-        formatted_logs = await get_chat_logs(
-            user_id=user_id,
-            session_id=session_id,
-            limit=limit
-        )
-
-        return {
-            "count": len(formatted_logs),
-            "logs": formatted_logs
-        }
-
-    except Exception as e:
-        logger.error(f"Error retrieving chat logs: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve logs")

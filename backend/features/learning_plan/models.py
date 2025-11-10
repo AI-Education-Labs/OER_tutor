@@ -98,6 +98,51 @@ class MilestoneProgress(BaseModel):
     key_messages: List[Dict] = []  # Messages where milestone was achieved
 
 
+class LearningEvent(BaseModel):
+    """
+    A specific learning event that demonstrates understanding.
+    These are concrete evidence of learning, not just exposure.
+    """
+    event_type: str  # "explained_concept", "answered_question", "corrected_misconception", "applied_knowledge", "synthesized_ideas"
+    concept: str  # Which concept this relates to
+    description: str  # What the student did
+    confidence: str = "medium"  # low, medium, high - how confident we are this demonstrates learning
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    session_id: Optional[str] = None
+    message_content: Optional[str] = None  # The actual student message
+
+
+class MisconceptionCorrected(BaseModel):
+    """Track when a misconception is identified and corrected."""
+    concept: str
+    misconception: str  # What the student thought
+    correction: str  # What they learned
+    corrected_at: datetime = Field(default_factory=datetime.utcnow)
+    session_id: Optional[str] = None
+    student_acknowledged: bool = False  # Did student demonstrate they understand the correction?
+
+
+class QuestionAnswered(BaseModel):
+    """Track questions the student answered (not just asked)."""
+    question: str
+    student_answer: str
+    was_correct: bool
+    concept: str
+    difficulty: str = "medium"  # easy, medium, hard
+    answered_at: datetime = Field(default_factory=datetime.utcnow)
+    session_id: Optional[str] = None
+
+
+class ActivePracticeCompleted(BaseModel):
+    """Track when student completes active practice (not passive reading)."""
+    practice_type: str  # "problem_solving", "explanation", "comparison", "application", "prediction"
+    concept: str
+    quality: str = "good"  # poor, fair, good, excellent
+    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    session_id: Optional[str] = None
+    details: str = ""  # What they did
+
+
 class LearningPlanProgress(BaseModel):
     """Student's progress through a chapter's learning plan."""
     objectives_completed: List[str] = []  # Objective IDs
@@ -112,6 +157,17 @@ class LearningPlanProgress(BaseModel):
 
     current_objective: Optional[str] = None  # Which objective student should focus on
     next_suggested_objective: Optional[str] = None
+
+    # NEW: Track actual learning events (evidence of understanding)
+    learning_events: List[LearningEvent] = []
+    misconceptions_corrected: List[MisconceptionCorrected] = []
+    questions_answered: List[QuestionAnswered] = []
+    active_practice_completed: List[ActivePracticeCompleted] = []
+
+    # Depth metrics (computed from events)
+    concepts_can_explain: List[str] = []  # Student demonstrated ability to explain
+    concepts_can_apply: List[str] = []    # Student applied concept to new situation
+    concepts_exposure_only: List[str] = []  # Student heard about but hasn't demonstrated understanding
 
     last_updated: datetime = Field(default_factory=datetime.utcnow)
 
@@ -136,3 +192,9 @@ class LearningAnalysis(BaseModel):
     student_engagement: str = "neutral"  # engaged, neutral, struggling
 
     notes: str = ""  # Any observations about learning style
+
+    # NEW: Actual learning events detected
+    learning_events: List[LearningEvent] = []
+    misconceptions_corrected: List[MisconceptionCorrected] = []
+    questions_answered: List[QuestionAnswered] = []
+    active_practice: List[ActivePracticeCompleted] = []
