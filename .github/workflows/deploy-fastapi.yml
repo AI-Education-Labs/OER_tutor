@@ -3,6 +3,7 @@ name: Deploy FastAPI to AWS Lambda
 on:
   push:
     branches: [ Dev ]
+  workflow_dispatch: # add manual trigger option for now
 jobs:
   deploy:
     runs-on: ubuntu-latest
