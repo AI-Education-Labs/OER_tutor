@@ -3,7 +3,6 @@ name: Deploy FastAPI to AWS Lambda
 on:
   push:
     branches: [ Dev, 51-automate-backend-deployments ]
-  workflow_dispatch:
 
 jobs:
   deploy:
@@ -43,4 +42,3 @@ jobs:
           aws_region: us-west-2
           function_name: fastapi-backend-dev-FastApiFunction-UmaUDOUS76PT
           image_uri: ${{ env.IMAGE_URI }}
-          dry_run: true
