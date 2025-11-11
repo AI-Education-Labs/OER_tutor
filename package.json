@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:all": "concurrently \"npm run dev\" \"source venv/bin/activate && uvicorn backend.main:app --reload --host\"",
-    "build": "next build",
+    "dev:all": "concurrently \"pnpm run dev\" \"venv/bin/python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000\"",
+    "build": "next build --turbopack",
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test"

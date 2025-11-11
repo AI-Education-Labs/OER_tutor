@@ -50,6 +50,10 @@ samconfig.toml
 
 # python environement
 .venv
+venv
+
+# Local s3 syncs
+s3
 
 # Playwright
 node_modules/

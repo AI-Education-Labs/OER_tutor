@@ -11,9 +11,10 @@ cd OER_tutor # or whatever you named it
 
 1. **Install dependencies**
 Node.js is required. if you don't have node, this https://nodejs.org/en/download
+Pnpm is also required. Install pnpm from [here](https://pnpm.io/installation)
 
 ```shell
-npm install --legacy-peer-deps
+pnpm install --legacy-peer-deps
 ```
 
 2. **Copy env file**
@@ -25,7 +26,7 @@ cp .env.example .env
 2.  **Start the development server**:
 
 ```shell
-npm run dev
+pnpm run dev
 ```
 
 This will start the Next.js server, typically on [http://localhost:3000](http://localhost:3000). It's also specified in the console after launching Next.
@@ -115,19 +116,19 @@ Playwright is used for automated browser testing.
 If you haven't already, install all dependencies (including Playwright):
 
 ```shell
-npm install --legacy-peer-deps
+pnpm install
 ```
 
 2. **Install Playwright browsers**
 
 ```shell
-npx playwright install
+pnpm dlx playwright install
 ```
 
 3. **Run Playwright tests**
 
 ```shell
-npm run test:e2e
+pnpm run test:e2e
 ```
 
 This will execute all tests in the `tests/e2e` directory using Playwright.
@@ -137,7 +138,7 @@ For more options, see [Playwright documentation](https://playwright.dev/docs/int
 UI can be launched via
 
 ```shell
-npx playwright test --ui
+pnpm dlx playwright test --ui
 ```
 
 ### Launching UI mode from remote development
@@ -152,5 +153,5 @@ ssh -X user@host
 run whatever command you need to x-11 forward
 
 ```shell
-npx playwright test --ui
+pnpm dlx playwright test --ui
 ```
