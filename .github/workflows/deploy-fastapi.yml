@@ -22,4 +22,4 @@ jobs:
           function_name: fastapi-backend-dev-FastApiFunction-UmaUDOUS76PT # optional
           # An Amazon S3 bucket in the same AWS Region as your function. The bucket can be in a different AWS account.
           dry_run: true # TODO: Set to 'false' before production deployment. Currently enabled for validation only.
-          
+          image_uri: 471112753848.dkr.ecr.us-west-2.amazonaws.com/fastapibackenddev0da7a51f/fastapifunction14c1518arepo
