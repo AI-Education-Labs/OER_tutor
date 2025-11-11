@@ -3,23 +3,44 @@ name: Deploy FastAPI to AWS Lambda
 on:
   push:
     branches: [ Dev, 51-automate-backend-deployments ]
-  workflow_dispatch: # add manual trigger option for now
+  workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout source 
+      - name: Checkout source
         uses: actions/checkout@v3
-      - name: AWS Lambda Deploy
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.LAMBDA_DEPLOY_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.LAMBDA_DEPLOY_SECRET_KEY }}
+          aws-region: us-west-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image to ECR
+        env:
+          ECR_REGISTRY: 471112753848.dkr.ecr.us-west-2.amazonaws.com
+          ECR_REPOSITORY: fastapibackenddev0da7a51f/fastapifunction14c1518arepo
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./backend
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy to AWS Lambda
         uses: appleboy/lambda-action@v0.2.0
         with:
-          # AWS Region
-          aws_region: us-west-2 # optional, default is us-east-1
-          # AWS ACCESS KEY
-          aws_access_key_id: ${{ secrets.LAMBDA_DEPLOY_ACCESS_KEY }} # optional
-          # AWS SECRET KEY
-          aws_secret_access_key: ${{ secrets.LAMBDA_DEPLOY_SECRET_KEY }} # optional
-          function_name: fastapi-backend-dev-FastApiFunction-UmaUDOUS76PT # optional
-          # An Amazon S3 bucket in the same AWS Region as your function. The bucket can be in a different AWS account.
-          dry_run: true # TODO: Set to 'false' before production deployment. Currently enabled for validation only.
-          image_uri: 471112753848.dkr.ecr.us-west-2.amazonaws.com/fastapibackenddev0da7a51f/fastapifunction14c1518arepo
+          aws_access_key_id: ${{ secrets.LAMBDA_DEPLOY_ACCESS_KEY }}
+          aws_secret_access_key: ${{ secrets.LAMBDA_DEPLOY_SECRET_KEY }}
+          aws_region: us-west-2
+          function_name: fastapi-backend-dev-FastApiFunction-UmaUDOUS76PT
+          image_uri: ${{ env.IMAGE_URI }}
+          dry_run: true
