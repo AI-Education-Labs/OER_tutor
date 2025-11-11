@@ -1,8 +1,8 @@
-name: Deploy FastAPI to AWS Lambda
+name: Build and Deploy FastAPI to AWS Lambda
 
 on:
   push:
-    branches: [ Dev, 51-automate-backend-deployments ]
+    branches: [ Dev ]
 
 jobs:
   deploy:
