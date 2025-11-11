@@ -35,7 +35,8 @@ export function TextbookLibrary() {
     const loadTextbooks = async () => {
       try {
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-        const resp = await fetch(`/api/textbooks`, {
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const resp = await fetch(`${backendUrl}/api/v1/textbooks/list`, {
           cache: "no-store",
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -205,7 +206,8 @@ export function TextbookLibrary() {
                     ;(async () => {
                       try {
                         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-                        const res = await fetch("/api/textbooks/add", {
+                        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+                        const res = await fetch(`${backendUrl}/api/v1/textbooks/add`, {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
@@ -222,7 +224,7 @@ export function TextbookLibrary() {
                           toast({ title: "Added to library", description: `${data?.title || "Textbook"} added.` })
                           // Refresh textbooks
                           const token2 = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-                          const resp = await fetch(`/api/textbooks`, {
+                          const resp = await fetch(`${backendUrl}/api/v1/textbooks/list`, {
                             cache: "no-store",
                             headers: { ...(token2 ? { Authorization: `Bearer ${token2}` } : {}) },
                           })

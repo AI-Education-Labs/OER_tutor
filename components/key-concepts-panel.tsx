@@ -22,13 +22,18 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
   const [previousNotes, setPreviousNotes] = useState<any[]>([])
   const [prevLoading, setPrevLoading] = useState<boolean>(false)
   const [prevError, setPrevError] = useState<string>("")
+  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
-  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quizzes" | "notes"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
+  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quiz" | "study-guide"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
     const handleDelete = async (e: React.MouseEvent) => {
       e.stopPropagation()
       try {
         onOptimisticRemove(id, item)
-        const resp = await fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" })
+        const token = localStorage.getItem("token")
+        const resp = await fetch(`${backendUrl}/api/v1/${kind}/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
         if (!resp.ok) {
           onFailureRestore(id, item)
           toast({ title: "Delete failed", description: `Could not delete. Please try again. (${resp.status})` })
@@ -70,7 +75,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       try {
         if (!textbookId) return
         // 1) Load metadata to extract subchapters
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
         if (metaResp.ok) {
           const meta = await metaResp.json()
           const subs: string[] = Array.isArray(meta?.chapters)
@@ -105,11 +110,11 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
   useEffect(() => {
     let isCancelled = false
     if (stage !== "menu") return
-    const load = async () => {
-      try {
-        setPrevLoading(true)
-        setPrevError("")
-        const resp = await fetch("/api/notes", { cache: "no-store" }) // TODO: no backend route for this anywhere
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+        const resp = await fetch(`${backendUrl}/api/study-guide`, {
+          cache: "no-store",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }) // TODO: no backend route for this anywhere
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {
@@ -118,6 +123,10 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
             }
             return
           }
+          throw new Error()
+        }
+        const data = await resp.json()
+        if (!isCancelled) setPreviousNotes(Array.isArray(data) ? data : [])
           throw new Error()
         }
         const data = await resp.json()
@@ -148,11 +157,15 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
     setStage("loading")
     try {
       // Placeholder context for now; will be replaced when backend context streaming is ready
-      const context =
-        "Identify the core key concepts for the introduction to physics. Provide concise, well-structured notes that include headings and bullet points, with emphasis on bold/italic text where helpful."
-      const focusHint = selectedSubchapter ? `Focus only on section: ${selectedSubchapter}` : ""
-
-      const resp = await fetch("/api/key-concept/generate", {
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+      const resp = await fetch(`${backendUrl}/api/key-concept/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ context, hint: focusHint, textbook_id: textbookId, chapter: selectedChapterId }),
+      })
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ context, hint: focusHint, textbook_id: textbookId, chapter: selectedChapterId }),
@@ -247,7 +260,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                           <MenuButton
                             id={d?._id}
-                            kind="notes"
+                            kind="study-guide"
                             item={d}
                             onOptimisticRemove={(id) => setPreviousNotes((prev) => prev.filter((x) => x?._id !== id))}
                             onFailureRestore={(id, item) => setPreviousNotes((prev) => [item, ...prev])}
