@@ -1,0 +1,24 @@
+name: Deploy FastAPI to AWS Lambda
+
+on:
+  push:
+    branches: [ Dev ]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout source 
+        uses: actions/checkout@v3
+      - name: AWS Lambda Deploy
+        uses: appleboy/lambda-action@v0.2.0
+        with:
+          # AWS Region
+          aws_region: us-west-2 # optional, default is us-east-1
+          # AWS ACCESS KEY
+          aws_access_key_id: ${{ secrets.LAMBDA_DEPLOY_ACCESS_KEY }} # optional
+          # AWS SECRET KEY
+          aws_secret_access_key: ${{ secrets.LAMBDA_DEPLOY_SECRET_KEY }} # optional
+          function_name: fastapi-backend-dev-FastApiFunction-UmaUDOUS76PT # optional
+          # An Amazon S3 bucket in the same AWS Region as your function. The bucket can be in a different AWS account.
+          dry_run: true # TODO: Set to 'false' before production deployment. Currently enabled for validation only.
+          
