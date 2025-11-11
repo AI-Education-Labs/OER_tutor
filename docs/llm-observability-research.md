@@ -787,7 +787,312 @@ The migration can be completed in one sprint with low risk, and the platform wil
 
 ---
 
-**Document Version**: 1.0  
+## Framework Flexibility and Future Migration Considerations
+
+### Langfuse with Alternative Agentic Frameworks
+
+A common concern is: **"What if we want to migrate from LangChain/LangGraph to another framework like Agno, CrewAI, or build our own agentic solution?"**
+
+#### Langfuse's Framework Agnostic Architecture
+
+**Good News**: Langfuse is designed to be framework-agnostic and provides multiple integration methods:
+
+1. **LangChain Callback Handler** (Current recommendation)
+   - Easy integration for LangChain/LangGraph projects
+   - Automatic span creation and hierarchy
+   - Minimal code changes
+
+2. **Python Decorator API** (Framework-agnostic)
+   ```python
+   from langfuse.decorators import observe, langfuse_context
+   
+   @observe()
+   def my_custom_agent_function(user_input: str):
+       # Your custom agent logic here
+       response = custom_llm_call(user_input)
+       return response
+   ```
+   - Works with ANY Python-based framework
+   - Manual control over tracing
+   - No framework dependencies
+
+3. **Low-Level SDK** (Maximum flexibility)
+   ```python
+   from langfuse import Langfuse
+   
+   client = Langfuse()
+   trace = client.trace(name="custom-agent-run")
+   span = trace.span(name="llm-call")
+   # Your custom logic
+   span.end(output=result)
+   ```
+   - Complete manual control
+   - Works with any framework or custom solution
+   - Best for homebrew solutions
+
+4. **OpenAI SDK Integration** (Direct API monitoring)
+   ```python
+   from langfuse.openai import openai  # Drop-in replacement
+   
+   response = openai.chat.completions.create(
+       model="gpt-4",
+       messages=[{"role": "user", "content": "Hello"}]
+   )
+   # Automatically traced without LangChain
+   ```
+
+#### Migration Scenarios
+
+##### Scenario 1: Migrating to Agno or Similar Framework
+
+**Agno** (or other modern agentic frameworks) typically:
+- Use OpenAI API directly or with minimal abstraction
+- Have custom agent orchestration logic
+- May not be tightly coupled to LangChain
+
+**Langfuse Integration Options**:
+
+**Option A: OpenAI SDK Wrapper** (Easiest)
+```python
+# Replace OpenAI import with Langfuse wrapper
+from langfuse.openai import openai
+
+# All your Agno code works as-is
+client = openai.Client(api_key="...")
+# Automatically traced!
+```
+**Migration Effort**: <30 minutes (just change imports)
+
+**Option B: Decorator API** (More control)
+```python
+from langfuse.decorators import observe
+
+@observe(name="agno-agent-step")
+def run_agno_agent(task: str):
+    # Your Agno agent code
+    result = agno.run(task)
+    return result
+```
+**Migration Effort**: 1-2 hours (add decorators to key functions)
+
+**Option C: Manual SDK** (Maximum control)
+```python
+from langfuse import Langfuse
+
+langfuse = Langfuse()
+trace = langfuse.trace(name="agno-workflow")
+
+# Wrap your Agno calls
+span = trace.span(name="agent-step-1")
+result = agno.step1()
+span.end(output=result)
+```
+**Migration Effort**: 2-4 hours (manual instrumentation)
+
+##### Scenario 2: Building Custom/Homebrew Agentic Solution
+
+If you build your own agent framework from scratch:
+
+**Strategy: Use Decorator API from the Start**
+
+```python
+from langfuse.decorators import observe, langfuse_context
+
+class CustomAgent:
+    @observe(name="agent-think")
+    def think(self, context: str):
+        # Your thinking logic
+        thoughts = self._reason(context)
+        return thoughts
+    
+    @observe(name="agent-act")
+    def act(self, action: str):
+        # Your action logic
+        result = self._execute(action)
+        
+        # Optional: Add metadata
+        langfuse_context.update_current_observation(
+            metadata={"action_type": action.type}
+        )
+        return result
+    
+    @observe(name="agent-run")
+    def run(self, task: str):
+        thoughts = self.think(task)
+        action = self.plan(thoughts)
+        result = self.act(action)
+        return result
+```
+
+**Benefits**:
+- Clean separation of concerns
+- No framework dependency
+- Easy to trace any Python function
+- Automatic hierarchical spans
+- Can add custom metadata and tags
+
+**Migration Effort**: Integrated during development (no later migration needed)
+
+##### Scenario 3: Hybrid Approach (LangChain + Custom Logic)
+
+Many teams use LangChain for some parts and custom logic for others:
+
+```python
+from langfuse.callback import CallbackHandler
+from langfuse.decorators import observe
+
+# LangChain components use callback
+langfuse_handler = CallbackHandler()
+llm = ChatOpenAI(callbacks=[langfuse_handler])
+
+# Custom components use decorators
+@observe(name="custom-retrieval")
+def custom_retrieval_logic(query: str):
+    # Your custom retrieval
+    return results
+
+# Both appear in same trace!
+def agent_pipeline(user_query: str):
+    context = custom_retrieval_logic(user_query)  # Traced via decorator
+    response = llm.invoke(user_query)  # Traced via callback
+    return response
+```
+
+#### Framework Comparison Table
+
+| Framework | Langfuse Integration | Effort | Notes |
+|-----------|---------------------|--------|-------|
+| **LangChain/LangGraph** | Callback Handler | 🟢 2-4h | Native support, automatic |
+| **Agno** | OpenAI Wrapper or Decorators | 🟢 1-2h | Simple drop-in or manual |
+| **CrewAI** | Decorators | 🟢 2-3h | Wrap agent methods |
+| **AutoGen** | Decorators | 🟡 3-4h | Wrap conversational functions |
+| **Custom/Homebrew** | Decorators or SDK | 🟢 1-4h | Design-in from start |
+| **Direct OpenAI** | OpenAI Wrapper | 🟢 <1h | Drop-in replacement |
+| **Anthropic/Claude** | Decorators or SDK | 🟢 1-2h | Manual wrapping |
+
+🟢 = Low effort | 🟡 = Medium effort
+
+#### Key Advantages for Framework Flexibility
+
+1. **No Vendor Lock-in to LangChain**
+   - Langfuse doesn't require LangChain
+   - Callback handler is just one of many integration methods
+   - Can mix and match integration methods
+
+2. **Progressive Migration**
+   - Can migrate away from LangChain gradually
+   - Keep Langfuse throughout the migration
+   - No need to change observability platform
+
+3. **Technology Stack Independent**
+   - Works with any Python-based LLM application
+   - Not tied to specific frameworks
+   - Future-proof investment
+
+4. **Multiple Integration Patterns**
+   - High-level (callbacks for frameworks)
+   - Mid-level (decorators for functions)
+   - Low-level (SDK for full control)
+
+#### Migration Path Example: LangChain → Custom Framework
+
+**Phase 1: Current State (LangChain + Langfuse)**
+```python
+# Using callback handler
+llm = ChatOpenAI(callbacks=[langfuse_handler])
+```
+
+**Phase 2: Gradual Migration (Mixed)**
+```python
+# Old LangChain code still uses callbacks
+llm = ChatOpenAI(callbacks=[langfuse_handler])
+
+# New custom code uses decorators
+@observe()
+def new_custom_function():
+    # New implementation
+    pass
+```
+
+**Phase 3: Complete Migration (Custom + Langfuse)**
+```python
+# All custom code, Langfuse stays
+from langfuse.openai import openai
+
+@observe(name="custom-agent")
+def custom_agent():
+    response = openai.chat.completions.create(...)
+    return response
+```
+
+**Result**: Langfuse observability works throughout entire migration!
+
+#### Practical Recommendations
+
+**For Current Decision (LangChain to Langfuse)**:
+- ✅ **Proceed with confidence** - Langfuse won't lock you into LangChain
+- ✅ **Use callback handler now** - Easiest for current LangChain setup
+- ✅ **Switch integration method later** - If you change frameworks
+
+**If Considering Framework Change**:
+1. **Migrate to Langfuse first** (2-4 hours)
+2. **Then migrate framework** (when ready)
+3. **Switch Langfuse integration method** (1-2 hours)
+
+**Total "wasted" effort if you change frameworks**: ~1-2 hours to switch integration method
+- Much less than finding and migrating to a different observability platform
+- Vastly better than starting observability from scratch
+
+**For Homebrew Solutions**:
+- ✅ **Use decorator API from start** - Clean, simple, no framework dependency
+- ✅ **Add `@observe()` to key functions** - Automatic tracing
+- ✅ **Use SDK for fine-grained control** - When decorators aren't enough
+
+#### Real-World Example: OER_tutor Scenarios
+
+**Scenario A: Stay with LangChain**
+- Current plan works perfectly
+- Use callback handlers
+- Minimal effort: 2-4 hours
+
+**Scenario B: Switch to Agno in 6 months**
+- Keep Langfuse (already invested 4 hours)
+- Switch to OpenAI wrapper: 30 minutes
+- Or add decorators: 2 hours
+- Total additional effort: <2 hours
+
+**Scenario C: Build custom agent (no framework)**
+- Keep Langfuse
+- Remove callback handlers: 30 minutes
+- Add decorators to agent methods: 2-3 hours
+- Total additional effort: 3 hours
+
+**Scenario D: Hybrid (some LangChain, some custom)**
+- Keep Langfuse
+- Use callbacks for LangChain parts
+- Use decorators for custom parts
+- Both show in same traces
+- No additional effort beyond development
+
+### Conclusion on Framework Flexibility
+
+**Answer: Very Feasible! 🎉**
+
+Langfuse is **specifically designed** to work across frameworks and custom solutions. The initial investment in Langfuse (2-4 hours) is preserved regardless of future framework changes.
+
+**Key Takeaway**: Choosing Langfuse now does NOT lock you into LangChain. It's a framework-agnostic observability layer that will serve you regardless of which agentic framework (or custom solution) you choose in the future.
+
+The migration path from LangChain to another framework is:
+1. Already using Langfuse with LangChain: ✅ Done
+2. Change to new framework: (Your framework migration)
+3. Switch Langfuse integration method: 1-2 hours
+4. Continue using same Langfuse dashboard, data, and team setup: ✅ No changes
+
+**This is a major advantage over LangSmith**, which is tightly coupled to LangChain and would require a complete observability migration if you change frameworks.
+
+---
+
+**Document Version**: 1.1  
 **Last Updated**: 2025-11-11  
 **Author**: GitHub Copilot  
 **Status**: Ready for Implementation

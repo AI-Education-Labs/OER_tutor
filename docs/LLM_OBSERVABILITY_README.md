@@ -47,6 +47,10 @@ This directory contains comprehensive research and analysis on LLM observability
 - Cost analysis with projections
 - Risk assessment
 - Timeline and rollout plan
+- **Framework Flexibility** section (NEW!)
+  - Works with Agno, CrewAI, custom frameworks
+  - Not locked into LangChain
+  - Multiple integration methods
 
 👉 **Best for**: Detailed analysis, technical evaluation, decision-making
 
@@ -84,6 +88,19 @@ This directory contains comprehensive research and analysis on LLM observability
 6. ✅ **Self-Hostable**: Can deploy on own infrastructure
 7. ✅ **Superior UI/UX**: Best-in-class interface
 8. ✅ **LLM-Specific**: Prompt management, cost tracking, evaluations
+9. ✅ **Framework Agnostic**: Works with LangChain, Agno, custom solutions, or any Python framework
+
+### 🔄 Framework Flexibility (Important!)
+
+**Not locked into LangChain!** Langfuse supports multiple integration methods:
+- **Callback Handler** (for LangChain/LangGraph) ← Current recommendation
+- **Decorator API** (for any Python function/custom framework)
+- **OpenAI SDK Wrapper** (drop-in replacement, framework-free)
+- **Low-level SDK** (manual control for homebrew solutions)
+
+**If you migrate to Agno or build custom agents**: Simply switch integration method (1-2 hours). Keep Langfuse, dashboards, and historical data.
+
+📖 **See "Framework Flexibility" section** in `llm-observability-research.md` for detailed scenarios, code examples, and effort estimates.
 
 ---
 

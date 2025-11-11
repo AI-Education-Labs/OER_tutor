@@ -635,6 +635,37 @@ Yes, you can delete specific traces or configure data retention policies in the 
 
 Yes, it works with OpenAI, Anthropic, Cohere, Azure OpenAI, and any LangChain-compatible provider.
 
+### Q: What if we want to migrate away from LangChain to another framework (like Agno) or build our own?
+
+Langfuse is **framework-agnostic**! You're not locked into LangChain.
+
+**Integration methods available**:
+1. **Callback Handler** (for LangChain) - what we're using now
+2. **Decorator API** (for any Python function/framework)
+3. **OpenAI SDK Wrapper** (drop-in replacement for openai library)
+4. **Low-level SDK** (for complete manual control)
+
+**If you switch frameworks later**:
+- Keep using Langfuse (already invested ~4 hours)
+- Switch integration method: 1-2 hours
+- No need to change observability platform
+- All your historical traces and dashboards remain
+
+**Example with custom framework**:
+```python
+from langfuse.decorators import observe
+
+@observe(name="custom-agent-step")
+def my_custom_agent_function(input: str):
+    # Your custom framework code
+    result = custom_framework.run(input)
+    return result
+```
+
+**See detailed "Framework Flexibility" section** in `llm-observability-research.md` for migration scenarios, code examples, and effort estimates for different frameworks (Agno, CrewAI, custom solutions, etc.).
+
+**Bottom line**: Langfuse works with LangChain, without LangChain, and everything in between.
+
 ---
 
 ## Troubleshooting

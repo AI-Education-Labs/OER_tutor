@@ -290,6 +290,12 @@ Active dev time: ~5-6 hours
 - Discuss with team
 - Review: `docs/llm-observability-research.md`
 
+**Framework flexibility:**
+- See "Framework Flexibility" section in `llm-observability-research.md`
+- Langfuse works with ANY framework (LangChain, Agno, custom, etc.)
+- Migration between frameworks: 1-2 hours to switch integration method
+- Not locked into LangChain!
+
 ---
 
 ## Resources
