@@ -98,7 +98,8 @@ export function PDFViewer({
       const last = lastSentRef.current
       if (last && last.percent === percent && last.page === page) return
 
-      fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/chapter/${encodeURIComponent(String(currentChapterId))}`,
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+      fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbookId)}/chapter/${encodeURIComponent(String(currentChapterId))}`,
         {
           method: "PATCH",
           headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
