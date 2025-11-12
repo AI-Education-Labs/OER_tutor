@@ -11,7 +11,6 @@ from backend.routes.quiz import router as quiz_router
 from backend.routes.studyguide import router as study_guide_router
 from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.chat import router as chat_router
-from backend.routes.user_books import router as user_books_router
 from backend.features.observability.service import setup_observability
 
 import mangum
