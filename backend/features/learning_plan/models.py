@@ -177,24 +177,24 @@ class LearningAnalysis(BaseModel):
     Analysis from a chat message about learning progress.
     This is the 'metadata' returned alongside the chat response.
     """
-    concepts_discussed: List[str] = []
+    concepts_discussed: List[str] = Field(default_factory=list)
 
-    milestone_reached: Optional[str] = None
+    milestone_reached: Optional[str] = Field(default=None)
 
-    understanding_demonstrated: Dict[str, str] = {}  # concept -> level (mastered/partial/confused)
+    understanding_demonstrated: Dict[str, str] = Field(default_factory=dict)  # concept -> level (mastered/partial/confused)
 
-    reference_worthy: bool = False  # Should this conversation be saved for future reference?
-    reference_concept: Optional[str] = None  # Which concept it explains well
-    reference_message_indices: List[int] = []  # Which messages in the conversation
+    reference_worthy: bool = Field(default=False)  # Should this conversation be saved for future reference?
+    reference_concept: Optional[str] = Field(default=None)  # Which concept it explains well
+    reference_message_indices: List[int] = Field(default_factory=list)  # Which messages in the conversation
 
-    next_objective_suggestion: Optional[str] = None
+    next_objective_suggestion: Optional[str] = Field(default=None)
 
-    student_engagement: str = "neutral"  # engaged, neutral, struggling
+    student_engagement: str = Field(default="neutral")  # engaged, neutral, struggling
 
-    notes: str = ""  # Any observations about learning style
+    notes: str = Field(default="")  # Any observations about learning style
 
     # NEW: Actual learning events detected
-    learning_events: List[LearningEvent] = []
-    misconceptions_corrected: List[MisconceptionCorrected] = []
-    questions_answered: List[QuestionAnswered] = []
-    active_practice: List[ActivePracticeCompleted] = []
+    learning_events: List[LearningEvent] = Field(default_factory=list)
+    misconceptions_corrected: List[MisconceptionCorrected] = Field(default_factory=list)
+    questions_answered: List[QuestionAnswered] = Field(default_factory=list)
+    active_practice: List[ActivePracticeCompleted] = Field(default_factory=list)

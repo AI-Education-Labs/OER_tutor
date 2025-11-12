@@ -169,7 +169,7 @@ async def analyze_learning_from_conversation(
     Uses structured output to guarantee valid response.
     """
     llm = ChatOpenAI(model="gpt-5-mini", temperature=0, reasoning_effort="low")
-    structured_llm = llm.with_structured_output(LearningAnalysis)
+    structured_llm = llm.with_structured_output(LearningAnalysis, method="function_calling")
 
     # Format messages
     conv_text = "\n".join([
@@ -290,7 +290,13 @@ async def update_student_progress_from_analysis(
     context = await get_student_context(user_id, textbook_id, chapter_id)
 
     # Initialize learning_plan_progress if doesn't exist
-    if not context or not hasattr(context, 'learning_plan_progress'):
+    needs_initialization = (
+        not context or
+        not context.learning_plan_progress or
+        context.learning_plan_progress is None
+    )
+
+    if needs_initialization:
         # Get learning plan to initialize
         learning_plan = await get_or_generate_learning_plan(textbook_id, chapter_id)
 
@@ -315,6 +321,8 @@ async def update_student_progress_from_analysis(
             },
             upsert=True
         )
+
+        logger.info(f"Initialized learning_plan_progress for user {user_id}, chapter {chapter_id}")
 
     # Build separate update operations
     set_updates = {"updated_at": datetime.utcnow()}
@@ -344,6 +352,9 @@ async def update_student_progress_from_analysis(
 
     # NEW: Add learning events to progress tracking
     if analysis.learning_events:
+        # Add session_id to each event before saving
+        for event in analysis.learning_events:
+            event.session_id = session_id
         events_to_add = [event.model_dump() for event in analysis.learning_events]
         push_updates["learning_plan_progress.learning_events"] = {"$each": events_to_add}
 
@@ -372,25 +383,41 @@ async def update_student_progress_from_analysis(
                     )
 
     # Track concepts that were only discussed (not demonstrated)
+    # FILTER: Only track concepts that were substantially discussed (appear in learning plan objectives)
+    learning_plan_concepts = [obj.concept.lower() for obj in learning_plan_from_db.objectives]
+
     for concept in analysis.concepts_discussed:
         is_demonstrated = any(e.concept == concept for e in analysis.learning_events)
-        if not is_demonstrated:
+
+        # Only track if: (1) not demonstrated AND (2) it's a major concept from learning plan
+        is_major_concept = concept.lower() in learning_plan_concepts
+
+        if not is_demonstrated and is_major_concept:
             if "learning_plan_progress.concepts_exposure_only" not in addToSet_updates:
                 addToSet_updates["learning_plan_progress.concepts_exposure_only"] = {"$each": []}
             addToSet_updates["learning_plan_progress.concepts_exposure_only"]["$each"].append(concept)
 
     # Add misconceptions corrected
     if analysis.misconceptions_corrected:
+        # Add session_id to each misconception before saving
+        for m in analysis.misconceptions_corrected:
+            m.session_id = session_id
         misconceptions_to_add = [m.model_dump() for m in analysis.misconceptions_corrected]
         push_updates["learning_plan_progress.misconceptions_corrected"] = {"$each": misconceptions_to_add}
 
     # Add questions answered
     if analysis.questions_answered:
+        # Add session_id to each question before saving
+        for q in analysis.questions_answered:
+            q.session_id = session_id
         questions_to_add = [q.model_dump() for q in analysis.questions_answered]
         push_updates["learning_plan_progress.questions_answered"] = {"$each": questions_to_add}
 
     # Add active practice completed
     if analysis.active_practice:
+        # Add session_id to each practice before saving
+        for p in analysis.active_practice:
+            p.session_id = session_id
         practice_to_add = [p.model_dump() for p in analysis.active_practice]
         push_updates["learning_plan_progress.active_practice_completed"] = {"$each": practice_to_add}
 
@@ -404,6 +431,93 @@ async def update_student_progress_from_analysis(
             key_messages=recent_messages[-3:]  # Last 3 messages
         )
         set_updates["learning_plan_progress.conversation_milestones.$[elem]"] = milestone_update.model_dump()
+
+    # NEW: Update objective status based on progress
+    # Get the learning plan to check objectives
+    from backend.features.learning_plan.models import ChapterLearningPlan
+    learning_plan_from_db = await get_or_generate_learning_plan(textbook_id, chapter_id)
+
+    # Check which objectives should be in progress or completed
+    for objective in learning_plan_from_db.objectives:
+        obj_id = objective.id
+        obj_concept = objective.concept
+
+        # Check if this objective should be marked as in_progress
+        # Criteria: student has done something with this concept
+        is_discussed = obj_concept.lower() in [c.lower() for c in analysis.concepts_discussed]
+        has_events = any(e.concept.lower() == obj_concept.lower() for e in analysis.learning_events)
+
+        if is_discussed or has_events:
+            # Move from not_started to in_progress if needed
+            await collection.update_one(
+                {
+                    "user_id": user_id,
+                    "textbook_id": textbook_id,
+                    "chapter_id": str(chapter_id),
+                    "learning_plan_progress.objectives_not_started": obj_id
+                },
+                {
+                    "$pull": {"learning_plan_progress.objectives_not_started": obj_id},
+                    "$addToSet": {"learning_plan_progress.objectives_in_progress": obj_id}
+                }
+            )
+
+        # Check if this objective should be marked as completed
+        # Criteria: student demonstrated mastery (can explain AND apply, or multiple high-confidence events)
+        # Get the current progress data from context (before this update)
+        context_now = await get_student_context(user_id, textbook_id, chapter_id)
+        current_progress_data = context_now.learning_plan_progress if context_now else {}
+
+        can_explain = obj_concept.lower() in [c.lower() for c in current_progress_data.get("concepts_can_explain", [])]
+        can_apply = obj_concept.lower() in [c.lower() for c in current_progress_data.get("concepts_can_apply", [])]
+
+        # Also check if we're adding it in this update
+        if addToSet_updates.get("learning_plan_progress.concepts_can_explain"):
+            can_explain = can_explain or obj_concept.lower() in [
+                c.lower() for c in addToSet_updates["learning_plan_progress.concepts_can_explain"]["$each"]
+            ]
+        if addToSet_updates.get("learning_plan_progress.concepts_can_apply"):
+            can_apply = can_apply or obj_concept.lower() in [
+                c.lower() for c in addToSet_updates["learning_plan_progress.concepts_can_apply"]["$each"]
+            ]
+
+        high_confidence_events = [
+            e for e in analysis.learning_events
+            if e.concept.lower() == obj_concept.lower() and e.confidence == "high"
+        ]
+
+        is_mastered = (can_explain and can_apply) or len(high_confidence_events) >= 3
+
+        if is_mastered:
+            # Move from in_progress to completed
+            await collection.update_one(
+                {
+                    "user_id": user_id,
+                    "textbook_id": textbook_id,
+                    "chapter_id": str(chapter_id),
+                    "learning_plan_progress.objectives_in_progress": obj_id
+                },
+                {
+                    "$pull": {"learning_plan_progress.objectives_in_progress": obj_id},
+                    "$addToSet": {"learning_plan_progress.objectives_completed": obj_id}
+                }
+            )
+            logger.info(f"Marked objective {obj_id} ({obj_concept}) as completed for user {user_id}")
+
+    # Calculate overall progress percentage
+    # Re-fetch the context to get updated objective lists
+    updated_context = await get_student_context(user_id, textbook_id, chapter_id)
+    if updated_context and updated_context.learning_plan_progress:
+        progress_data = updated_context.learning_plan_progress
+        completed = len(progress_data.get("objectives_completed", []))
+        in_progress = len(progress_data.get("objectives_in_progress", []))
+        not_started = len(progress_data.get("objectives_not_started", []))
+        total = completed + in_progress + not_started
+
+        if total > 0:
+            # Weight: completed = 100%, in_progress = 50%, not_started = 0%
+            progress_percent = ((completed * 100) + (in_progress * 50)) / total
+            set_updates["learning_plan_progress.overall_progress_percent"] = round(progress_percent, 1)
 
     # Build the complete update operation
     update_operation = {}

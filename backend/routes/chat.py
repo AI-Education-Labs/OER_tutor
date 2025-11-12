@@ -330,6 +330,17 @@ Student Progress on Learning Plan:
 - Completed objectives: {', '.join(progress.get('objectives_completed', [])) or 'None yet'}
 - In progress: {', '.join(progress.get('objectives_in_progress', [])) or 'None'}
 - Overall progress: {progress.get('overall_progress_percent', 0):.0f}%
+
+DEPTH TRACKING (what student has DEMONSTRATED):
+- Concepts student CAN EXPLAIN: {', '.join(progress.get('concepts_can_explain', [])) or 'None yet'}
+- Concepts student CAN APPLY: {', '.join(progress.get('concepts_can_apply', [])) or 'None yet'}
+- Concepts EXPOSURE ONLY (heard but not demonstrated): {len(progress.get('concepts_exposure_only', []))} concepts
+
+Learning Evidence:
+- Total learning events recorded: {len(progress.get('learning_events', []))}
+- Questions answered: {len(progress.get('questions_answered', []))}
+- Misconceptions corrected: {len(progress.get('misconceptions_corrected', []))}
+- Active practice completed: {len(progress.get('active_practice_completed', []))}
 """
 
             # Add concept mastery details
@@ -339,6 +350,15 @@ Student Progress on Learning Plan:
                 for concept, mastery in concept_mastery.items():
                     level = mastery.get('understanding_level', 'unknown')
                     progress_text += f"- {concept}: {level}\n"
+
+            # Add milestone progress
+            milestones = progress.get('conversation_milestones', [])
+            if milestones:
+                reached_count = sum(1 for m in milestones if m.get('reached', False))
+                progress_text += f"\nConversation Milestones: {reached_count}/{len(milestones)} reached\n"
+                for m in milestones:
+                    if m.get('reached'):
+                        progress_text += f"  ✓ {m.get('milestone', '')[:60]}...\n"
 
             llm_msgs.append(SystemMessage(content=progress_text))
             logger.info("Added student progress to chat")
