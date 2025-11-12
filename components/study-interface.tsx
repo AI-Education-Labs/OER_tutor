@@ -421,11 +421,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     if (chapterId !== selectedChapterId) {
       setSelectedChapterId(chapterId)
       setCurrentProgress(0)
-    }
-
-    // Set target page for navigation (add 1 since pageOffset is 0-based but pages are 1-based)
-    if (pageOffset !== undefined) {
-      setTargetPage(pageOffset + 1)
+      // Set target page for when chapter loads
+      if (pageOffset !== undefined) {
+        setTargetPage(pageOffset + 1)
+      }
+    } else {
+      // Same chapter, just scroll to the page
+      if (pageOffset !== undefined) {
+        setTargetPage(pageOffset + 1)
+      }
     }
 
     let sectionTitle = String(sectionId)
