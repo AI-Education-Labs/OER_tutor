@@ -11,6 +11,8 @@ from backend.routes.quiz import router as quiz_router
 from backend.routes.studyguide import router as study_guide_router
 from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.chat import router as chat_router
+from backend.routes.user_books import router as user_books_router
+from backend.features.observability.service import setup_observability
 
 import mangum
 
@@ -31,11 +33,16 @@ if not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+
 # Create FastAPI app
 
 api_router = APIRouter(prefix="/api/v1")
 
 app = FastAPI(title="TextbookAI API")
+# Add observability middleware (e.g., OpenTelemetry) if needed
+setup_observability(app)
+# Include routers
 api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
 api_router.include_router(textbooks_router, prefix="/textbooks", tags=["textbooks"])
 api_router.include_router(flashcards_router, prefix="/flashcards", tags=["flashcards"])
