@@ -324,6 +324,10 @@ async def update_student_progress_from_analysis(
 
         logger.info(f"Initialized learning_plan_progress for user {user_id}, chapter {chapter_id}")
 
+    # Get the learning plan (needed for filtering concepts and checking objectives)
+    from backend.features.learning_plan.models import ChapterLearningPlan
+    learning_plan_from_db = await get_or_generate_learning_plan(textbook_id, chapter_id)
+
     # Build separate update operations
     set_updates = {"updated_at": datetime.utcnow()}
     push_updates = {}
@@ -433,10 +437,6 @@ async def update_student_progress_from_analysis(
         set_updates["learning_plan_progress.conversation_milestones.$[elem]"] = milestone_update.model_dump()
 
     # NEW: Update objective status based on progress
-    # Get the learning plan to check objectives
-    from backend.features.learning_plan.models import ChapterLearningPlan
-    learning_plan_from_db = await get_or_generate_learning_plan(textbook_id, chapter_id)
-
     # Check which objectives should be in progress or completed
     for objective in learning_plan_from_db.objectives:
         obj_id = objective.id

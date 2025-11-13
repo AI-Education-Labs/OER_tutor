@@ -50,6 +50,8 @@ samconfig.toml
 
 # python environement
 .venv
+v3.venv
+venv
 
 # Playwright
 node_modules/
