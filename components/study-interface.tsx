@@ -216,45 +216,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       content: "flashcards",
       description: "Practice key concepts with spaced repetition",
     },
-    {
-      id: "concepts",
-      label: "Key Concepts",
-      icon: BookOpen,
-      content: "concepts",
-      description: "Track your mastery of important concepts",
-    },
-    {
-      id: "practice",
-      label: "Practice",
-      icon: Target,
-      content: "practice",
-      description: "Work through problems and exercises",
-      disabled: true,
-    },
-    {
-      id: "progress",
-      label: "Progress",
-      icon: BarChart3,
-      content: "progress",
-      description: "Monitor your learning progress and analytics",
-      disabled: true,
-    },
-    {
-      id: "chat",
-      label: "Socratic Dialogue",
-      icon: MessageSquare,
-      content: "chat",
-      description: "Explore concepts through guided questions and discovery",
-      disabled: true,
-    },
-    {
-      id: "notes",
-      label: "Study Notes",
-      icon: FileText,
-      content: "notes",
-      description: "AI-generated and personal study notes",
-      disabled: true,
-    },
   ]
 
   const [tabGroups, setTabGroups] = useState<TabGroupData[]>([])
