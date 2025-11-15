@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:all": "concurrently \"npm run dev\" \"source venv/bin/activate && uvicorn backend.main:app --reload --host\"",
+    "dev-live": "concurrently \"next dev\" \"source venv/bin/activate && uvicorn backend.main:app --reload --host 0.0.0.0\" \"ngrok http 3000\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
