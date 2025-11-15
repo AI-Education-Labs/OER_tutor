@@ -36,12 +36,17 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
   const [prevLoading, setPrevLoading] = useState<boolean>(false)
   const [prevError, setPrevError] = useState<string>("")
 
-  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quizzes" | "notes"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
+  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quiz" | "notes"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
     const handleDelete = async (e: React.MouseEvent) => {
       e.stopPropagation()
       try {
         onOptimisticRemove(id, item)
-        const resp = await fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" })
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const token = localStorage.getItem("access_token")
+        const resp = await fetch(`${backendUrl}/api/v1/${kind}/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        })
         if (!resp.ok) {
           onFailureRestore(id, item)
           toast({ title: "Delete failed", description: `Could not delete. Please try again. (${resp.status})` })
@@ -83,7 +88,8 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       try {
         if (!textbookId || !selectedChapterId) return
         // 1) Load metadata for subchapters of selected chapter
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
         if (metaResp.ok) {
           const meta = await metaResp.json()
           let current_chapter: any = null
@@ -125,7 +131,12 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       try {
         setPrevLoading(true)
         setPrevError("")
-        const resp = await fetch("/api/quizzes", { cache: "no-store" })
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const token = localStorage.getItem("access_token")
+        const resp = await fetch(`${backendUrl}/api/v1/quiz/list`, {
+          cache: "no-store",
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {
@@ -166,10 +177,12 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
     try {
       const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
+      const token = localStorage.getItem("access_token")
 
-      const resp = await fetch("/api/quiz/generate", {
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+      const resp = await fetch(`${backendUrl}/api/v1/quiz/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ context, hint: focusHint, num_questions: numQuestions, chapter: selectedChapterId, textbook_id: textbookId }),
       })
 
@@ -370,7 +383,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                           <MenuButton
                             id={d?._id}
-                            kind="quizzes"
+                            kind="quiz"
                             item={d}
                             onOptimisticRemove={(id) => setPreviousQuizzes((prev) => prev.filter((x) => x?._id !== id))}
                             onFailureRestore={(id, item) => setPreviousQuizzes((prev) => [item, ...prev])}

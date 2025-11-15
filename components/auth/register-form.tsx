@@ -87,7 +87,8 @@ export default function RegisterForm() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(`/api/auth/register`, {
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+      const response = await fetch(`${backendUrl}/api/v1/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
