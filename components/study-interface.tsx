@@ -17,6 +17,7 @@ import {
   X,
   Settings,
   MessageSquareText,
+  Tally1,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChapterSelector } from "@/components/chapter-selector"
@@ -704,7 +705,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                     onClick={() => setRightPanelCollapsed(false)}
                     title="Open Learning Tools"
                   >
-                    <Settings className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4" />
                   </Button>
                 )}
               </div>
@@ -754,14 +755,19 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   }}
                 >
                   {/* Visual indicator for resize handle */}
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-[#3e3e42] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
+                  <div className="absolute left-[-10px] top-1/2 -translate-y-1/2">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-md bg-gray-300 text-gray-300 shadow-sm">
+                      <Tally1 className="h-3.5 w-3.5" />
+                      <span className="sr-only">Resize learning tools panel</span>
+                    </div>
+                  </div>
+                  </div>
 
                 {/* Panel header */}
                 <div className="h-8 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-between px-3 flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">LEARNING TOOLS</span>
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className={`w-6 h-6 p-0 hover:bg-[#3e3e42] group relative ${showHelpTab ? "bg-[#3e3e42]" : ""}`}
@@ -771,7 +777,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                       <div className="absolute left-8 top-1/2 transform -translate-y-1/2 bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none whitespace-nowrap z-50">
                         Show Learning Tools
                       </div>
-                    </Button>
+                    </Button> */}
                   </div>
                   <Button
                     variant="ghost"
@@ -830,7 +836,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
           })()}
           <div className="ml-auto flex items-center gap-4">
             <span>Learning Mode: Socratic</span>
-            <span>Study Time: 0h 0m</span>
+            {/* TODO: Implement study time tracking */}
+            {/* <span>Study Time: 0h 0m</span> */}
           </div>
         </div>
 

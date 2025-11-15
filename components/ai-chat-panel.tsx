@@ -237,6 +237,11 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
       // Clear session storage since we're loading from server
       removeChatSession()
+
+      // Scroll to bottom after loading
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      }, 100)
     } catch (e) {
       console.error("Failed to load chat", e)
     }
@@ -518,11 +523,21 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
   return (
     <div className="h-full flex bg-[#252526]">
-      {/* Sidebar */}
-      {showSidebar && (
-        <div className="w-64 bg-[#1e1e1e] border-r border-[#3e3e42] flex flex-col">
+      {/* Sidebar - Full Width */}
+      {showSidebar ? (
+        <div className="w-full bg-[#1e1e1e] border-r border-[#3e3e42] flex flex-col">
           <div className="p-3 border-b border-[#3e3e42]">
-            <div className="font-bold text-white mb-2">Chats</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-bold text-white">Chats</div>
+              <Button
+                onClick={() => setShowSidebar(false)}
+                size="sm"
+                variant="ghost"
+                className="text-[#969696] hover:text-white"
+              >
+                <Menu className="w-4 h-4" />
+              </Button>
+            </div>
             <Button onClick={clearChat} size="sm" className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white">
               New Chat
             </Button>
@@ -535,31 +550,17 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
                     sessionIdRef.current === c.session_id ? "bg-[#2d2d30] text-white" : "text-[#cccccc]"
                   }`}
                   onClick={() => loadChat(c.session_id, c.title || "Untitled Chat")}
-                  onMouseEnter={() => handleChatHover(c.session_id, c.summary || "")}
-                  onMouseLeave={handleChatLeave}
                 >
                   <div className="font-medium">{c.title || "Untitled Chat"}</div>
                   <div className="text-xs text-[#969696] mt-1">{new Date(c.updated_at).toLocaleDateString()}</div>
                 </button>
-
-                {showSummary === c.session_id && c.summary && (
-                  <div
-                    className="absolute left-full top-0 ml-2 z-50 bg-[#1e1e1e] border border-[#3e3e42] rounded-md p-3 shadow-lg max-w-xs pointer-events-auto"
-                    onMouseEnter={handleTooltipEnter}
-                    onMouseLeave={handleTooltipLeave}
-                  >
-                    <div className="text-xs text-[#cccccc] font-medium mb-1">Summary:</div>
-                    <div className="text-xs text-[#969696] leading-relaxed">{c.summary}</div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
         </div>
-      )}
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      ) : (
+        /* Main Chat Area - Only show when sidebar is closed */
+        <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-center p-2 border-b border-[#3e3e42]">
           <div className="flex items-center gap-2">
@@ -575,6 +576,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
             </Button>
             <span className="text-sm text-[#cccccc] font-medium">{currentChatTitle}</span>
           </div>
+          <Button onClick={clearChat} size="sm" className="left-2 flex-2 bg-[#007acc] hover:bg-[#005a9e] text-white">
+              New Chat
+            </Button>
           <Button
             onClick={clearChat}
             size="sm"
@@ -628,6 +632,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
           {canSend && <div className="text-xs text-[#969696] mt-2">Press Enter to send, Shift+Enter for new line</div>}
         </div>
       </div>
+      )}
     </div>
   )
 }
