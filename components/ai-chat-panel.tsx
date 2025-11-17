@@ -423,6 +423,22 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
             if (isStreamDoneData(data)) {
               console.log("[v0] ✅ Stream marked as done")
+
+              // Trigger summary update in background (fire-and-forget)
+              // This prevents Lambda timeout by making it a separate invocation
+              if (sessionIdRef.current && token) {
+                fetch(`${backendUrl}/chat/update-summary-async`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ session_id: sessionIdRef.current }),
+                }).catch((error) => {
+                  console.warn("[v0] ⚠️ Failed to trigger summary update:", error)
+                  // Don't show error to user - this is a background operation
+                })
+              }
             }
 
             if (isStreamErrorData(data)) {

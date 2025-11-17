@@ -118,7 +118,7 @@ Return valid JSON with exactly these keys:
 
 - "summary": If existing summary exists, UPDATE it by ADDING new information. DO NOT replace the entire summary - build upon it. Format: "Previous topics: [old info]. New discussion: [new info]". Keep it concise but comprehensive.
 
-- "important_messages": a list of truly important messages (same guidelines as before)
+- "important_messages": a list of truly important messages (same guidelines as before) no duplicates from existing important messages. Only add messages that contain ESSENTIAL information, instructions, or insights. DO NOT include greetings, filler, or procedural messages.
 
 Guidelines for "important_messages":
 1. Only include messages with essential information or insights
@@ -158,6 +158,34 @@ Data:
        print(f"Error updating conversation summary: {e}")
 
 
+# ----------------------------
+# POST endpoint for summary update (called by frontend after chat completes)
+# ----------------------------
+@router.post("/update-summary-async")
+async def update_summary_async(
+    request: Request,
+    user_id: str = Depends(validate_access_token)
+):
+    """
+    Standalone endpoint to update conversation summary.
+    Called fire-and-forget from streaming endpoint.
+    """
+    try:
+        data = await request.json()
+        session_id = data.get("session_id")
+
+        if not session_id:
+            logger.warning("update-summary-async called without session_id")
+            return {"status": "error", "message": "session_id required"}
+
+        logger.info(f"Starting async summary update for session {session_id}")
+        await update_conversation_summary(user_id, session_id)
+        logger.info(f"Completed async summary update for session {session_id}")
+
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error in update-summary-async: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 async def get_textbook_context(textbook_id: str, chapter_id: str) -> str:
@@ -254,10 +282,7 @@ async def chat_message(
    ai_response = await llm.ainvoke(llm_msgs)
    await history.add_message("assistant", ai_response.content)
 
-
-   background_tasks.add_task(update_conversation_summary, user_id, session_id)
-
-
+   # Frontend will trigger summary update after receiving the response
    return {"session_id": session_id, "ai_response": ai_response.content}
 
 
@@ -288,8 +313,8 @@ async def stream_chat(
        print(f"Generated new session ID: {session_id}")
 
    history = MongoChatMessageHistory(session_id=session_id)
-   await history.add_message("user", user_message)
-   print(f"Added user message to history for session {session_id}.")
+   # Note: We save the user message to DB AFTER the LLM call (see line ~355)
+   # This way we explicitly append it to recent_msgs for the LLM without duplication
    important_messages_collection = MongoChatMessageHistory(session_id=session_id, collection_name="important_messages")
    important_msgs = await important_messages_collection.get_messages(limit=20)
 
@@ -334,7 +359,7 @@ async def stream_chat(
                    llm_msgs.append(AIMessage(content=str(msg["content"])))
                    print(f"Fine 4: Added assistant message to history: {msg['content'][:30]}...")
 
-
+           # Append the current user message (not yet saved to DB)
            llm_msgs.append(HumanMessage(content=str(user_message)))
            print(f"Fine 5: Added current user message: {user_message[:30]}...")
            llm = ChatOpenAI(model="gpt-5-mini", temperature=0, streaming=True, tags=["Chatter"], reasoning_effort="minimal")#, use_responses_api=True)
@@ -352,9 +377,14 @@ async def stream_chat(
 
 
            full_response = "".join(collected_chunks)
-           await history.add_message("assistant", full_response)
-           background_tasks.add_task(update_conversation_summary, user_id, session_id)
 
+           # Save both user message and assistant response to DB
+           await history.add_message("user", user_message)
+           await history.add_message("assistant", full_response)
+           print(f"Saved user message and assistant response to history for session {session_id}.")
+
+           # Frontend will trigger summary update after receiving the response
+           # This ensures true non-blocking behavior with Lambda
            yield json.dumps({'done': True, 'session_id': session_id})
 
 
