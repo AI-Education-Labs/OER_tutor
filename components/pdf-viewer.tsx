@@ -98,7 +98,8 @@ export function PDFViewer({
       const last = lastSentRef.current
       if (last && last.percent === percent && last.page === page) return
 
-      fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/chapter/${encodeURIComponent(String(currentChapterId))}`,
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+      fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbookId)}/chapter/${encodeURIComponent(String(currentChapterId))}`,
         {
           method: "PATCH",
           headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
@@ -289,16 +290,33 @@ export function PDFViewer({
     const pageHeight = container.scrollHeight / totalPages
     const targetScrollTop = (pageNumber - 1) * pageHeight
 
+    // Temporarily suppress tracking to avoid false progress updates during navigation
+    suppressTrackingRef.current = true
+
     container.scrollTo({
       top: targetScrollTop,
       behavior: "smooth",
     })
 
-    setCurrentPage(pageNumber)
-    onPageChange?.(pageNumber, totalPages)
+    // Re-enable tracking after scroll animation completes
+    setTimeout(() => {
+      suppressTrackingRef.current = false
+      setCurrentPage(pageNumber)
+      onPageChange?.(pageNumber, totalPages)
+    }, 500)
   }
 
-  // Disable auto-jump to targetPage for now to avoid jumping before pages finish rendering
+  // Effect to handle targetPage changes
+  useEffect(() => {
+    if (targetPage !== undefined && pdfDoc && totalPages > 0) {
+      // Wait a bit for pages to render before scrolling
+      const scrollTimer = setTimeout(() => {
+        scrollToPage(targetPage)
+      }, 300)
+
+      return () => clearTimeout(scrollTimer)
+    }
+  }, [targetPage, pdfDoc, totalPages])
 
   const handleTextSelection = (e: React.MouseEvent<HTMLDivElement>) => {
     const selection = window.getSelection()
@@ -528,12 +546,8 @@ export function PDFViewer({
       setError(null)
 
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      console.log("[v0] Backend URL:", backendUrl)
 
-      const fullUrl = `${backendUrl}/api/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`
-      console.log("[v0] Fetching PDF from:", fullUrl)
-
-      const response = await fetch(fullUrl)
+      const response = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`)
 
       if (!response.ok) {
         throw new Error(`Failed to get chapter PDF: ${response.status}`)

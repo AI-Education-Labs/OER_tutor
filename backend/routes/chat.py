@@ -313,8 +313,7 @@ async def stream_chat(
        print(f"Generated new session ID: {session_id}")
 
    history = MongoChatMessageHistory(session_id=session_id)
-   # Note: We save the user message to DB AFTER the LLM call (see line ~355)
-   # This way we explicitly append it to recent_msgs for the LLM without duplication
+   
    important_messages_collection = MongoChatMessageHistory(session_id=session_id, collection_name="important_messages")
    important_msgs = await important_messages_collection.get_messages(limit=20)
 

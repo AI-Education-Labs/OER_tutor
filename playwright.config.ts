@@ -74,7 +74,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
    webServer: {
-     command: 'npm run dev',
+     command: 'pnpm run dev:all',
      url: 'http://localhost:3001',
      env: {
         "PORT": "3001"
