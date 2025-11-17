@@ -174,7 +174,7 @@ async def get_textbook_context(textbook_id: str, chapter_id: str) -> str:
         return ""
 
 
-async def branch_decision_handler(history: MongoChatMessageHistory, user_message: str, full_response: str, user_id: str, background_tasks: BackgroundTasks) -> AsyncGenerator[dict]:
+async def branch_decision_handler(history: MongoChatMessageHistory, user_message: str, full_response: str, user_id: str, background_tasks: BackgroundTasks) -> AsyncGenerator[str, None]:
     """
     Determines if a message indicates a branching decision point
     And returns
