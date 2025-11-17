@@ -132,14 +132,17 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
       const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
-
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const [textbookResp, chaptersResp] = await Promise.all([
-        fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { headers }),
-        fetch(`/api/chapters/${encodeURIComponent(textbookId)}`, { headers }),
+        fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { headers }),
+        fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}/chapters`, { headers }),
       ])
 
-      if (!textbookResp.ok || !chaptersResp.ok) {
-        throw new Error(`Failed to load textbook data: ${textbookResp.status} ${chaptersResp.status}`)
+      if (!textbookResp.ok) {
+        throw new Error(`Failed to load textbook metadata: ${textbookResp.statusText} (${textbookResp.status})`)
+      }
+      if (!chaptersResp.ok) {
+        throw new Error(`Failed to load chapters: ${chaptersResp.statusText} (${chaptersResp.status})`)
       }
 
       const textbookMetadata = await textbookResp.json()
@@ -166,14 +169,13 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
         byTextbook = {}
       }
 
-      const chapterList = chaptersArray.map((c: any) => {
+        const chapterList = chaptersArray.map((c: any) => {
         const id = String(c.id ?? "")
         const stored = Number(byTextbook[id] ?? 0)
 
         const sections: Section[] = (c.sub_chapters || []).map((subChapter: any, index: number) => {
           let title: string
           let pageOffset = 0
-
           if (typeof subChapter === "string") {
             title = subChapter
             pageOffset = 0
@@ -184,7 +186,6 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
             title = `Section ${index + 1}`
             pageOffset = 0
           }
-
           return {
             id: `${id}-${index + 1}`,
             title,
@@ -215,10 +216,11 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
 
       // Background: merge server progress if available (do not block UI)
       ;(async () => {
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
         try {
           const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
           if (!token) return
-          const resp = await fetch(`/api/user/progress/${encodeURIComponent(textbookId)}`, {
+          const resp = await fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbookId)}`, {
             headers: { Authorization: `Bearer ${token}` },
             cache: "no-store",
           })
@@ -469,7 +471,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
                           {section.title}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <div className="text-[10px] text-[#969696]">Page {section.page}</div>
+                          <div className="text-[10px] text-[#969696]">Page {pageOffset}</div>
                           {section.progress !== undefined && section.progress > 0 && (
                             <div className="text-[10px] text-[#007acc]">{Math.round(section.progress)}%</div>
                           )}

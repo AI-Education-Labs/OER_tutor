@@ -36,7 +36,8 @@ export default function LoginForm() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/auth/login`, {
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+      const response = await fetch(`${backendUrl}/api/v1/auth/token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",

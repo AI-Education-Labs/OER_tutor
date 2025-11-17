@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     LANGSMITH_TRACING_V2: Optional[bool] = True
     NAME: Optional[str] = "EC2v2"
 
+    # Observability settings
+    METRICS_BEARER_TOKEN: Optional[str] = None
+
 
 settings = Settings()
 

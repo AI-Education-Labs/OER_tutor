@@ -32,13 +32,18 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   const [prevLoading, setPrevLoading] = useState<boolean>(false)
   const [prevError, setPrevError] = useState<string>("")
 
-  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quizzes" | "notes"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
+  function MenuButton({ id, kind, item, onOptimisticRemove, onFailureRestore }: { id: string; kind: "flashcards" | "quiz" | "study-guide"; item: any; onOptimisticRemove: (id: string, item: any) => void; onFailureRestore: (id: string, item: any) => void }) {
     const handleDelete = async (e: React.MouseEvent) => {
       e.stopPropagation()
       try {
         // Optimistic remove
         onOptimisticRemove(id, item)
-        const resp = await fetch(`/api/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" })
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const token = localStorage.getItem("access_token")
+        const resp = await fetch(`${backendUrl}/api/v1/${kind}/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        })
         if (!resp.ok) {
           onFailureRestore(id, item)
           toast({ title: "Delete failed", description: `Could not delete. Please try again. (${resp.status})` })
@@ -80,7 +85,8 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       try {
         if (!textbookId || !selectedChapterId) return
         // 1) Load metadata to extract subchapters
-        const metaResp = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
         if (metaResp.ok) {
           const meta = await metaResp.json()
           console.log("Meta:", meta);
@@ -94,7 +100,8 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           }
           const rawSubs = current_chapter?.sub_chapters ?? []
           const sub_chapters: string[] = Array.isArray(rawSubs)
-            ? rawSubs.map((s: any) => (typeof s === "string" ? s : String(s?.title ?? ""))).filter((s: string) => s)
+            ? rawSubs.map((s: any) => (typeof s === "string" ? (s === "Introduction" ? '' : s) 
+            : String(s?.title === "Introduction" ? "" : String(s?.title ?? "")))).filter((s: string) => s)
             : []
           console.log("Subs:", sub_chapters);
           if (!isCancelled) {
@@ -102,9 +109,9 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
             // Enable generation UI by marking context as available for this chapter
             setContextText(`context-ready:${selectedChapterId}`)
             // Default select first subchapter if none selected
-            if (!selectedSubchapter && sub_chapters.length > 0) {
-              setSelectedSubchapter(sub_chapters[0])
-            }
+            // if (!selectedSubchapter && sub_chapters.length > 0) {
+            //   setSelectedSubchapter(sub_chapters[0])
+            // }
           }
         }
       } catch {
@@ -125,7 +132,9 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       try {
         setPrevLoading(true)
         setPrevError("")
-        const resp = await fetch("/api/flashcards", { cache: "no-store" })
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+        const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { cache: "no-store", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {
@@ -159,7 +168,9 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     try {
       setPrevLoading(true)
       setPrevError("")
-      const resp = await fetch("/api/flashcards", { cache: "no-store" })
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+      const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } })
       if (!resp.ok) {
         if (resp.status === 401 || resp.status === 403) {
           setPreviousDecks([])
@@ -208,47 +219,50 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     try {
       const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
+      const token = localStorage.getItem("access_token")
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
-      const resp = await fetch("/api/flashcard/generate", {
+      const resp = await fetch(`${backendUrl}/api/v1/flashcard/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context, hint: focusHint, num_flashcards: numCards, chapter: selectedChapterId, textbook_id: textbookId }),
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          context,
+          hint: focusHint,
+          num_questions: numCards,
+          chapter: selectedChapterId,
+          textbook_id: textbookId,
+        }),
       })
 
       if (!resp.ok) {
-        throw new Error(`Failed to generate flashcards (${resp.status})`)
+        const errorData = await resp.json().catch(() => ({}))
+        throw new Error(errorData.detail || "Failed to generate flashcards.")
       }
 
       const payload = await resp.json()
-      // Accept multiple shapes and normalize to fronts/backs arrays
-      const fronts: string[] = Array.isArray(payload?.front)
-        ? payload.front
-        : Array.isArray(payload?.flashcards_front)
-          ? payload.flashcards_front
-          : Array.isArray(payload?.data?.front)
-            ? payload.data.front
-            : Array.isArray(payload?.data?.flashcards_front)
-              ? payload.data.flashcards_front
-              : []
-      const backs: string[] = Array.isArray(payload?.back)
-        ? payload.back
-        : Array.isArray(payload?.flashcards_back)
-          ? payload.flashcards_back
-          : Array.isArray(payload?.data?.back)
-            ? payload.data.back
-            : Array.isArray(payload?.data?.flashcards_back)
-              ? payload.data.flashcards_back
-              : []
-
+      const fronts = payload?.flashcards_front ?? []
+      const backs = payload?.flashcards_back ?? []
       const length = Math.min(fronts.length, backs.length)
-      if (length === 0) throw new Error("Flashcard generation returned no cards")
 
-      const nextCards: Flashcard[] = Array.from({ length }, (_, i) => ({ front: String(fronts[i] ?? ""), back: String(backs[i] ?? "") }))
-      setCards(nextCards)
+      if (length === 0) {
+        throw new Error("No flashcards were generated.")
+      }
+
+      const newCards: Flashcard[] = Array.from({ length }, (_, i) => ({
+        front: String(fronts[i] ?? ""),
+        back: String(backs[i] ?? ""),
+      }))
+
+      setCards(newCards)
       setCurrentIndex(0)
       setShowBack(!defaultFront)
       setStage("study")
-    } catch {
+    } catch (err: any) {
+      toast({
+        title: "Generation Failed",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      })
       setStage("menu")
     }
   }
@@ -337,7 +351,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           </div>
 
           <div className="flex gap-2 justify-center">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!contextText}>
+            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!selectedSubchapter}>
               Generate Flashcards
             </Button>
           </div>
@@ -510,5 +524,4 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     </div>
   )
 }
-
 

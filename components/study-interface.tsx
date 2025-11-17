@@ -17,6 +17,7 @@ import {
   X,
   Settings,
   MessageSquareText,
+  Tally1,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChapterSelector } from "@/components/chapter-selector"
@@ -86,8 +87,12 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     const fetchTextbookData = async () => {
       if (!textbookId) return
 
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       try {
-        const response = await fetch(`/api/textbooks/${encodeURIComponent(textbookId)}`)
+        const token = localStorage.getItem("access_token")
+        const response = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        })
         console.log("[v0] Fetch response status:", response.status)
 
         if (response.ok) {
@@ -123,7 +128,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       try {
         const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
         if (!token) return
-        const resp = await fetch(`/api/user/progress/${encodeURIComponent(textbookId)}`, {
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        const resp = await fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbookId)}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         })
@@ -210,45 +216,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       icon: CreditCard,
       content: "flashcards",
       description: "Practice key concepts with spaced repetition",
-    },
-    {
-      id: "concepts",
-      label: "Key Concepts",
-      icon: BookOpen,
-      content: "concepts",
-      description: "Track your mastery of important concepts",
-    },
-    {
-      id: "practice",
-      label: "Practice",
-      icon: Target,
-      content: "practice",
-      description: "Work through problems and exercises",
-      disabled: true,
-    },
-    {
-      id: "progress",
-      label: "Progress",
-      icon: BarChart3,
-      content: "progress",
-      description: "Monitor your learning progress and analytics",
-      disabled: true,
-    },
-    {
-      id: "chat",
-      label: "Socratic Dialogue",
-      icon: MessageSquare,
-      content: "chat",
-      description: "Explore concepts through guided questions and discovery",
-      disabled: true,
-    },
-    {
-      id: "notes",
-      label: "Study Notes",
-      icon: FileText,
-      content: "notes",
-      description: "AI-generated and personal study notes",
-      disabled: true,
     },
   ]
 
@@ -416,11 +383,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     if (chapterId !== selectedChapterId) {
       setSelectedChapterId(chapterId)
       setCurrentProgress(0)
-    }
-
-    // Set target page for navigation (add 1 since pageOffset is 0-based but pages are 1-based)
-    if (pageOffset !== undefined) {
-      setTargetPage(pageOffset + 1)
+      // Set target page for when chapter loads
+      if (pageOffset !== undefined) {
+        setTargetPage(pageOffset + 1)
+      }
+    } else {
+      // Same chapter, just scroll to the page
+      if (pageOffset !== undefined) {
+        setTargetPage(pageOffset + 1)
+      }
     }
 
     let sectionTitle = String(sectionId)
@@ -465,12 +436,12 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
       if (!token) return
       // Fire-and-forget last visit using keepalive for page-close safety
-      fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/last-visit`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ chapter: Number(selectedChapterId), page: currentPage || 1 }),
-        keepalive: true,
-      }).catch(() => {})
+      // fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/last-visit`, {
+      //   method: "PATCH",
+      //   headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+      //   body: JSON.stringify({ chapter: Number(selectedChapterId), page: currentPage || 1 }),
+      //   keepalive: true,
+      // }).catch(() => {})
     } catch {
       // noop
     }
@@ -734,7 +705,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                     onClick={() => setRightPanelCollapsed(false)}
                     title="Open Learning Tools"
                   >
-                    <Settings className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4" />
                   </Button>
                 )}
               </div>
@@ -784,14 +755,19 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   }}
                 >
                   {/* Visual indicator for resize handle */}
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-[#3e3e42] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                </div>
+                  <div className="absolute left-[-10px] top-1/2 -translate-y-1/2">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-md bg-gray-300 text-gray-300 shadow-sm">
+                      <Tally1 className="h-3.5 w-3.5" />
+                      <span className="sr-only">Resize learning tools panel</span>
+                    </div>
+                  </div>
+                  </div>
 
                 {/* Panel header */}
                 <div className="h-8 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-between px-3 flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">LEARNING TOOLS</span>
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className={`w-6 h-6 p-0 hover:bg-[#3e3e42] group relative ${showHelpTab ? "bg-[#3e3e42]" : ""}`}
@@ -801,7 +777,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                       <div className="absolute left-8 top-1/2 transform -translate-y-1/2 bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none whitespace-nowrap z-50">
                         Show Learning Tools
                       </div>
-                    </Button>
+                    </Button> */}
                   </div>
                   <Button
                     variant="ghost"
@@ -860,7 +836,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
           })()}
           <div className="ml-auto flex items-center gap-4">
             <span>Learning Mode: Socratic</span>
-            <span>Study Time: 0h 0m</span>
+            {/* TODO: Implement study time tracking */}
+            {/* <span>Study Time: 0h 0m</span> */}
           </div>
         </div>
 

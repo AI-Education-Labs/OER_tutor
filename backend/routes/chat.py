@@ -88,7 +88,7 @@ async def update_conversation_summary(user_id: str, session_id: str):
 
 
        system_prompt = SystemMessage(
-           content="Generate a detailed conversation summary, a one-line title, and decide if the recent messages need to be added to important messages."
+           content="Update the conversation summary with new information, and decide if the recent messages need to be added to important messages."
        )
        llm_msgs.insert(0, system_prompt)
 
@@ -101,53 +101,57 @@ async def update_conversation_summary(user_id: str, session_id: str):
            for m in llm_msgs
        ])
 
+       # Get existing summary and title
+       collection = await get_collection("conversation_summaries")
+       existing_doc = await collection.find_one({"session_id": session_id, "user_id": user_id})
+       existing_title = existing_doc.get("title") if existing_doc else None
+       existing_summary = existing_doc.get("summary") if existing_doc else None
 
-       result = await summary_llm.ainvoke(
-           f"""
-You are an assistant that summarizes conversations and can find detailed important messages.
+       prompt = f"""
+You are an assistant that UPDATES conversation summaries and finds important messages.
+
+EXISTING TITLE: {existing_title or "None - create a simple 2-4 word title"}
+EXISTING SUMMARY: {existing_summary or "None - create initial summary"}
 
 Return valid JSON with exactly these keys:
-- "title": a concise, one-line title summarizing the conversation.
-- "summary": a detailed summary of the conversation, including key points, decisions, and outcomes.
-- "important_messages": a list of truly important messages. Each message must be an object:
-    - "role": either "user" or "assistant"
-    - "content": the full, verbatim text of the message.
+- "title": If existing title is good and still fits the conversation, KEEP IT EXACTLY THE SAME. Only change if conversation topic has significantly shifted. Keep it very simple: 2-4 words (e.g., "Psychology Methods", "Chapter Discussion"). DO NOT add unnecessary details like dates or chapter numbers unless critical.
 
-Guidelines for selecting "important_messages":
+- "summary": If existing summary exists, UPDATE it by ADDING new information. DO NOT replace the entire summary - build upon it. Format: "Previous topics: [old info]. New discussion: [new info]". Keep it concise but comprehensive.
 
-1. Only include messages that contain **essential information, insights, or turning points** that should be remembered long-term.
-2. Exclude greetings, filler, polite phrases, or temporary procedural messages unless they contain key content.
-3. Any message that contains **detailed instructions, structured learning plans, step-by-step guidance, strategies, or decisions** must be included in full, **as one single message**, exactly as it appears. Do not summarize, shorten, or replace it with placeholders like "[detailed plan provided]".
-4. User messages that express **commitment, goals, or instructions for the assistant to act on knowledge or plans** are important and should also be included verbatim.
-5. Do not split long messages into smaller pieces; each important message should remain intact.
-6. Never remove or abbreviate content that contains actionable knowledge or structured guidance.
-7. If no messages meet the criteria, return an empty list for "important_messages". DO NOT INCLUDE MESSAGES LIKE 'the sky is blue' or 'i had eggs for breakfat', be intelligent and DONT CLOG THE IMPORTANT MESSAGES STORAGE.
-8. Do not include duplicate messages; each important message should be unique. IF ITS ALREADY IN THE IMPORTANT MESSAGES: PROMPT DONT ADD IT AGAIN.
+- "important_messages": a list of truly important messages (same guidelines as before)
+
+Guidelines for "important_messages":
+1. Only include messages with essential information or insights
+2. Exclude greetings, filler, procedural messages
+3. Include detailed instructions/plans verbatim as single messages
+4. Do not split long messages
+5. Empty list if no important messages
+6. Do not duplicate messages already in the conversation
 
 Data:
-            {prompt_content}
-            """
-        )
+{prompt_content}
+"""
+
+       result = await summary_llm.ainvoke(prompt)
 
 
        try:
            summary_json = json.loads(result.content)
-           title = summary_json.get("title", "Chat Session")
-           summary = summary_json.get("summary", "")
+           new_title = summary_json.get("title", existing_title or "Chat Session")
+           new_summary = summary_json.get("summary", "")
            important_msgs = summary_json.get("important_messages", None)
        except Exception:
-           title = "Chat Session"
-           summary = result.content
+           new_title = existing_title or "Chat Session"
+           new_summary = result.content
 
        if isinstance(important_msgs, list):
            for msg in important_msgs:
                 if isinstance(msg, dict) and "role" in msg and "content" in msg:
                     await important_messages_collection.add_message(msg["role"], msg["content"])
-           
-       collection = await get_collection("conversation_summaries")
+
        await collection.update_one(
            {"session_id": session_id, "user_id": user_id},
-           {"$set": {"title": title, "summary": summary, "updated_at": datetime.utcnow()}},
+           {"$set": {"title": new_title, "summary": new_summary, "updated_at": datetime.utcnow()}},
            upsert=True
        )
    except Exception as e:
@@ -157,16 +161,64 @@ Data:
 
 
 async def get_textbook_context(textbook_id: str, chapter_id: str) -> str:
-# TODO S3 textbook content retrieval
-#    try:
-#        pdf_path = f"./public/textbooks/{textbook_id}/chapter{chapter_id}.pdf"
-#        text = text_extract(pdf_path)
-#        return text
-#    except Exception as e:
-#        print(f"Error retrieving textbook context: {e}")
-   return ""
+    """
+    Retrieves textbook chapter content from S3.
+    Expects S3 key pattern: {textbook_id}/chapter{chapter_id}.txt
+    """
+    try:
+        text = await get_chapter_text(textbook_id, chapter_id)
+        logger.info(f"Retrieved textbook context for {textbook_id}/chapter{chapter_id}: {len(text)} characters")
+        return text
+    except Exception as e:
+        logger.error(f"Error retrieving textbook context for {textbook_id}/chapter{chapter_id}: {e}")
+        return ""
 
 
+async def branch_decision_handler(history: MongoChatMessageHistory, user_message: str, full_response: str, user_id: str, background_tasks: BackgroundTasks) -> AsyncGenerator[str, None]:
+    """
+    Determines if a message indicates a branching decision point
+    And returns
+    """
+    # --- Branch decision ---
+    try:
+        detector_llm = ChatOpenAI(model="gpt-5-mini", temperature=0, tags = ["branch-detector"], reasoning_effort="low", )
+        recent = await history.get_messages(limit=10)
+        conv_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent])
+        detector_prompt = (
+            'Decide whether the last user message starts a new topic. '
+            'Respond ONLY with JSON: {"start_new_chat": true/false, "suggested_title": string}'
+            f'\nConversation:\n{conv_text}'
+        )
+        result = await detector_llm.ainvoke(detector_prompt)
+        print("===================================================")
+        print("Branch detector response:", result.content)
+        print("===================================================")
+        decision = json.loads(result.content)
+    except Exception:
+        decision = {"start_new_chat": False}
+
+
+    if decision.get("start_new_chat"):
+        print("==================================================")
+        print("Starting new chat session as per LLM decision.")
+        print("==================================================")
+        new_session_id = str(uuid.uuid4())
+        new_history = MongoChatMessageHistory(session_id=new_session_id)
+        await new_history.add_message("user", user_message)
+        await new_history.add_message("assistant", full_response)
+        background_tasks.add_task(update_conversation_summary, user_id, new_session_id)
+
+
+        yield json.dumps({
+            'start_new_chat': True,
+            'new_session_id': new_session_id,
+            'suggested_title': decision.get("suggested_title", "New Chat")
+        })
+    else:
+        print("unable to parse json")
+        print("Response content:", result.content)
+        print("Desicion:", decision)
+        print("==================================================")
 
 
 # ----------------------------
@@ -302,49 +354,6 @@ async def stream_chat(
            full_response = "".join(collected_chunks)
            await history.add_message("assistant", full_response)
            background_tasks.add_task(update_conversation_summary, user_id, session_id)
-
-
-           # --- Branch decision ---
-           try:
-               detector_llm = ChatOpenAI(model="gpt-5-mini", temperature=0, tags = ["branch-detector"], reasoning_effort="low", )
-               recent = await history.get_messages(limit=10)
-               conv_text = "\n".join([f"{m['role']}: {m['content']}" for m in recent])
-               detector_prompt = (
-                   'Decide whether the last user message starts a new topic. '
-                   'Respond ONLY with JSON: {"start_new_chat": true/false, "suggested_title": string}'
-                   f'\nConversation:\n{conv_text}'
-               )
-               result = await detector_llm.ainvoke(detector_prompt)
-               print("===================================================")
-               print("Branch detector response:", result.content)
-               print("===================================================")
-               decision = json.loads(result.content)
-           except Exception:
-               decision = {"start_new_chat": False}
-
-
-           if decision.get("start_new_chat"):
-               print("==================================================")
-               print("Starting new chat session as per LLM decision.")
-               print("==================================================")
-               new_session_id = str(uuid.uuid4())
-               new_history = MongoChatMessageHistory(session_id=new_session_id)
-               await new_history.add_message("user", user_message)
-               await new_history.add_message("assistant", full_response)
-               background_tasks.add_task(update_conversation_summary, user_id, new_session_id)
-
-
-               yield json.dumps({
-                   'start_new_chat': True,
-                   'new_session_id': new_session_id,
-                   'suggested_title': decision.get("suggested_title", "New Chat")
-               })
-           else:
-               print("unable to parse json")
-               print("Response content:", result.content)
-               print("Desicion:", decision)
-               print("==================================================")
-
 
            yield json.dumps({'done': True, 'session_id': session_id})
 
