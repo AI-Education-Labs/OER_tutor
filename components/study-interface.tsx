@@ -574,7 +574,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
               </div>
             </Link>
           </div>
-          <div className="flex-1 text-center text-sm">StudyCode - Physics</div>
+          <div className="flex-1 text-center text-sm">Research Methods in Psychology</div> 
         </div>
 
         {/* Mobile Navigation Bar */}
