@@ -222,7 +222,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       const token = localStorage.getItem("access_token")
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
-      const resp = await fetch(`${backendUrl}/api/v1/flashcard/generate`, {
+      const resp = await fetch(`${backendUrl}/api/v1/flashcards/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
