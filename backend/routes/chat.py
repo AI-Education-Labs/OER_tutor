@@ -288,8 +288,7 @@ async def stream_chat(
        print(f"Generated new session ID: {session_id}")
 
    history = MongoChatMessageHistory(session_id=session_id)
-   await history.add_message("user", user_message)
-   print(f"Added user message to history for session {session_id}.")
+   
    important_messages_collection = MongoChatMessageHistory(session_id=session_id, collection_name="important_messages")
    important_msgs = await important_messages_collection.get_messages(limit=20)
 
@@ -352,6 +351,7 @@ async def stream_chat(
 
 
            full_response = "".join(collected_chunks)
+           await history.add_message("user", user_message)
            await history.add_message("assistant", full_response)
            background_tasks.add_task(update_conversation_summary, user_id, session_id)
 
