@@ -427,7 +427,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
               // Trigger summary update in background (fire-and-forget)
               // This prevents Lambda timeout by making it a separate invocation
               if (sessionIdRef.current && token) {
-                fetch(`${backendUrl}/chat/update-summary-async`, {
+                fetch(`${backendUrl}/api/v1/chat/update-summary-async`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
