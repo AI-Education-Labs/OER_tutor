@@ -389,7 +389,8 @@ export function PDFViewer({
 
         const pageContainer = document.createElement("div")
         pageContainer.className = "relative mb-4"
-        pageContainer.style.display = "inline-block"
+        pageContainer.style.width = "100%"
+        pageContainer.style.aspectRatio = `${viewport.width} / ${viewport.height}`
 
         pageContainer.addEventListener("mouseup", (e) => {
           handleTextSelection(e as any)
@@ -401,8 +402,8 @@ export function PDFViewer({
         const devicePixelRatio = window.devicePixelRatio || 1
         canvas.width = viewport.width * devicePixelRatio
         canvas.height = viewport.height * devicePixelRatio
-        canvas.style.width = "100%"   // allow flex shrink
-        canvas.style.height = "auto"  // maintain aspect
+        canvas.style.width = "100%"   // responsive width
+        canvas.style.height = "100%"  // fill container
         canvas.className = "block border"
 
         context.scale(devicePixelRatio, devicePixelRatio)
@@ -410,6 +411,7 @@ export function PDFViewer({
         const textLayerDiv = document.createElement("div")
         textLayerDiv.className = "textLayer"
         textLayerDiv.style.setProperty("--scale-factor", "1.5")
+        // Text layer positioned in viewport pixels, will be scaled by CSS
         textLayerDiv.style.width = `${viewport.width}px`
         textLayerDiv.style.height = `${viewport.height}px`
         textLayerDiv.style.position = "absolute"
@@ -420,6 +422,7 @@ export function PDFViewer({
         textLayerDiv.style.pointerEvents = "auto"
         textLayerDiv.style.color = "transparent"
         textLayerDiv.style.userSelect = "text"
+        textLayerDiv.style.transformOrigin = "0 0"
 
         const renderContext = {
           canvasContext: context,
@@ -448,6 +451,21 @@ export function PDFViewer({
 
         pageContainer.appendChild(canvas)
         pageContainer.appendChild(textLayerDiv)
+
+        // After appending, calculate and apply scale to match canvas display size
+        // Use ResizeObserver to update scale when container resizes
+        const updateTextLayerScale = () => {
+          const canvasDisplayWidth = canvas.getBoundingClientRect().width
+          const scaleX = canvasDisplayWidth / viewport.width
+          textLayerDiv.style.transform = `scale(${scaleX})`
+        }
+
+        // Initial scale
+        requestAnimationFrame(updateTextLayerScale)
+
+        // Update on resize
+        const resizeObserver = new ResizeObserver(updateTextLayerScale)
+        resizeObserver.observe(pageContainer)
 
         const pageLabel = document.createElement("div")
         pageLabel.textContent = `Page ${pageNum}`
