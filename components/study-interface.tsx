@@ -755,8 +755,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   }}
                 >
                   {/* Visual indicator for resize handle */}
-                  <div className="absolute left-[-10px] top-1/2 -translate-y-1/2">
-                    <div className="flex items-center justify-center h-6 w-6 rounded-md bg-gray-300 text-gray-300 shadow-sm">
+                  <div className="absolute left-[-4px] top-1/2 -translate-y-1/2">
+                    <div className="flex items-center justify-center h-6 w-1.5 rounded-md bg-gray-300 text-gray-300 shadow-sm overflow-hidden">
                       <Tally1 className="h-3.5 w-3.5" />
                       <span className="sr-only">Resize learning tools panel</span>
                     </div>

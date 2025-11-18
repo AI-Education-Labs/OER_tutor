@@ -24,7 +24,7 @@ interface Textbook {
 export function TextbookLibrary() {
   const [searchQuery, setSearchQuery] = useState("")
   const [myTextbooks, setMyTextbooks] = useState<Textbook[]>([])
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(false)
   const [message, setMessage] = useState<string | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [codeValue, setCodeValue] = useState("")
@@ -192,9 +192,9 @@ export function TextbookLibrary() {
 
         {/* Add Textbook Modal */}
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogContent className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc]">
+          <DialogContent className="bg-white border-black text-black rounded-xl shadow-lg">
             <DialogHeader>
-              <DialogTitle>Enter 6-character textbook code</DialogTitle>
+              <DialogTitle>Enter 6-Character Textbook Code</DialogTitle>
             </DialogHeader>
             <div className="flex justify-center py-2">
               <InputOTP
@@ -258,13 +258,31 @@ export function TextbookLibrary() {
                   }
                 }}
               >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
+                <InputOTPGroup className="gap-3">
+                  <InputOTPSlot
+                    index={0}
+                    className="h-12 w-12 rounded-md border border-black bg-white text-black text-xl font-semibold"
+                  />
+                  <InputOTPSlot
+                    index={1}
+                    className="h-12 w-12 rounded-md border border-black bg-white text-black text-xl font-semibold"
+                  />
+                  <InputOTPSlot
+                    index={2}
+                    className="h-12 w-12 rounded-md border border-black bg-white text-black text-xl font-semibold"
+                  />
+                  <InputOTPSlot
+                    index={3}
+                    className="h-12 w-12 rounded-md border border-black bg-white text-black text-xl font-semibold"
+                  />
+                  <InputOTPSlot
+                    index={4}
+                    className="h-12 w-12 rounded-md border border-black bg-white text-black text-xl font-semibold"
+                  />
+                  <InputOTPSlot
+                    index={5}
+                    className="h-12 w-12 rounded-md border border-black bg-white text-black text-xl font-semibold"
+                  />
                 </InputOTPGroup>
               </InputOTP>
             </div>
