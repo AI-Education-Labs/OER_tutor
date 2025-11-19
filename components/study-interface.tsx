@@ -729,7 +729,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
               >
                 {/* Resize handle */}
                 <div
-                  className="absolute left-0 top-0 bottom-0 w-1 bg-transparent hover:bg-[#007acc] cursor-col-resize z-10 group"
+                  className="absolute left-0 top-0 bottom-0 w-1 bg-transparent hover:bg-[#2d2d30] cursor-col-resize z-10 group"
                   onMouseDown={(e) => {
                     e.preventDefault()
                     const startX = e.clientX
