@@ -82,6 +82,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [textbookData, setTextbookData] = useState<TextbookWithProgress | null>(null)
+  const [selectedChapter, setSelectedChapter] = useState<string | null>(null)
 
   // Change the initial expanded state to start collapsed
   const [expandedChapters, setExpandedChapters] = useState<string[]>([])
@@ -338,6 +339,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
   const handleChapterClick = (chapterId: string) => {
     // Toggle the dropdown
     toggleChapter(chapterId)
+    setSelectedChapter(chapterId)
 
     // Load the PDF for this chapter
     if (onChapterSelect) {
@@ -413,7 +415,8 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
       </div>
 
       {textbookData.chapters.map((chapter) => (
-        <div key={chapter.id} className="mb-1">
+        <div key={chapter.id} 
+            className={`mb-1 ${chapter.id === selectedChapter ? "border-2 border border-[#3a3a3d] rounded-lg" : ""}`}>
           <Button
             variant="ghost"
             className="w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative"
