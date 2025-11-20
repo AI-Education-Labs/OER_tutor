@@ -347,7 +347,7 @@ user_id: str = Depends(validate_access_token)
             )
 
             for chunk in stream:
-                if chunk.choices[0].delta.content:
+                if len(chunk.choices) > 0 and chunk.choices[0].delta.content:
                     chunk_text = chunk.choices[0].delta.content
                     collected_chunks.append(chunk_text)
                     yield json.dumps({'text': chunk_text, 'session_id': session_id})
