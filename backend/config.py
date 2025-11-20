@@ -27,14 +27,11 @@ class Settings(BaseSettings):
     S3_REGION: str = ""
 
     # LLM / Providers
-    OPENAI_API_KEY: str = None
-    LANGCHAIN_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: str = ""
 
     # Qdrant settings
     QDRANT_KEY: Optional[str] = None
 
-    # Langchain settings
-    LANGSMITH_TRACING_V2: Optional[bool] = True
     NAME: Optional[str] = "EC2v2"
 
     # Observability settings
