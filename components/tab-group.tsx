@@ -2,10 +2,9 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { X, MoreHorizontal, SplitSquareHorizontal, SplitSquareVertical } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { X, SquarePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { TutorPanel } from "@/components/tutor-panel"
 import { useDragDrop } from "@/components/drag-drop-provider"
 import type { TabGroupData, TabItem } from "@/components/study-interface"
@@ -13,8 +12,8 @@ import type { TabGroupData, TabItem } from "@/components/study-interface"
 interface TabGroupProps {
   group: TabGroupData
   onUpdateGroup: (updates: Partial<TabGroupData>) => void
-  onSplitGroup: (direction: "horizontal" | "vertical") => void
   onRemoveGroup: () => void
+  onOpenToolGrid?: () => void
   isNarrowPanel?: boolean
   style?: React.CSSProperties
   textbookId?: string
@@ -24,8 +23,8 @@ interface TabGroupProps {
 export function TabGroup({
   group,
   onUpdateGroup,
-  onSplitGroup,
   onRemoveGroup,
+  onOpenToolGrid,
   isNarrowPanel = true,
   style,
   textbookId,
@@ -34,7 +33,45 @@ export function TabGroup({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
+  const [showIconOnly, setShowIconOnly] = useState(false)
+  const [showAddToolTooltip, setShowAddToolTooltip] = useState(false)
+  const [addToolTooltipPos, setAddToolTooltipPos] = useState<{ x: number; y: number } | null>(null)
   const { draggedTab, setDraggedTab } = useDragDrop()
+  const tabContainerRef = useRef<HTMLDivElement>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Calculate if we should show icon-only tabs based on available width
+  useEffect(() => {
+    const calculateTabDisplay = () => {
+      if (!tabContainerRef.current) return
+
+      const containerWidth = tabContainerRef.current.offsetWidth
+      const tabCount = group.tabs.length
+      const fullTabWidth = 160 // Width of tab with label
+      const iconOnlyTabWidth = 32 // Width of icon-only tab (optimized)
+      const addButtonWidth = onOpenToolGrid ? 32 : 0
+
+      // Check if full tabs would fit
+      const fullTabsWidth = tabCount * fullTabWidth + addButtonWidth
+      const iconOnlyTabsWidth = tabCount * iconOnlyTabWidth + addButtonWidth
+
+      if (fullTabsWidth > containerWidth && iconOnlyTabsWidth <= containerWidth) {
+        setShowIconOnly(true)
+      } else if (fullTabsWidth <= containerWidth) {
+        setShowIconOnly(false)
+      }
+    }
+
+    calculateTabDisplay()
+
+    // Recalculate on resize
+    const resizeObserver = new ResizeObserver(calculateTabDisplay)
+    if (tabContainerRef.current) {
+      resizeObserver.observe(tabContainerRef.current)
+    }
+
+    return () => resizeObserver.disconnect()
+  }, [group.tabs.length, onOpenToolGrid])
 
   const handleTabDragStart = (e: React.DragEvent, tab: TabItem) => {
     setDraggedTab({ tab, sourceGroupId: group.id })
@@ -74,8 +111,8 @@ export function TabGroup({
     const rect = e.currentTarget.getBoundingClientRect()
     const textElement = e.currentTarget.querySelector(".tab-text") as HTMLElement
 
-    // Check if text is truncated by comparing scroll width to client width
-    if (textElement && textElement.scrollWidth > textElement.clientWidth) {
+    // Show tooltip if in icon-only mode or if text is truncated
+    if (showIconOnly || (textElement && textElement.scrollWidth > textElement.clientWidth)) {
       setHoveredTabId(tabId)
       setTooltipPosition({
         x: rect.left + rect.width / 2,
@@ -111,19 +148,19 @@ export function TabGroup({
     <div className="flex flex-col border-b border-[#3e3e42] bg-[#252526] min-h-0 relative" style={style}>
       {/* Tab bar */}
       <div className="flex items-center bg-[#2d2d30] border-b border-[#3e3e42] min-h-[35px] flex-shrink-0">
-        <div className="flex flex-1 overflow-x-auto scrollbar-none" onDragLeave={handleTabDragLeave}>
+        <div ref={tabContainerRef} className="flex flex-1 overflow-x-auto scrollbar-none" onDragLeave={handleTabDragLeave}>
           {group.tabs.map((tab, index) => (
             <div
               key={tab.id}
-              className={`relative flex items-center border-r border-[#3e3e42] transition-all duration-200 group ${
+              className={`relative flex items-center justify-center border-r border-[#3e3e42] transition-all duration-200 group ${
                 group.activeTab === tab.id
                   ? "bg-[#1e1e1e] text-[#ffffff]"
                   : "bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42]"
               } ${dragOverIndex === index ? "bg-[#007acc]" : ""} ${tab.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               style={{
-                width: "160px",
+                width: showIconOnly ? "32px" : "160px",
                 height: "35px",
-                padding: "0 8px",
+                padding: showIconOnly ? "0" : "0 8px",
                 display: "flex",
                 alignItems: "center",
                 flexShrink: 0,
@@ -140,52 +177,75 @@ export function TabGroup({
               onMouseLeave={handleTabMouseLeave}
               title=""
             >
-              {/* Icon */}
-              <tab.icon className="w-4 h-4 flex-shrink-0" />
+              {showIconOnly ? (
+                <>
+                  {/* In icon-only mode: show icon by default, X on hover */}
+                  <tab.icon className="w-4 h-4 flex-shrink-0 group-hover:hidden" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="hidden group-hover:flex w-4 h-4 p-0 items-center justify-center flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeTab(tab.id)
+                    }}
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {/* Icon */}
+                  <tab.icon className="w-4 h-4 flex-shrink-0" />
 
-              {/* Text */}
-              <span className="tab-text text-sm ml-2 truncate flex-1 min-w-0">{tab.label}</span>
+                  {/* Text */}
+                  <span className="tab-text text-sm ml-2 truncate flex-1 min-w-0">{tab.label}</span>
 
-              {/* Close button - always visible */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-5 h-5 p-0 ml-2 hover:bg-[#3e3e42] flex-shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  removeTab(tab.id)
-                }}
-              >
-                <X className="w-3 h-3 text-white" />
-              </Button>
+                  {/* Close button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-5 h-5 p-0 ml-2 hover:bg-[#3e3e42] flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeTab(tab.id)
+                    }}
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </Button>
+                </>
+              )}
 
               {/* Drop indicator */}
               {dragOverIndex === index && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#007acc]" />}
             </div>
           ))}
-        </div>
 
-        {/* Group actions */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#3e3e42] flex-shrink-0">
-              <MoreHorizontal className="w-4 h-4" />
+          {/* Add tool button - inside scrollable container */}
+          {onOpenToolGrid && (
+            <Button
+              ref={addButtonRef}
+              variant="ghost"
+              size="sm"
+              className="w-8 h-8 p-0 hover:bg-[#3e3e42] flex-shrink-0 border-r border-[#3e3e42]"
+              onClick={onOpenToolGrid}
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                setAddToolTooltipPos({ x: rect.left + rect.width / 2, y: rect.bottom + 4 })
+                setShowAddToolTooltip(true)
+              }}
+              onMouseLeave={() => {
+                setShowAddToolTooltip(false)
+                setAddToolTooltipPos(null)
+              }}
+            >
+              <SquarePlus className="w-4 h-4 text-[#cccccc] hover:text-white" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
-            <DropdownMenuItem onClick={() => onSplitGroup("horizontal")} className="hover:bg-[#3e3e42]">
-              <SplitSquareHorizontal className="w-4 h-4 mr-2" />
-              Split Right
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSplitGroup("vertical")} className="hover:bg-[#3e3e42]">
-              <SplitSquareVertical className="w-4 h-4 mr-2" />
-              Split Down
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+        </div>
       </div>
 
-      {/* Floating tooltip */}
+      {/* Floating tooltip for tabs */}
       {hoveredTabId && tooltipPosition && (
         <div
           className="fixed bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] shadow-lg z-50 pointer-events-none max-w-xs"
@@ -196,6 +256,20 @@ export function TabGroup({
           }}
         >
           {group.tabs.find((tab) => tab.id === hoveredTabId)?.label}
+        </div>
+      )}
+
+      {/* Floating tooltip for add tool button */}
+      {showAddToolTooltip && addToolTooltipPos && (
+        <div
+          className="fixed bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] shadow-lg z-50 pointer-events-none whitespace-nowrap"
+          style={{
+            left: `${addToolTooltipPos.x}px`,
+            top: `${addToolTooltipPos.y}px`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          Add Tool
         </div>
       )}
 
