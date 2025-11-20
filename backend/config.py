@@ -28,13 +28,10 @@ class Settings(BaseSettings):
 
     # LLM / Providers
     OPENAI_API_KEY: str = ""
-    LANGCHAIN_API_KEY: Optional[str] = None
 
     # Qdrant settings
     QDRANT_KEY: Optional[str] = None
 
-    # Langchain settings
-    LANGSMITH_TRACING_V2: Optional[bool] = True
     NAME: Optional[str] = "EC2v2"
 
     # Observability settings
