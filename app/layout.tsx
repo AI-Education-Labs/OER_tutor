@@ -9,7 +9,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "StudyCode - Interactive Learning Platform",
   description: "An interactive learning platform with PDF viewing and AI tutoring",
-    generator: 'v0.dev'
+  icons: {
+    icon: '/favicon.png',
+  }
 }
 
 export default function RootLayout({
