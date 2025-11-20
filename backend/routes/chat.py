@@ -323,8 +323,8 @@ user_id: str = Depends(validate_access_token)
                 llm_msgs.append({"role": "system", "content": f"Textbook context: {textbook_text}"})
                 print("Fine 1: Added textbook context to system message.")
             if summary_text:
-                    llm_msgs.append({"role": "system", "content": f"Conversation so far (summary): {summary_text}"})
-                    print("Fine 2: Added conversation summary to system message.")
+                llm_msgs.append({"role": "system", "content": f"Conversation so far (summary): {summary_text}"})
+                print("Fine 2: Added conversation summary to system message.")
 
 
             for msg in recent_msgs:
