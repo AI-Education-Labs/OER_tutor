@@ -255,6 +255,8 @@ async def chat_message(
         raise HTTPException(status_code=502, detail="OpenAI API returned no choices")
 
     ai_response = response.choices[0].message.content
+    if ai_response is None:
+        raise HTTPException(status_code=502, detail="OpenAI API returned empty content")
     await history.add_message("assistant", ai_response)
 
     # Frontend will trigger summary update after receiving the response
