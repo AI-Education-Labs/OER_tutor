@@ -153,7 +153,6 @@ Guidelines for "important_messages":
             logger.error("OpenAI structured output parsing returned None")
             new_title = existing_title or "Chat Session"
             new_summary = existing_summary or ""
-            important_msgs = []
         else:
             new_title = result.title
             new_summary = result.summary
