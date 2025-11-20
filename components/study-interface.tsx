@@ -318,42 +318,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     setTabGroups((prev) => [...prev, newGroup])
   }
 
-  const splitTabGroup = (groupId: string, direction: "horizontal" | "vertical") => {
-    setTabGroups((prev) => {
-      const group = prev.find((g) => g.id === groupId)
-      if (!group || group.tabs.length < 2) return prev
-
-      const midIndex = Math.ceil(group.tabs.length / 2)
-      const firstHalf = group.tabs.slice(0, midIndex)
-      const secondHalf = group.tabs.slice(midIndex)
-
-      const newGroup: TabGroupData = {
-        id: `group-${Date.now()}`,
-        tabs: secondHalf,
-        activeTab: secondHalf[0].id,
-        position: {
-          x: group.position.x,
-          y: direction === "vertical" ? group.position.y + group.position.height / 2 : group.position.y,
-          width: group.position.width,
-          height: direction === "vertical" ? group.position.height / 2 : group.position.height,
-        },
-      }
-
-      return [
-        ...prev.filter((g) => g.id !== groupId),
-        {
-          ...group,
-          tabs: firstHalf,
-          position: {
-            ...group.position,
-            height: direction === "vertical" ? group.position.height / 2 : group.position.height,
-          },
-        },
-        newGroup,
-      ]
-    })
-  }
-
   const toggleHelpTab = () => {
     if (!showHelpTab) {
       setShowHelpTab(true)
@@ -508,7 +472,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                 key={group.id}
                 group={group}
                 onUpdateGroup={(updates) => updateTabGroup(group.id, updates)}
-                onSplitGroup={(direction) => splitTabGroup(group.id, direction)}
                 onRemoveGroup={() => removeTabGroup(group.id)}
                 isNarrowPanel={isRightPanelNarrow}
                 style={{ minHeight: "200px" }}
@@ -549,7 +512,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   )
 
   return (
-    <DragDropProvider onMoveTab={moveTabToGroup} onCreateGroup={createNewTabGroup} onSplitGroup={splitTabGroup}>
+    <DragDropProvider onMoveTab={moveTabToGroup} onCreateGroup={createNewTabGroup}>
       <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col overflow-hidden">
         {/* Custom CSS for flash animation */}
         <style jsx>{`
@@ -805,8 +768,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                         key={group.id}
                         group={group}
                         onUpdateGroup={(updates) => updateTabGroup(group.id, updates)}
-                        onSplitGroup={(direction) => splitTabGroup(group.id, direction)}
                         onRemoveGroup={() => removeTabGroup(group.id)}
+                        onOpenToolGrid={toggleHelpTab}
                         isNarrowPanel={isRightPanelNarrow}
                         textbookId={textbookId}
                         selectedChapterId={selectedChapterId}
