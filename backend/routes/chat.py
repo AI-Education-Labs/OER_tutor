@@ -87,6 +87,9 @@ async def update_conversation_summary(user_id: str, session_id: str):
             "content": "Update the conversation summary with new information, and decide if the recent messages need to be added to important messages."
         })
 
+        # Track important message identifiers to avoid duplication
+        important_msg_ids = set()
+
         # Add important messages
         if important_messages:
             llm_msgs.append({
@@ -99,18 +102,23 @@ async def update_conversation_summary(user_id: str, session_id: str):
                         "role": msg["role"],
                         "content": msg["content"]
                     })
+                    # Track this message to avoid duplication
+                    msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                    important_msg_ids.add(msg_id)
 
-        # Add recent messages
+        # Add recent messages (excluding duplicates already in important messages)
         llm_msgs.append({
             "role": "system",
             "content": "Recent messages:"
         })
         for msg in messages:
             if msg["role"] in ["user", "assistant"]:
-                llm_msgs.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
+                msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                if msg_id not in important_msg_ids:
+                    llm_msgs.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
 
         # Get existing summary and title
         collection = await get_collection("conversation_summaries")
@@ -150,6 +158,7 @@ Guidelines for "important_messages":
             response_format=ConversationSummary,
             user_id=user_id,
             temperature=0,
+            session_id=session_id,
             metadata={"session_id": session_id}
         )
 
@@ -254,6 +263,7 @@ async def chat_message(
         user_id=user_id,
         trace_name="chat-message",
         temperature=0,
+        session_id=session_id,
         metadata={"session_id": session_id}
     )
 
@@ -316,6 +326,9 @@ user_id: str = Depends(validate_access_token)
 
             llm_msgs: list[ChatCompletionMessageParam] = [{"role": "system", "content": chat_prompt}]
 
+            # Track important message identifiers to avoid duplication
+            important_msg_ids = set()
+
             if important_msgs:
                 llm_msgs.append({"role": "system", "content": "Important messages from the conversation:"})
                 for msg in important_msgs:
@@ -324,6 +337,9 @@ user_id: str = Depends(validate_access_token)
                             "role": msg["role"],
                             "content": msg["content"]
                         })
+                        # Track this message to avoid duplication in recent messages
+                        msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                        important_msg_ids.add(msg_id)
 
             textbook_text = await get_textbook_context(textbook_id, chapter_id) if (textbook_id and chapter_id) else None
             if textbook_text:
@@ -333,14 +349,18 @@ user_id: str = Depends(validate_access_token)
                 llm_msgs.append({"role": "system", "content": f"Conversation so far (summary): {summary_text}"})
                 print("Fine 2: Added conversation summary to system message.")
 
-
+            # Only add recent messages that aren't already in important messages
             for msg in recent_msgs:
                 if msg["role"] in ["user", "assistant"]:
-                    llm_msgs.append({
-                        "role": msg["role"],
-                        "content": str(msg["content"])
-                    })
-                    print(f"Fine 3/4: Added {msg['role']} message to history: {msg['content'][:30]}...")
+                    msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                    if msg_id not in important_msg_ids:
+                        llm_msgs.append({
+                            "role": msg["role"],
+                            "content": str(msg["content"])
+                        })
+                        print(f"Fine 3/4: Added {msg['role']} message to history: {msg['content'][:30]}...")
+                    else:
+                        print(f"Skipped duplicate message (already in important messages): {msg['content'][:30]}...")
 
             llm_msgs.append({"role": "user", "content": str(user_message)})
             print(f"Fine 5: Added current user message: {user_message[:30]}...")
@@ -351,9 +371,9 @@ user_id: str = Depends(validate_access_token)
                 messages=llm_msgs,
                 user_id=user_id,
                 temperature=0,
+                session_id=session_id,
                 metadata={
                     "session_id": session_id,
-                    "textbook_id": textbook_id,
                     "chapter_id": chapter_id
                 }
             )
@@ -374,6 +394,7 @@ user_id: str = Depends(validate_access_token)
                 user_id=user_id,
                 trace_name="chat-stream",
                 temperature=0,
+                session_id=session_id,
                 metadata={
                     "session_id": session_id,
                     "textbook_id": textbook_id,

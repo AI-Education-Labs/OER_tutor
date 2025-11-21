@@ -28,11 +28,11 @@ async def generate_study_guide(body: StudyGuideRequest, current_user = Depends(v
     try:
         response = generate_with_responses_parse(
             model="gpt-4.1",
-            input=[
+            messages=[
                 {"role": "developer", "content": system_prompt},
                 {"role": "user", "content": "Generate a study guide"}
             ],
-            text_format=StudyGuide,
+            response_format=StudyGuide,
             user_id=user_id,
             trace_name="study-guide-generation",
             metadata={

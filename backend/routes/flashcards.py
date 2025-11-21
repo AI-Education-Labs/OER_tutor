@@ -44,11 +44,11 @@ async def generate_flashcard(body: FlashcardRequest, current_user = Depends(vali
     try:
         response = generate_with_responses_parse(
             model="gpt-4.1",
-            input=[
+            messages=[
                 {"role": "developer", "content": system_prompt},
                 {"role": "user", "content": "Generate a flashcard deck"}
             ],
-            text_format=FlashcardDeck,
+            response_format=FlashcardDeck,
             user_id=user_id,
             trace_name="flashcard-generation",
             metadata={

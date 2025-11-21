@@ -44,11 +44,11 @@ async def generate_quiz(body: QuizRequest, current_user = Depends(validate_acces
     try:
         response = generate_with_responses_parse(
             model="gpt-4.1",
-            input=[
+            messages=[
                 {"role": "developer", "content": system_prompt},
                 {"role": "user", "content": "Generate a quiz"}
             ],
-            text_format=GeneratedQuiz,
+            response_format=GeneratedQuiz,
             user_id=user_id,
             trace_name="quiz-generation",
             metadata={
