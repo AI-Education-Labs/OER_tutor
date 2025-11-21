@@ -59,7 +59,10 @@ async def generate_flashcard(body: FlashcardRequest, current_user = Depends(vali
             }
         )
 
-        data = response.output[0].content[0].parsed
+        data = response.choices[0].message.parsed
+
+        if not data:
+            raise HTTPException(status_code=500, detail="Failed to parse flashcard response")
 
     except Exception as e:
         print("error:", e)

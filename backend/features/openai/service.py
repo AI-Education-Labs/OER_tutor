@@ -22,8 +22,6 @@ try:
     if not settings.OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY environment variable is not set or is empty")
     _openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    logger.debug(settings.LANGFUSE_PUBLIC_KEY)
-    logger.debug(settings.LANGFUSE_SECRET_KEY)
     _langfuse_client = Langfuse(
         public_key=settings.LANGFUSE_PUBLIC_KEY,
         secret_key=settings.LANGFUSE_SECRET_KEY,

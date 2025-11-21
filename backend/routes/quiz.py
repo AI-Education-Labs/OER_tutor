@@ -54,15 +54,18 @@ async def generate_quiz(body: QuizRequest, current_user = Depends(validate_acces
             metadata={
                 "textbook_id": textbook_id,
                 "chapter": chapter,
-                "num_questions": num_questions,
+                "num_questions": str(num_questions),
                 "hint": hint
             }
         )
 
-        data = response.output[0].content[0].parsed
+        data = response.choices[0].message.parsed
+
+        if not data:
+            raise HTTPException(status_code=500, detail="Failed to parse quiz response")
 
         quiz_list = []
-        for i, question in enumerate(data.questions):
+        for question in data.questions:
             quiz_list.append({
                 "question": question.question,
                 "choices": question.choices,
