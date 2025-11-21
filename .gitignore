@@ -62,6 +62,4 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
-storageState.json# pixi environments
-.pixi/*
-!.pixi/config.toml
+storageState.json
