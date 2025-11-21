@@ -1,25 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from openai import OpenAI
-from backend.config import settings
 from backend.routes.textbooks import get_chapter_text
 from backend.features.sidebar_modules.models import *
 from backend.db.database import get_collection
 from backend.features.auth.service import validate_access_token
+from backend.features.openai.service import generate_with_responses_parse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 import uuid, time
 
 router = APIRouter()
-
-
-def get_openai_client() -> OpenAI:
-    api_key = settings.OPENAI_API_KEY
-    try:
-        if api_key:
-            return OpenAI(api_key=api_key)
-        return OpenAI()
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"OpenAI client init failed: {exc}")
 
 
 @router.post("/generate")
@@ -29,7 +18,7 @@ async def generate_study_guide(body: StudyGuideRequest, current_user = Depends(v
     textbook_id = body.textbook_id
     chapter = body.chapter
     print("context:", context)
-    client = get_openai_client()
+    user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
 
     system_prompt = f"You job it to help a student create a study guide based on the current context: {context} [END OF CONTEXT], what they have learned so far so that they can effectively review their material. Your task is to create condensed notes, summarized into bullet poinst and shorter sentences while highlighing key terms, equations, or bold concepts. Be sure to include example problems with step-by-step solutions. Be sure to utilize formatting to make the content engaging such as bolding key words, italizing examples and using heading and bullet points to prevent cognitive overload."
 
@@ -37,16 +26,26 @@ async def generate_study_guide(body: StudyGuideRequest, current_user = Depends(v
         system_prompt += f"\nFocus only on this section/topic if applicable: {hint}"
 
     try:
-        response = client.responses.parse(
+        response = generate_with_responses_parse(
             model="gpt-4.1",
-            input=[
+            messages=[
                 {"role": "developer", "content": system_prompt},
                 {"role": "user", "content": "Generate a study guide"}
             ],
-            text_format=StudyGuide
+            response_format=StudyGuide,
+            user_id=user_id,
+            trace_name="study-guide-generation",
+            metadata={
+                "textbook_id": textbook_id,
+                "chapter": chapter,
+                "hint": hint
+            }
         )
 
-        data = response.output[0].content[0].parsed
+        data = response.choices[0].message.parsed
+
+        if not data:
+            raise HTTPException(status_code=500, detail="Failed to parse study guide response")
 
     except Exception as e:
         print("error:", e)
@@ -56,7 +55,6 @@ async def generate_study_guide(body: StudyGuideRequest, current_user = Depends(v
 
     # Persist study guide as a note for the user
     try:
-        user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
         notes_col = await get_collection("user_notes")
         doc = {
             "_id": str(uuid.uuid4()),

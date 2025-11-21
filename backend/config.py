@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # Observability settings
     METRICS_BEARER_TOKEN: Optional[str] = None
 
+    # Langfuse settings
+    LANGFUSE_PUBLIC_KEY: Optional[str] = None
+    LANGFUSE_SECRET_KEY: Optional[str] = None
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
 
 settings = Settings()
 
