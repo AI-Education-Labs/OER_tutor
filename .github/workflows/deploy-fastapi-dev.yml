@@ -1,8 +1,13 @@
-name: Build and Deploy FastAPI to AWS Lambda For Dev
+name: Deploy FastAPI Dev
 
 on:
   push:
-    branches: [ Dev ]
+    branches:
+      - Dev
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   deploy:

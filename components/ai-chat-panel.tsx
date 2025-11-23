@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from "react"
-import { Send, User, Bot, AlertCircle, Menu } from "lucide-react"
+import { Send, User, Bot, AlertCircle, MessagesSquare, MessageSquarePlus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
@@ -74,6 +74,32 @@ const removeChatSession = () => {
   sessionStorage.removeItem(CHAT_STORAGE_KEY)
   sessionStorage.removeItem(MESSAGE_COUNT_KEY)
   sessionStorage.removeItem("current_session_id")
+}
+
+// ---------------- Helper Functions ----------------
+const formatChatDate = (dateString: string): string => {
+  // Backend sends UTC times without 'Z', so we need to append it to parse as UTC
+  const utcDateString = dateString.endsWith('Z') ? dateString : dateString + 'Z'
+  const date = new Date(utcDateString)
+  const now = new Date()
+
+  // Calculate difference in local time
+  const diffMs = now.getTime() - date.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+
+  // If today (less than 24 hours ago)
+  if (diffHours < 24 && date.getDate() === now.getDate()) {
+    return `Today ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+  } else if (diffDays < 7) {
+    // Within the last week, show day and time
+    const dayName = date.toLocaleDateString([], { weekday: 'long' })
+    const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    return `${dayName} ${time}`
+  } else {
+    // For older dates, show month and day
+    return date.toLocaleDateString([], { month: 'long', day: 'numeric' })
+  }
 }
 
 // ---------------- MessageCard ----------------
@@ -160,7 +186,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const [currentChatTitle, setCurrentChatTitle] = useState<string>("Current Chat")
   const [hoveredChat, setHoveredChat] = useState<string | null>(null)
   const [showSummary, setShowSummary] = useState<string | null>(null)
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -183,6 +211,23 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     const token = localStorage.getItem("access_token")
     setIsLoggedIn(!!token)
   }, [])
+
+  // Auto-resize textarea as user types (up to 10 lines)
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    // Reset height to minimum to get the correct scrollHeight
+    textarea.style.height = "24px"
+
+    // Calculate new height based on content (max 10 lines)
+    const lineHeight = 24 // approximate line height in pixels
+    const maxLines = 10
+    const maxHeight = lineHeight * maxLines
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight)
+
+    textarea.style.height = `${newHeight}px`
+  }, [input])
 
   // Load all chats for sidebar
   const fetchChats = async () => {
@@ -543,7 +588,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
       {showSidebar ? (
         <div className="w-full bg-[#1e1e1e] border-r border-[#3e3e42] flex flex-col">
           <div className="p-3 border-b border-[#3e3e42]">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between">
               <div className="font-bold text-white">Chats</div>
               <Button
                 onClick={() => setShowSidebar(false)}
@@ -551,12 +596,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
                 variant="ghost"
                 className="text-[#969696] hover:text-white"
               >
-                <Menu className="w-4 h-4" />
+                <X className="w-4 h-4" />
               </Button>
             </div>
-            <Button onClick={clearChat} size="sm" className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white">
-              New Chat
-            </Button>
           </div>
           <div className="flex-1 overflow-auto relative">
             {chats.map((c) => (
@@ -568,7 +610,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
                   onClick={() => loadChat(c.session_id, c.title || "Untitled Chat")}
                 >
                   <div className="font-medium">{c.title || "Untitled Chat"}</div>
-                  <div className="text-xs text-[#969696] mt-1">{new Date(c.updated_at).toLocaleDateString()}</div>
+                  <div className="text-xs text-[#969696] mt-1">{formatChatDate(c.updated_at)}</div>
                 </button>
               </div>
             ))}
@@ -576,34 +618,62 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
         </div>
       ) : (
         /* Main Chat Area - Only show when sidebar is closed */
-        <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="flex justify-between items-center p-2 border-b border-[#3e3e42]">
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => {
-                setShowSidebar(!showSidebar)
-                if (!showSidebar) fetchChats()
-              }}
-              size="sm"
-              variant="ghost"
-            >
-              <Menu className="w-4 h-4 text-[#969696]" />
-            </Button>
-            <span className="text-sm text-[#cccccc] font-medium">{currentChatTitle}</span>
-          </div>
-          <Button onClick={clearChat} size="sm" className="left-2 flex-2 bg-[#007acc] hover:bg-[#005a9e] text-white">
-              New Chat
-            </Button>
-          <Button
-            onClick={clearChat}
-            size="sm"
-            variant="ghost"
-            className="text-[#969696] hover:text-white"
-            disabled={isLoading}
+        <div className="flex-1 flex flex-col relative">
+        {/* Floating Header Buttons */}
+        <div className="absolute top-2 left-3 z-10">
+          <div
+            className="flex flex-col gap-1 border border-[#969696] rounded p-1 shadow-lg"
+            style={{
+              backgroundColor: 'rgba(30, 30, 30, 0.3)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)'
+            }}
           >
-            Clear
-          </Button>
+            <div className="relative">
+              <Button
+                onClick={() => {
+                  setShowSidebar(!showSidebar)
+                  if (!showSidebar) fetchChats()
+                }}
+                size="sm"
+                variant="ghost"
+                className="text-[#969696] hover:text-white w-6 h-6 p-0"
+                onMouseEnter={() => setHoveredButton("chats")}
+                onMouseLeave={() => setHoveredButton(null)}
+              >
+                <MessagesSquare className="w-4 h-4" />
+              </Button>
+              {hoveredButton === "chats" && (
+                <div
+                  className="absolute left-full bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] shadow-lg z-50 whitespace-nowrap pointer-events-none"
+                  style={{ marginLeft: '28px', top: '50%', transform: 'translateY(calc(-50% - 2.5px))' }}
+                >
+                  Chats
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <Button
+                onClick={clearChat}
+                size="sm"
+                variant="ghost"
+                className="text-[#969696] hover:text-white w-6 h-6 p-0"
+                disabled={isLoading}
+                onMouseEnter={() => setHoveredButton("newchat")}
+                onMouseLeave={() => setHoveredButton(null)}
+              >
+                <MessageSquarePlus className="w-4 h-4" />
+              </Button>
+              {hoveredButton === "newchat" && (
+                <div
+                  className="absolute left-full bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] shadow-lg z-50 whitespace-nowrap pointer-events-none"
+                  style={{ marginLeft: '28px', top: '50%', transform: 'translateY(calc(-50% - 2.5px))' }}
+                >
+                  New Chat
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Messages */}
@@ -621,29 +691,34 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
         {/* Input */}
         <div className="p-3 border-t border-[#3e3e42] bg-[#2d2d30]">
-          <form onSubmit={handleSendMessage} className="flex gap-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSendMessage()
-                }
-              }}
-              placeholder={canSend ? "Ask me anything..." : "Sign in to continue chatting"}
-              className="flex-1 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc] min-h-[40px] max-h-[120px] resize-none overflow-auto"
-              disabled={!canSend || isLoading}
-              rows={1}
-            />
-            <Button
-              type="submit"
-              size="sm"
-              className="bg-[#007acc] hover:bg-[#005a9e] text-white"
-              disabled={!input.trim() || !canSend || isLoading}
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+          <form onSubmit={handleSendMessage}>
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSendMessage()
+                  }
+                }}
+                placeholder={canSend ? "Ask me anything..." : "Sign in to continue chatting"}
+                className="w-full pr-16 py-2 pl-3 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc] resize-none overflow-auto"
+                style={{ minHeight: "40px", maxHeight: "240px", height: "40px" }}
+                disabled={!canSend || isLoading}
+                rows={1}
+              />
+              <Button
+                type="submit"
+                size="icon"
+                className="absolute h-7 w-7 bg-[#007acc] hover:bg-[#005a9e] text-white shrink-0"
+                style={{ bottom: "-33px", right: "0px", left: "auto" }}
+                disabled={!input.trim() || !canSend || isLoading}
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
           </form>
           {canSend && <div className="text-xs text-[#969696] mt-2">Press Enter to send, Shift+Enter for new line</div>}
         </div>
