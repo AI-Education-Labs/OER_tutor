@@ -26,6 +26,7 @@ import { TabGroup } from "@/components/tab-group"
 import { DragDropProvider } from "@/components/drag-drop-provider"
 import { ToolGrid } from "@/components/tool-grid"
 import Link from "next/link"
+import { useAuth } from "@/hooks/use-auth"
 
 interface StudyInterfaceProps {
   textbookId?: string // Make optional since we can get from URL
@@ -54,8 +55,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   const textbookId = propTextbookId || (params?.id as string)
 
   // Authentication state
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [authLoading, setAuthLoading] = useState(true)
+  const { isAuthenticated } = useAuth()
 
   // Textbook metadata and progress state
   const [textbookData, setTextbookData] = useState<any>(null)
@@ -89,9 +89,8 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       try {
-        const token = localStorage.getItem("access_token")
         const response = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, {
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: "include",
         })
         console.log("[v0] Fetch response status:", response.status)
 
@@ -126,11 +125,9 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     const restore = async () => {
       if (!textbookId) return
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-        if (!token) return
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
         const resp = await fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbookId)}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
           cache: "no-store",
         })
         if (!resp.ok) return
@@ -145,19 +142,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     }
     restore()
   }, [textbookId])
-
-  // Get user authentication on component mount
-  useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
-    setAuthLoading(false)
-
-    console.log("StudyInterface - Authentication check:", {
-      hasToken: !!token,
-      textbookId,
-      isLoggedIn: !!token,
-    })
-  }, [])
 
   // Flash animation effect for chapters
   const handleChaptersFlash = () => {
@@ -191,8 +175,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
   console.log("StudyInterface - Render state:", {
     textbookId,
-    isLoggedIn,
-    authLoading,
+    isAuthenticated,
   })
 
   const tutorTabs: TabItem[] = [
@@ -397,8 +380,6 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     // Best-effort persist last visit in background
     if (!textbookId || !selectedChapterId) return
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-      if (!token) return
       // Fire-and-forget last visit using keepalive for page-close safety
       // fetch(`/api/user/progress/${encodeURIComponent(textbookId)}/last-visit`, {
       //   method: "PATCH",

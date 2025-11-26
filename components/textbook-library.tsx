@@ -34,14 +34,8 @@ export function TextbookLibrary() {
   useEffect(() => {
     const loadTextbooks = async () => {
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const resp = await fetch(`${backendUrl}/api/v1/textbooks/list`, {
-          cache: "no-store",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        })
+        const resp = await fetch(`${backendUrl}/api/v1/textbooks/list`, { credentials: "include" })
         if (!resp.ok) throw new Error(`Failed to fetch textbooks (${resp.status})`)
         const data = await resp.json()
 
@@ -205,14 +199,14 @@ export function TextbookLibrary() {
                   if (v.length === 6) {
                     ;(async () => {
                       try {
-                        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
+
                         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
                         const res = await fetch(`${backendUrl}/api/v1/textbooks/add`, {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
-                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
                           },
+                          credentials: "include",
                           body: JSON.stringify({ code: v.toUpperCase() }),
                         })
                         const text = await res.text()
@@ -223,11 +217,7 @@ export function TextbookLibrary() {
                         if (res.ok && data?.ok) {
                           toast({ title: "Added to library", description: `${data?.title || "Textbook"} added.` })
                           // Refresh textbooks
-                          const token2 = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-                          const resp = await fetch(`${backendUrl}/api/v1/textbooks/list`, {
-                            cache: "no-store",
-                            headers: { ...(token2 ? { Authorization: `Bearer ${token2}` } : {}) },
-                          })
+                          const resp = await fetch(`${backendUrl}/api/v1/textbooks/list`, { credentials: "include" })
                           if (resp.ok) {
                             const payload = await resp.json()
                             const pls = Array.isArray(payload)

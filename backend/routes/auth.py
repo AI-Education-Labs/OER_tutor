@@ -1,48 +1,98 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 import re
 import uuid
 from backend.features.users.models import UserWithPassword, UserCreate
-from backend.features.auth.models import Token
+from backend.features.auth.models import Token, LoginRequest, LoginResponse
 from backend.config import settings
 from backend.db.database import create_user_document, get_collection, get_user_by_username
-from backend.features.auth.service import hash_password, create_access_token
+from backend.features.auth.service import hash_password, create_access_token, validate_cookie_token, validate_cookie_token
 
 router = APIRouter()
 
-@router.post("/token", response_model=Token)
-async def assign_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@router.post("/login", response_model=LoginResponse)
+async def assign_httpOnly_cookie(body: LoginRequest, response: Response):
     """
-    Logs in a user and returns an access token.
+    returns a httpOnlyCookie for session authentication
     """
-    user = await get_user_by_username(form_data.username)
-    input_password_hash = await hash_password(form_data.password)
+
+    hashed_input = await hash_password(body.password) # hash first for timing attacks
+
+    user = await get_user_by_username(body.username)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Incorrect username or password"
         )
     hashed_password = user.get("hashed_password")
-    
-    if hashed_password != input_password_hash:
+    if hashed_password != hashed_input: # TODO:SEC this should use some library like hmac instead of us comparing it
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Incorrect username or password"
         )
-    
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    jwt_expiry = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     user_id = user.get("id")
-    access_token = await create_access_token(
-        data={"sub": user_id, "user_id": user_id}, expires_delta=access_token_expires
+    jwt = await create_access_token(
+        data={"sub": user_id, "user_id": user_id },
+        expires_delta=jwt_expiry)
+
+    response.set_cookie(
+        key="access_token",
+        value=jwt,
+        httponly=True,
+        path="/",
+        secure=False, #TODO:SEC CHANGE THIS BACK TO TRUE IN PRODUCTION
+        samesite="lax",
+        max_age=int(settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60),
     )
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    response.status_code = 200
 
-# Register a new user
+    # Determine email safely whether `user` is a dict or an object
+    if isinstance(user, dict):
+        user_email = user.get("email")
+    else:
+        user_email = getattr(user, "email", None)
+
+    # Return a JSON payload (don't return the Response object itself). Returning
+    # the Response instance here can confuse FastAPI's response handling and
+    # middleware (it can result in a None status being propagated to the
+    # server access logger). Instead, set the cookie on the provided response
+    # and return a dict that matches the `LoginResponse` model.
+    return {
+        "message": "Login successful",
+        "user_uuid": user_id,
+        "email": user_email,
+    }
+
+@router.get("/session")
+async def get_session(current_user = Depends(validate_cookie_token)):
+    """
+    Get current authenticated user's session info.
+    Returns user details if authenticated via cookie, otherwise raises 401.
+    """
+    user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
+    
+    try:
+        users = await get_collection("users")
+        user = await users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        
+        return {
+            "uuid": user.get("id"),
+            "user_id": user.get("id"),
+            "email": user.get("email"),
+            "username": user.get("username"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch session")
+
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(user_create: UserCreate):
     # Username should only have alphanumeric characters

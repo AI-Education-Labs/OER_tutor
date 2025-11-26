@@ -41,10 +41,10 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       e.stopPropagation()
       try {
         onOptimisticRemove(id, item)
-        const token = localStorage.getItem("access_token")
+
         const resp = await fetch(`${backendUrl}/api/v1/${kind}/${encodeURIComponent(id)}`, {
           method: "DELETE",
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: "include",
         })
         if (!resp.ok) {
           onFailureRestore(id, item)
@@ -87,7 +87,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       try {
         if (!textbookId) return
         // 1) Load metadata to extract subchapters
-        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store", credentials: "include", })
         if (metaResp.ok) {
           const meta = await metaResp.json()
           const subs: string[] = Array.isArray(meta?.chapters)
@@ -127,10 +127,9 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       try {
         setPrevLoading(true)
         setPrevError("")
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
         const resp = await fetch(`${backendUrl}/api/v1/studyguide/list`, {
           cache: "no-store",
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: "include",
         })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
@@ -173,13 +172,12 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
     try {
       const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
       const resp = await fetch(`${backendUrl}/api/v1/studyguide/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        credentials: "include",
         body: JSON.stringify({ context, hint: focusHint, textbook_id: textbookId, chapter: selectedChapterId }),
       })
 

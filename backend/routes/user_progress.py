@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.db.database import get_collection, get_document
-from backend.features.auth.service import validate_access_token
+from backend.features.auth.service import validate_cookie_token
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def _recompute_total_progress(chapters: Dict[str, float]) -> float:
 
 
 @router.get("/{textbook_id}")
-async def get_textbook_progress(textbook_id: str, current_user=Depends(validate_access_token)):
+async def get_textbook_progress(textbook_id: str, current_user=Depends(validate_cookie_token)):
     """Return full progress payload for a textbook for this user.
     Shape: { total_progress, chapters: {"1": pct}, last_visit }
     """
@@ -88,7 +88,7 @@ async def update_chapter_progress(
     textbook_id: str,
     chapter_id: str,
     payload: ChapterProgressUpdate,
-    current_user=Depends(validate_access_token),
+    current_user=Depends(validate_cookie_token),
 ):
     user_id = current_user
     await _ensure_user_progress_doc(user_id)
@@ -134,7 +134,7 @@ class LastVisitUpdate(BaseModel):
 
 
 @router.patch("/{textbook_id}/last-visit")
-async def update_last_visit(textbook_id: str, payload: LastVisitUpdate, current_user=Depends(validate_access_token)):
+async def update_last_visit(textbook_id: str, payload: LastVisitUpdate, current_user=Depends(validate_cookie_token)):
     user_id = current_user
     # Ensure parent subdocument exists to avoid update conflicts
     await _ensure_textbook_progress_subdoc(user_id, textbook_id)

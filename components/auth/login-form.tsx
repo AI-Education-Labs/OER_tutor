@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, User, Lock, Eye, EyeOff } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [loginData, setLoginData] = useState({ username: "", password: "" })
   const { toast } = useToast()
   const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const {login} = useAuth()
 
   const readErrorMessage = async (response: Response, fallback: string): Promise<string> => {
     try {
@@ -36,27 +38,7 @@ export default function LoginForm() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      const response = await fetch(`${backendUrl}/api/v1/auth/token`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          username: loginData.username,
-          password: loginData.password,
-        }),
-      })
-
-      if (!response.ok) {
-        const message = await readErrorMessage(response, "Login failed")
-        throw new Error(message || "Login failed")
-      }
-      const data = await response.json()
-      const { access_token } = data
-      if (access_token) {
-        localStorage.setItem("access_token", access_token)
-      }
+       await login({ username: loginData.username, password: loginData.password })
 
       toast({
         title: "Login Successful",

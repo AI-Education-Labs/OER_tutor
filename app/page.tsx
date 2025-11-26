@@ -6,24 +6,18 @@ import { BookOpen, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { TextbookLibrary } from "@/components/textbook-library"
+import useAuth from "@/hooks/use-auth"
 
 export default function HomePage() {
   const router = useRouter()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-
-  useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
-  }, [])
+  const {isAuthenticated, logout} = useAuth()
 
   const handleLogin = () => {
     router.push("/auth")
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token")
-    setIsLoggedIn(false)
-    window.location.reload()
+    logout()
   }
 
   return (
@@ -41,7 +35,7 @@ export default function HomePage() {
 
         {/* Right side - Auth buttons */}
         <div className="flex items-center gap-2">
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <>
               <Button
                 variant="ghost"

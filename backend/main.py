@@ -57,7 +57,10 @@ app.include_router(api_router)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # When `allow_credentials=True`, browsers will refuse to send cookies if
+    # Access-Control-Allow-Origin is set to "*". Use explicit origins in
+    # development so `credentials: 'include'` works from the frontend.
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -42,10 +42,9 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       try {
         onOptimisticRemove(id, item)
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const token = localStorage.getItem("access_token")
         const resp = await fetch(`${backendUrl}/api/v1/${kind}/${encodeURIComponent(id)}`, {
           method: "DELETE",
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: "include",
         })
         if (!resp.ok) {
           onFailureRestore(id, item)
@@ -89,7 +88,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
         if (!textbookId || !selectedChapterId) return
         // 1) Load metadata for subchapters of selected chapter
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store", credentials: "include" })
         if (metaResp.ok) {
           const meta = await metaResp.json()
           let current_chapter: any = null
@@ -132,10 +131,10 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
         setPrevLoading(true)
         setPrevError("")
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const token = localStorage.getItem("access_token")
+
         const resp = await fetch(`${backendUrl}/api/v1/quiz/list`, {
           cache: "no-store",
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: "include"
         })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
@@ -177,13 +176,21 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
     try {
       const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
-      const token = localStorage.getItem("access_token")
 
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const resp = await fetch(`${backendUrl}/api/v1/quiz/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ context, hint: focusHint, num_questions: numQuestions, chapter: selectedChapterId, textbook_id: textbookId }),
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          context: context,
+          textbook_id: textbookId,
+          chapter: selectedChapterId,
+          num_questions: numQuestions,
+          hint: focusHint,
+        }),
       })
 
       if (!resp.ok) {
