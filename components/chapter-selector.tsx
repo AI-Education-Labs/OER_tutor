@@ -1,6 +1,6 @@
 "use client"
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ChevronDown, ChevronRight, FileText, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -76,9 +76,11 @@ interface ChapterSelectorProps {
   textbookId: string
   onSectionSelect?: (chapterId: string, sectionId: string, pageOffset?: number) => void
   onChapterSelect?: (chapterId: string) => void // Added onChapterSelect callback for PDF viewer integration
+  activeChapterId?: string // Track which chapter is currently being viewed
+  activeSectionId?: string // Track which section is currently being viewed
 }
 
-export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }: ChapterSelectorProps) {
+export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, activeChapterId, activeSectionId }: ChapterSelectorProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [textbookData, setTextbookData] = useState<TextbookWithProgress | null>(null)
@@ -87,6 +89,8 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
   const [expandedChapters, setExpandedChapters] = useState<string[]>([])
   const [hoveredChapter, setHoveredChapter] = useState<string | null>(null)
   const [hoveredSection, setHoveredSection] = useState<string | null>(null)
+  const [pendingScrollChapter, setPendingScrollChapter] = useState<string | null>(null)
+  const chapterContainerRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [chapters, setChapters] = useState<Chapter[]>([])
 
   const updateProgress = async (
@@ -169,7 +173,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
         byTextbook = {}
       }
 
-        const chapterList = chaptersArray.map((c: any) => {
+      const chapterList = chaptersArray.map((c: any, index: number) => {
         const id = String(c.id ?? "")
         const stored = Number(byTextbook[id] ?? 0)
 
@@ -199,7 +203,8 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
         return {
           id,
           title: c.title || `Chapter ${c.id || ""}`,
-          chapter_number: c.id || 1,
+          chapter_number: Number(c.chapter_number ?? c.id ?? index + 1),
+          // chapter_number: c.id || 1,
           sections,
           progress: Math.max(0, Math.min(100, Math.round(stored))),
         } as Chapter
@@ -329,6 +334,30 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
     return () => clearInterval(interval)
   }, [textbookId])
 
+  useEffect(() => {
+    if (!pendingScrollChapter) return
+    if (!expandedChapters.includes(pendingScrollChapter)) return
+
+    let timeoutId: number | undefined
+
+    const attemptScroll = () => {
+      const el = chapterContainerRefs.current[pendingScrollChapter]
+      if (el) {
+        el.scrollIntoView({ block: "start", behavior: "smooth" })
+        setPendingScrollChapter(null)
+      } else {
+        timeoutId = window.setTimeout(attemptScroll, 50)
+      }
+    }
+
+    attemptScroll()
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [expandedChapters, pendingScrollChapter])
+
   const toggleChapter = (chapterId: string) => {
     setExpandedChapters((prev) =>
       prev.includes(chapterId) ? prev.filter((id) => id !== chapterId) : [...prev, chapterId],
@@ -336,12 +365,20 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
   }
 
   const handleChapterClick = (chapterId: string) => {
+    const isExpanding = !expandedChapters.includes(chapterId)
+
     // Toggle the dropdown
     toggleChapter(chapterId)
 
     // Load the PDF for this chapter
     if (onChapterSelect) {
       onChapterSelect(chapterId)
+    }
+
+    if (isExpanding) {
+      setPendingScrollChapter(chapterId)
+    } else if (pendingScrollChapter === chapterId) {
+      setPendingScrollChapter(null)
     }
   }
 
@@ -398,9 +435,11 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
 
   return (
     <div className="p-1.5 show-scrollbar">
-      <div className="mb-3 p-2 bg-[#2d2d30] rounded">
-        <div className="text-xs text-[#cccccc] mb-1">{textbookData.title}</div>
-        <div className="text-[10px] text-[#969696] mb-1">by {textbookData.author}</div>
+      <div className="mb-4 p-3 bg-[#252526] rounded border-b border-[#3e3e42]">
+        <div className="text-center mb-3">
+          <div className="text-medium font-medium text-[#ffffff]">Table of Contents</div>
+        </div>
+        <div className="text-[10px] text-[#969696] mb-1">Progress</div>
         <div className="flex items-center gap-2">
           <div className="flex-1 bg-[#3e3e42] rounded-full h-1">
             <div
@@ -412,91 +451,107 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
         </div>
       </div>
 
-      {textbookData.chapters.map((chapter) => (
-        <div key={chapter.id} className="mb-1">
-          <Button
-            variant="ghost"
-            className="w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative"
-            onClick={() => handleChapterClick(chapter.id)}
-            onMouseEnter={() => setHoveredChapter(chapter.id)}
-            onMouseLeave={() => setHoveredChapter(null)}
+      {textbookData.chapters.map((chapter) => {
+        const chapterLabel = chapter.chapter_number ? `${chapter.chapter_number}) ${chapter.title}` : chapter.title
+        const isActiveChapter = activeChapterId === chapter.id
+
+        return (
+          <div
+            key={chapter.id}
+            className="mb-1"
+            ref={(el) => {
+              if (el) {
+                chapterContainerRefs.current[chapter.id] = el
+              } else {
+                delete chapterContainerRefs.current[chapter.id]
+              }
+            }}
           >
-            <div className="flex items-center gap-1.5 w-full">
-              {expandedChapters.includes(chapter.id) ? (
-                <ChevronDown className="w-3 h-3 text-[#969696] flex-shrink-0" />
-              ) : (
-                <ChevronRight className="w-3 h-3 text-[#969696] flex-shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div
-                  className={`text-xs text-[#cccccc] leading-tight transition-all duration-200 ${
-                    hoveredChapter === chapter.id ? "whitespace-normal" : "truncate"
-                  }`}
-                >
-                  {chapter.title}
-                </div>
-                {chapter.progress !== undefined && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <div className="w-12 bg-[#3e3e42] rounded-full h-0.5">
-                      <div className="bg-[#007acc] h-0.5 rounded-full" style={{ width: `${chapter.progress}%` }} />
-                    </div>
-                    <span className="text-[10px] text-[#969696] flex-shrink-0">{chapter.progress}%</span>
-                  </div>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative ${
+                isActiveChapter ? "bg-[#3a3d40]" : ""
+              }`}
+              onClick={() => handleChapterClick(chapter.id)}
+              onMouseEnter={() => setHoveredChapter(chapter.id)}
+              onMouseLeave={() => setHoveredChapter(null)}
+            >
+              <div className="flex items-center gap-1.5 w-full">
+                {expandedChapters.includes(chapter.id) ? (
+                  <ChevronDown className="w-3 h-3 text-[#969696] flex-shrink-0" />
+                ) : (
+                  <ChevronRight className="w-3 h-3 text-[#969696] flex-shrink-0" />
                 )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-[#cccccc] leading-tight transition-all duration-200 whitespace-normal">
+                    {chapterLabel}
+                  </div>
+                  {chapter.progress !== undefined && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="w-12 bg-[#3e3e42] rounded-full h-0.5">
+                        <div className="bg-[#007acc] h-0.5 rounded-full" style={{ width: `${chapter.progress}%` }} />
+                      </div>
+                      <span className="text-[10px] text-[#969696] flex-shrink-0">{chapter.progress}%</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </Button>
+            </Button>
 
-          {expandedChapters.includes(chapter.id) && chapter.sections && (
-            <div className="ml-4 mt-0.5">
-              {chapter.sections.map((section, index) => {
-                const pageOffset = section.pageOffset || 0
+            {expandedChapters.includes(chapter.id) && chapter.sections && (
+              <div className="ml-4 mt-0.5">
+                {chapter.sections.map((section) => {
+                  const pageOffset = section.pageOffset || 0
+                  const isActiveSection = activeSectionId === section.id || activeSectionId === section.title
 
-                return (
-                  <div
-                    key={section.id}
-                    className="w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative group cursor-pointer rounded"
-                    onMouseEnter={() => setHoveredSection(section.id)}
-                    onMouseLeave={() => setHoveredSection(null)}
-                    onClick={() => handleSectionClick(chapter.id, section.id, pageOffset)}
-                  >
-                    <div className="flex items-center gap-1.5 w-full">
-                      <FileText className="w-2.5 h-2.5 text-[#969696] flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className={`text-[11px] text-[#cccccc] leading-tight transition-all duration-200 ${
-                            hoveredSection === section.id ? "whitespace-normal" : "truncate"
-                          }`}
-                        >
-                          {section.title}
+                  return (
+                    <div
+                      key={section.id}
+                      className={`w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative group cursor-pointer rounded ${
+                        isActiveSection ? "bg-[#3a3d40] border-l-2 border-l-[#007acc]" : ""
+                      }`}
+                      onMouseEnter={() => setHoveredSection(section.id)}
+                      onMouseLeave={() => setHoveredSection(null)}
+                      onClick={() => handleSectionClick(chapter.id, section.id, pageOffset)}
+                    >
+                      <div className="flex items-center gap-1.5 w-full">
+                        <FileText className="w-2.5 h-2.5 text-[#969696] flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className={`text-[11px] text-[#cccccc] leading-tight transition-all duration-200 ${
+                              hoveredSection === section.id ? "whitespace-normal" : "truncate"
+                            }`}
+                          >
+                            {section.title}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <div className="text-[10px] text-[#969696]">Page {pageOffset}</div>
+                            {section.progress !== undefined && section.progress > 0 && (
+                              <div className="text-[10px] text-[#007acc]">{Math.round(section.progress)}%</div>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <div className="text-[10px] text-[#969696]">Page {pageOffset}</div>
-                          {section.progress !== undefined && section.progress > 0 && (
-                            <div className="text-[10px] text-[#007acc]">{Math.round(section.progress)}%</div>
+                        <div className="flex items-center gap-1">
+                          {section.completed ? (
+                            <div className="w-1.5 h-1.5 bg-[#4ec9b0] rounded-full flex-shrink-0" />
+                          ) : (
+                            <div
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto cursor-pointer"
+                              onClick={(e) => markSectionComplete(chapter.id, section.id, e)}
+                            >
+                              <div className="w-1.5 h-1.5 border border-[#969696] rounded-full" />
+                            </div>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        {section.completed ? (
-                          <div className="w-1.5 h-1.5 bg-[#4ec9b0] rounded-full flex-shrink-0" />
-                        ) : (
-                          <div
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto cursor-pointer"
-                            onClick={(e) => markSectionComplete(chapter.id, section.id, e)}
-                          >
-                            <div className="w-1.5 h-1.5 border border-[#969696] rounded-full" />
-                          </div>
-                        )}
-                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      ))}
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

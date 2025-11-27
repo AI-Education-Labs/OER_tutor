@@ -16,7 +16,7 @@ export function ToolGrid({ tutorTabs, onSelectTool }: ToolGridProps) {
   return (
     <div className="p-6">
       <div className="text-center mb-6">
-        <h3 className="text-lg font-medium text-[#ffffff] mb-2">Learning Tools</h3>
+        <h3 className="text-medium font-medium text-[#ffffff] mb-2">Learning Tools</h3>
         <p className="text-sm text-[#969696]">Choose tools to enhance your study session</p>
       </div>
 
