@@ -463,7 +463,9 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     )
     if (!chapter || !chapter.sub_chapters || chapter.sub_chapters.length === 0) return
 
-    const sections = chapter.sub_chapters.map((sub: any, index: number) => {
+    type SectionInfo = { id: string; title: string; startPage: number }
+
+    const sections: SectionInfo[] = chapter.sub_chapters.map((sub: any, index: number): SectionInfo => {
       const title = typeof sub === "object" && sub !== null ? sub.title || `Section ${index + 1}` : String(sub)
       const rawOffset =
         typeof sub === "object" && sub !== null && typeof sub.pageOffset === "number" ? sub.pageOffset : undefined
@@ -472,7 +474,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       return { id, title, startPage }
     })
 
-    const sorted = sections.slice().sort((a, b) => a.startPage - b.startPage)
+    const sorted = sections.slice().sort((a: SectionInfo, b: SectionInfo) => a.startPage - b.startPage)
     const active = sorted.reduce((acc, section) => (section.startPage <= page ? section : acc), sorted[0])
 
     setCurrentSectionId(active.id)
@@ -549,8 +551,17 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     </div>
   )
 
+  const handleSplitGroup = (groupId: string, direction: "horizontal" | "vertical") => {
+    // TODO: Implement actual split behavior for tab groups
+    console.warn("Split group not yet implemented", { groupId, direction })
+  }
+
   return (
-    <DragDropProvider onMoveTab={moveTabToGroup} onCreateGroup={createNewTabGroup}>
+    <DragDropProvider
+      onMoveTab={moveTabToGroup}
+      onCreateGroup={createNewTabGroup}
+      onSplitGroup={handleSplitGroup}
+    >
       <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col overflow-hidden">
         {/* Custom CSS for flash animation */}
         <style jsx>{`
