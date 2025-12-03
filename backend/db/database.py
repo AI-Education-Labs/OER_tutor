@@ -1,6 +1,8 @@
 from pymongo import AsyncMongoClient
 from typing import Optional, Any, Dict
 from backend.features.users.models import UserWithPassword
+from beanie import init_beanie
+from backend.db.models import User
 import asyncio
 
 from backend.config import settings
@@ -10,6 +12,14 @@ MONGO_DB_NAME = settings.MONGO_DB_NAME
 
 _mongo_client: Optional[AsyncMongoClient] = None
 _client_init_lock: asyncio.Lock = asyncio.Lock()
+
+
+async def init_beanie_models():
+    """Initalize Beanie for collections that use the new migrations"""
+    client = await get_mongo_client()
+    db = client[MONGO_DB_NAME]
+    await init_beanie(database=db, models=[])
+    pass
 
 async def get_mongo_client() -> AsyncMongoClient:
     """Return a singleton AsyncMongoClient, initializing it lazily if needed."""
