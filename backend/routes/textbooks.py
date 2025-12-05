@@ -4,7 +4,7 @@ import logging
 from backend.features.textbooks.models import TextbookInfo
 from pydantic import BaseModel
 from backend.db.database import get_document, get_document_by_field, add_textbook_to_user, get_document_by_field
-from backend.features.auth.service import validate_access_token_optional, validate_access_token
+from backend.features.auth.service import validate_cookie_token
 from botocore.exceptions import ClientError
 from starlette.concurrency import run_in_threadpool
 from backend.config import settings
@@ -40,7 +40,7 @@ async def get_chapter_text(textbook_uuid: str, chapter_id: str) -> str:
         raise HTTPException(status_code=500, detail=f"Error retrieving chapter text: {str(e)}")
 
 @router.get("/list")
-async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
+async def get_textbooks(user_uuid: str = Depends(validate_cookie_token)):
     """Get all available textbooks."""
     print(f"get_textbooks: user {user_uuid}")
     # Check if user is authenticated
@@ -164,7 +164,7 @@ class AddTextbookResponse(BaseModel):
 logger = logging.getLogger(__name__)
 
 @router.post("/add", response_model=AddTextbookResponse)
-async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_access_token)):
+async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_cookie_token)):
     """Add a textbook to the authenticated user's library using a 6-char code."""
     textbook_code = (payload.code or "").strip().upper()
 

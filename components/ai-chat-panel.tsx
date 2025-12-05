@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Message, ChatContext, BranchCandidate, ChatSession } from "@/types/chat"
 import { formatMarkdown } from "@/utils/markdown"
+import useAuth from "@/hooks/use-auth"
 
 interface AiChatPanelProps {
   context?: ChatContext
@@ -178,7 +179,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const [messages, setMessages] = useState<Message[]>(initial.messages)
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const { isAuthenticated } = useAuth()
   const [messageCount, setMessageCount] = useState<number>(initial.messageCount)
   const [branchCandidates, setBranchCandidates] = useState<Record<string, BranchCandidate>>({})
   const [chats, setChats] = useState<ChatSession[]>([])
@@ -206,11 +207,6 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   // Save chat
   useEffect(() => saveChatToSession(messages, messageCount), [messages, messageCount])
 
-  // Detect login
-  useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
-  }, [])
 
   // Auto-resize textarea as user types (up to 10 lines)
   useEffect(() => {
@@ -233,9 +229,8 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const fetchChats = async () => {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      const token = localStorage.getItem("access_token")
       const res = await fetch(`${backendUrl}/api/v1/chat/history`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: "include",
       })
       const data = await res.json()
       setChats(data.chats || [])
@@ -247,9 +242,8 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   const loadChat = async (sessionId: string, title: string) => {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      const token = localStorage.getItem("access_token")
       const res = await fetch(`${backendUrl}/api/v1/chat/history?session_id=${sessionId}`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: "include",
       })
       const data = await res.json()
 
@@ -348,8 +342,8 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!input.trim() || isLoading) return
-    if (!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST) return
+    if (!input.trim()) return
+    if (!isAuthenticated && messageCount >= MAX_MESSAGES_GUEST) return // TODO:QA are we still doing unauthenticated guests?  
 
     const userMessage: Message = { id: Date.now().toString(), content: input, role: "user", timestamp: new Date() }
     const tempMessage: Message = { id: `temp-${Date.now()}`, content: "", role: "assistant", timestamp: new Date() }
@@ -363,7 +357,6 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     }, 0)
 
     try {
-      const token = localStorage.getItem("access_token")
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const body: any = { message: userMessage.content, textbook_id: textbookId, chapter_id: selectedChapterId }
       if (sessionIdRef.current) body.session_id = sessionIdRef.current
@@ -374,7 +367,8 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
       const streamRes = await fetch(`${backendUrl}/api/v1/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
         signal: controller.signal,
       })
@@ -471,13 +465,13 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
               // Trigger summary update in background (fire-and-forget)
               // This prevents Lambda timeout by making it a separate invocation
-              if (sessionIdRef.current && token) {
+              if (sessionIdRef.current) {
                 fetch(`${backendUrl}/api/v1/chat/update-summary-async`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                   },
+                  credentials: "include",
                   body: JSON.stringify({ session_id: sessionIdRef.current }),
                 }).catch((error) => {
                   console.warn("[v0] ⚠️ Failed to trigger summary update:", error)
@@ -533,10 +527,9 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     setMessageSinceTitleUpdate(0)
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      const token = localStorage.getItem("access_token")
       const sessionId = sessionIdRef.current
       const res = await fetch(`${backendUrl}/api/v1/chat/history?session_id=${sessionId}`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        credentials: "include",
       })
       const data = await res.json()
       if (data.title) {
@@ -567,7 +560,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
     await fetchChats()
   }
 
-  const canSend = isLoggedIn || messageCount < MAX_MESSAGES_GUEST
+  const canSend = isAuthenticated || messageCount < MAX_MESSAGES_GUEST
 
   const renderedMessages = useMemo(
     () =>
@@ -683,7 +676,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
         </div>
 
         {/* Message limit warning */}
-        {!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST && (
+        {!isAuthenticated && messageCount >= MAX_MESSAGES_GUEST && (
           <div className="p-3 bg-[#2d2d30] border-t border-[#3e3e42] flex items-center gap-2 text-[#ce9178] text-sm">
             <AlertCircle className="w-4 h-4" /> You've reached the message limit. Sign in for unlimited chat!
           </div>

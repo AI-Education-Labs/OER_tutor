@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from backend.routes.textbooks import get_chapter_text
 from backend.features.sidebar_modules.models import *
 from backend.db.database import get_collection
-from backend.features.auth.service import validate_access_token
+from backend.features.auth.service import validate_cookie_token
 from backend.features.openai.service import generate_with_responses_parse
 from pydantic import BaseModel
 from typing import Any, Dict, List
@@ -13,7 +13,7 @@ router = APIRouter()
 
 
 @router.post("/generate")
-async def generate_quiz(body: QuizRequest, current_user = Depends(validate_access_token)):
+async def generate_quiz(body: QuizRequest, current_user = Depends(validate_cookie_token)):
     context = body.context
     textbook_id = body.textbook_id
     chapter = body.chapter
@@ -103,7 +103,7 @@ class QuizResultUpdate(BaseModel):
 
 
 @router.get("/list", status_code=status.HTTP_200_OK)
-async def list_user_quizzes(current_user = Depends(validate_access_token)):
+async def list_user_quizzes(current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
     try:
@@ -115,7 +115,7 @@ async def list_user_quizzes(current_user = Depends(validate_access_token)):
 
 
 @router.get("/{item_id}", status_code=status.HTTP_200_OK)
-async def get_user_quiz(item_id: str, current_user = Depends(validate_access_token)):
+async def get_user_quiz(item_id: str, current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
     doc = await collection.find_one({"_id": item_id, "user": user_id})
@@ -125,7 +125,7 @@ async def get_user_quiz(item_id: str, current_user = Depends(validate_access_tok
 
 
 @router.patch("/{item_id}/result", status_code=status.HTTP_200_OK)
-async def update_quiz_result(item_id: str, payload: QuizResultUpdate, current_user = Depends(validate_access_token)):
+async def update_quiz_result(item_id: str, payload: QuizResultUpdate, current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
     result = await collection.update_one(
@@ -139,7 +139,7 @@ async def update_quiz_result(item_id: str, payload: QuizResultUpdate, current_us
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_200_OK)
-async def delete_user_quiz(item_id: str, current_user = Depends(validate_access_token)):
+async def delete_user_quiz(item_id: str, current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_quizzes")
     result = await collection.delete_one({"_id": item_id, "user": user_id})

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from backend.routes.textbooks import get_chapter_text
 from backend.features.sidebar_modules.models import *
 from backend.db.database import get_collection
-from backend.features.auth.service import validate_access_token
+from backend.features.auth.service import validate_cookie_token
 from backend.features.openai.service import generate_with_responses_parse
 from typing import Any, Dict, List
 import uuid, time
@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.post("/generate")
-async def generate_flashcard(body: FlashcardRequest, current_user = Depends(validate_access_token)):
+async def generate_flashcard(body: FlashcardRequest, current_user = Depends(validate_cookie_token)):
     context = body.context
     textbook_id = body.textbook_id
     chapter = body.chapter
@@ -89,7 +89,7 @@ async def generate_flashcard(body: FlashcardRequest, current_user = Depends(vali
 
 
 @router.get("/list", status_code=status.HTTP_200_OK)
-async def list_user_flashcards(current_user = Depends(validate_access_token)):
+async def list_user_flashcards(current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_flashcards")
     try:
@@ -101,7 +101,7 @@ async def list_user_flashcards(current_user = Depends(validate_access_token)):
 
 
 @router.get("/{item_id}", status_code=status.HTTP_200_OK)
-async def get_user_flashcard(item_id: str, current_user = Depends(validate_access_token)):
+async def get_user_flashcard(item_id: str, current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_flashcards")
     doc = await collection.find_one({"_id": item_id, "user": user_id})
@@ -111,7 +111,7 @@ async def get_user_flashcard(item_id: str, current_user = Depends(validate_acces
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_200_OK)
-async def delete_user_flashcard(item_id: str, current_user = Depends(validate_access_token)):
+async def delete_user_flashcard(item_id: str, current_user = Depends(validate_cookie_token)):
     user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
     collection = await get_collection("user_flashcards")
     result = await collection.delete_one({"_id": item_id, "user": user_id})

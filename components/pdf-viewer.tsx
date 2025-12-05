@@ -92,8 +92,6 @@ export function PDFViewer({
   const sendProgressToServer = (percent: number, page: number, chapter: number) => {
     try {
       if (!textbookId || !currentChapterId) return
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-      if (!token) return
       // Avoid duplicate sends for same payload
       const last = lastSentRef.current
       if (last && last.percent === percent && last.page === page) return
@@ -102,7 +100,8 @@ export function PDFViewer({
       fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbookId)}/chapter/${encodeURIComponent(String(currentChapterId))}`,
         {
           method: "PATCH",
-          headers: { "content-type": "application/json", Authorization: `Bearer ${token}` },
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ percent, page, chapter }),
         },
       ).catch(() => {})
@@ -565,7 +564,7 @@ export function PDFViewer({
 
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
-      const response = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`)
+      const response = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}/chapters/${encodeURIComponent(chapterId)}/pdf`, { credentials: "include"})
 
       if (!response.ok) {
         throw new Error(`Failed to get chapter PDF: ${response.status}`)

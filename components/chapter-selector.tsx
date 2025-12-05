@@ -131,12 +131,10 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
     setError(null)
 
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
       const [textbookResp, chaptersResp] = await Promise.all([
-        fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { headers }),
-        fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}/chapters`, { headers }),
+        fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { credentials: "include" }),
+        fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}/chapters`, { credentials: "include" }),
       ])
 
       if (!textbookResp.ok) {
@@ -219,10 +217,8 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect }
       ;(async () => {
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
         try {
-          const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-          if (!token) return
           const resp = await fetch(`${backendUrl}/api/v1/progress/${encodeURIComponent(textbookId)}`, {
-            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include",
             cache: "no-store",
           })
           if (!resp.ok) return

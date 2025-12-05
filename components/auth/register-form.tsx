@@ -39,7 +39,7 @@ export default function RegisterForm() {
   const validateRegistration = (): string | null => {
     const { username, email, password, confirmPassword } = registerData
 
-    if (!isAlphanumeric(username)) {
+    if (!isAlphanumeric(username)) { // TODO:clean this should be using zod
       return "Username should only have alphanumeric characters"
     }
     if (username.length > 100) {

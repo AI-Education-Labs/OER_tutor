@@ -39,10 +39,9 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
         // Optimistic remove
         onOptimisticRemove(id, item)
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const token = localStorage.getItem("access_token")
         const resp = await fetch(`${backendUrl}/api/v1/${kind}/${encodeURIComponent(id)}`, {
           method: "DELETE",
-          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          credentials: "include",
         })
         if (!resp.ok) {
           onFailureRestore(id, item)
@@ -86,7 +85,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
         if (!textbookId || !selectedChapterId) return
         // 1) Load metadata to extract subchapters
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store" })
+        const metaResp = await fetch(`${backendUrl}/api/v1/textbooks/${encodeURIComponent(textbookId)}`, { cache: "no-store", credentials: "include", })
         if (metaResp.ok) {
           const meta = await metaResp.json()
           console.log("Meta:", meta);
@@ -133,8 +132,10 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
         setPrevLoading(true)
         setPrevError("")
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-        const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
-        const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { cache: "no-store", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
+
+        const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { 
+          cache: "no-store", credentials: "include",
+        })
         if (!resp.ok) {
           if (resp.status === 401 || resp.status === 403) {
             if (!isCancelled) {
@@ -168,9 +169,8 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     try {
       setPrevLoading(true)
       setPrevError("")
-      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } })
+      const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { cache: "no-store", credentials: "include" })
       if (!resp.ok) {
         if (resp.status === 401 || resp.status === 403) {
           setPreviousDecks([])
@@ -219,12 +219,13 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     try {
       const context = ""
       const focusHint = selectedSubchapter ? `${selectedSubchapter}` : ""
-      const token = localStorage.getItem("access_token")
+
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
       const resp = await fetch(`${backendUrl}/api/v1/flashcards/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           context,
           hint: focusHint,
