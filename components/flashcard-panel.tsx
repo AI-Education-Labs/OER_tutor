@@ -228,7 +228,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
         body: JSON.stringify({
           context,
           hint: focusHint,
-          num_questions: numCards,
+          num_flashcards: numCards,
           chapter: selectedChapterId,
           textbook_id: textbookId,
         }),
@@ -336,9 +336,9 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
 
           <div>
             <label className="block text-xs text-[#cccccc] mb-2">Number of Flashcards</label>
-            <Select onValueChange={(v: string) => setNumCards(parseInt(v))} value={String(numCards)}>
+            <Select onValueChange={(v: string) => setNumCards(Number(v))} defaultValue="5">
               <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
-                <SelectValue />
+                <SelectValue placeholder="Select number of cards" />
               </SelectTrigger>
               <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
                 {Array.from({ length: 18 }, (_, i) => i + 3).map((n) => (
