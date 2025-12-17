@@ -20,7 +20,7 @@ from backend.features.openai.prompts import chat_prompt
 from backend.db.database import get_collection
 from backend.features.users.models import User
 from backend.features.auth.service import validate_access_token
-from backend.routes.textbooks import get_chapter_text
+from backend.features.textbooks.service import get_chapter_text
 
 
 router = APIRouter()

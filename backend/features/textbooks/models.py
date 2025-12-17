@@ -14,14 +14,18 @@ class Chapter(BaseModel):
     file: str
 
 
-class TextbookInfo(BaseModel):
-    id: str
-    title: str
+class Textbook(BaseModel):
+    # Mongo stores the primary key as `_id`, but the API and frontend use `id`.
+    # Accept Mongo's `_id` when validating, but serialize as `id` for the API/frontend.
+    id: str = Field(validation_alias="_id", serialization_alias="id")
+    author: Optional[str] = None
     chapters: List[Chapter]
-    filepath: str
-    subject: Optional[str] = None
-    created_at: Optional[datetime] = None
+    chapter_texts: Optional[Dict[str, str]] = None
+    code: Optional[str] = None
     cover: Optional[str] = None
+    created_at: Optional[datetime] = None
+    subject: Optional[str] = None
+    title: str
 
 class ChapterProgress(BaseModel):
     completed: bool = False

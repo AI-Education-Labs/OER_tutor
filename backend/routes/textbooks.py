@@ -1,43 +1,27 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 import logging
-from backend.features.textbooks.models import TextbookInfo
+from backend.features.textbooks.models import Textbook
 from pydantic import BaseModel
-from backend.db.database import get_document, get_document_by_field, add_textbook_to_user, get_document_by_field
+from backend.db.database import get_document, add_textbook_to_user
+from backend.features.textbooks.repo import (
+    find_textbook_by_code,
+    find_textbook_by_id,
+    find_textbooks_by_ids,
+)
 from backend.features.auth.service import validate_access_token_optional, validate_access_token
-from botocore.exceptions import ClientError
-from starlette.concurrency import run_in_threadpool
 from backend.config import settings
-from backend.db.s3_service import generate_presigned_get_url, head_object, get_client, get_object_bytes
+from backend.db.s3_service import generate_presigned_get_url
 
 S3_BUCKET = settings.S3_BUCKET
 
 class TextbookResponse(BaseModel):
-    textbooks: List[TextbookInfo]
+    textbooks: List[Textbook]
     is_authenticated: bool
     message: Optional[str] = None
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-
-async def get_chapter_text(textbook_uuid: str, chapter_id: str) -> str:
-    """Fetch chapter text content from S3 as UTF-8.
-
-    Expects key pattern "{textbook_uuid}/chapter{chapter_id}.txt".
-    """
-    key = f"{textbook_uuid}/chapter{chapter_id}.txt"
-    try:
-        data = get_object_bytes(key)
-        text = data.decode("utf-8", errors="replace")
-        if not text:
-            raise HTTPException(status_code=500, detail="Chapter text is empty")
-        return text
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching chapter text from S3 for key {key}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving chapter text: {str(e)}")
 
 @router.get("/list")
 async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)):
@@ -45,7 +29,7 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
     print(f"get_textbooks: user {user_uuid}")
     # Check if user is authenticated
     is_authenticated = False
-    available_textbooks = []
+    available_textbooks: List[Textbook] = []
     message = "Sign in to see your textbooks!"
 
     if user_uuid:
@@ -59,24 +43,10 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
         print(f"User {user_uuid} has the following textbooks -> {user_textbook_ids}")
 
         try:
-            for textbook_id in user_textbook_ids:
-                # TODO: We should promise.all this later
-                if textbook_id is None:
-                    continue
-                else:
-                    textbook_metadata = await get_document_by_field("textbooks", "_id", textbook_id)
-                    available_textbooks.append(TextbookInfo(
-                        id=textbook_metadata.get("_id"),
-                        title=textbook_metadata.get("title"),
-                        chapters=textbook_metadata.get("chapters"),
-                        filepath=textbook_metadata.get("filepath"),
-                        subject=textbook_metadata.get("subject"),
-                        created_at=textbook_metadata.get("created_at"),
-                        cover=textbook_metadata.get("cover"),
-                    ))
+            available_textbooks = await find_textbooks_by_ids(user_textbook_ids)
         except Exception as e:
-            logger.error(f"Error getting textbook metadata for {textbook_id}: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error getting textbook metadata for {textbook_id}: {str(e)}")
+            logger.error(f"Error getting textbook metadata for user {user_uuid}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error getting textbook metadata: {str(e)}")
 
     return TextbookResponse(
         textbooks=available_textbooks,
@@ -87,11 +57,10 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
 # TODO: These routes need to be protected
 @router.get("/{textbook_uuid}")
 async def get_textbook_details(textbook_uuid: str):
-    metadata = await get_document_by_field("textbooks", "_id", textbook_uuid)
-    print(f"Textbook metadata: {metadata}")
-    if metadata is None:
+    textbook = await find_textbook_by_id(textbook_uuid)
+    if textbook is None:
         raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
-    return metadata
+    return textbook
     
 
 @router.get("/{textbook_uuid}/chapters")
@@ -99,8 +68,8 @@ async def get_chapters(textbook_uuid: str):
     """Get available chapters for a textbook.
     and returns a consistent response shape: { "chapters": [...] }.
     """
-    textbook_metadata = await get_textbook_details(textbook_uuid)
-    chapters = textbook_metadata.get("chapters", [])
+    textbook = await get_textbook_details(textbook_uuid)
+    chapters = textbook.chapters or []
 
     return {"chapters": chapters}
 
@@ -110,17 +79,16 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     print(f"Getting chapter PDF for {textbook_uuid} and {chapter_id}")
     try:
         # --- keep your metadata lookup ---
-        textbook_metadata = await get_textbook_details(textbook_uuid)
-
-        chapters = textbook_metadata.get("chapters", [])
+        textbook = await get_textbook_details(textbook_uuid)
+        chapters = textbook.chapters or []
         target_chapter = next(
-            (c for c in chapters if str(c.get("id")) == str(chapter_id)), None
+            (c for c in chapters if str(c.id) == str(chapter_id)), None
         )
         if not target_chapter:
             logger.error(f"Chapter {chapter_id} not found in textbook {textbook_uuid}")
             raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found")
 
-        pdf_filename = target_chapter.get("file")
+        pdf_filename = target_chapter.file
         if not pdf_filename:
             logger.error(f"No PDF file specified for chapter {chapter_id}")
             raise HTTPException(status_code=404, detail=f"No PDF file found for chapter {chapter_id}")
@@ -141,7 +109,7 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
 
         return {
             "pdf_url": url,
-            "chapter_title": target_chapter.get("title", f"Chapter {chapter_id}")
+            "chapter_title": target_chapter.title or f"Chapter {chapter_id}"
         }
 
     except HTTPException:
@@ -169,14 +137,14 @@ async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(
     textbook_code = (payload.code or "").strip().upper()
 
     # Check if the textbook ID is valid
-    valid_textbook = await get_document_by_field("textbooks", "code", textbook_code)
+    valid_textbook = await find_textbook_by_code(textbook_code)
     if(valid_textbook is None):
         # If no textbook exists, let the user know
         raise HTTPException(status_code=404, detail="Textbook not found")
     else:
         # If the textbook exists, add it to the user's books
-        textbook_id = valid_textbook.get("_id")
-        textbook_title = valid_textbook.get("title")
+        textbook_id = valid_textbook.id
+        textbook_title = valid_textbook.title
         print(f"Adding Textbook {textbook_title} ({textbook_id}) to user {user_id}")
         await add_textbook_to_user(user_id, textbook_id)
         return AddTextbookResponse(ok=True, textbook_id=textbook_id, title=textbook_title)
