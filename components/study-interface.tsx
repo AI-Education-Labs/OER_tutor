@@ -796,15 +796,20 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
               >
                 {/* Resize handle */}
                 <div
-                  className="absolute left-0 top-0 bottom-0 w-1 bg-transparent hover:bg-[#2d2d30] cursor-col-resize z-10 group"
+                  className="absolute left-0 top-0 bottom-0 w-3 cursor-col-resize z-10 group"
                   onMouseDown={(e) => {
                     e.preventDefault()
                     const startX = e.clientX
                     const startWidth = rightPanelWidth
 
+                    // Calculate available width: window width minus left panel minus minimum PDF width
+                    const minPdfWidth = 300
+                    const currentLeftPanelWidth = leftPanelCollapsed ? 0 : leftPanelWidth
+                    const maxRightPanelWidth = Math.min(450, window.innerWidth - currentLeftPanelWidth - minPdfWidth)
+
                     const handleMouseMove = (e: MouseEvent) => {
                       const deltaX = startX - e.clientX
-                      const newWidth = Math.max(200, Math.min(700, startWidth + deltaX))
+                      const newWidth = Math.max(200, Math.min(maxRightPanelWidth, startWidth + deltaX))
                       setRightPanelWidth(newWidth)
                     }
 
@@ -821,14 +826,20 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                     document.body.style.userSelect = "none"
                   }}
                 >
+                  {/* Thin hover line (keeps the affordance visually narrow while the hit-area is wider) */}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-1 bg-transparent group-hover:bg-[#2d2d30]"
+                    aria-hidden="true"
+                  />
+
                   {/* Visual indicator for resize handle */}
-                  <div className="absolute left-[-4px] top-1/2 -translate-y-1/2">
+                  <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none">
                     <div className="flex items-center justify-center h-6 w-1.5 rounded-md bg-[#3D3D40] text-[#3D3D40] border border-[#252526] shadow-sm overflow-hidden">
                       <Tally1 className="h-3.5 w-3.5" />
                       <span className="sr-only">Resize learning tools panel</span>
                     </div>
                   </div>
-                  </div>
+                </div>
 
                 {/* Panel header */}
                 <div className="relative h-8 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-between px-3 flex-shrink-0">

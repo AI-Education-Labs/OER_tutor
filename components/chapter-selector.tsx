@@ -452,7 +452,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
       </div>
 
       {textbookData.chapters.map((chapter) => {
-        const chapterLabel = chapter.chapter_number ? `${chapter.chapter_number}) ${chapter.title}` : chapter.title
+        const chapterLabel = chapter.chapter_number ? `${chapter.chapter_number}. ${chapter.title}` : chapter.title
         const isActiveChapter = activeChapterId === chapter.id
 
         return (
