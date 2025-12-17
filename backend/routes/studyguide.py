@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from backend.routes.textbooks import get_chapter_text
 from backend.features.sidebar_modules.models import *
 from backend.db.database import get_collection
 from backend.features.auth.service import validate_access_token
