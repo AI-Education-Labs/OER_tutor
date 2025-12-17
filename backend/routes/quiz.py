@@ -1,25 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from openai import OpenAI
-from backend.config import settings
 from backend.routes.textbooks import get_chapter_text
 from backend.features.sidebar_modules.models import *
 from backend.db.database import get_collection
 from backend.features.auth.service import validate_access_token
+from backend.features.openai.service import generate_with_responses_parse
 from pydantic import BaseModel
 from typing import Any, Dict, List
 import uuid, time
 
 router = APIRouter()
-
-
-def get_openai_client() -> OpenAI:
-    api_key = settings.OPENAI_API_KEY
-    try:
-        if api_key:
-            return OpenAI(api_key=api_key)
-        return OpenAI()
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"OpenAI client init failed: {exc}")
 
 
 
@@ -31,7 +20,7 @@ async def generate_quiz(body: QuizRequest, current_user = Depends(validate_acces
     num_questions = body.num_questions
     hint = body.hint
     print("context:", context)
-    client = get_openai_client()
+    user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
 
     system_prompt = f"You are a helpful tutor for a student currently studying a textbook. Help create a formatted quiz for the student. Each question should be a multiple choice question with four options and one correct answer. The options should be realistic but clearly wrong to someone who understands the material. Generate a multiple choice quiz with {num_questions} questions based on the following their current chapter: "
 
@@ -53,19 +42,30 @@ async def generate_quiz(body: QuizRequest, current_user = Depends(validate_acces
         system_prompt += f"[End of Chapter]\nMake sure you are only working on the current section: {hint}"
 
     try:
-        response = client.responses.parse(
+        response = generate_with_responses_parse(
             model="gpt-4.1",
-            input=[
+            messages=[
                 {"role": "developer", "content": system_prompt},
                 {"role": "user", "content": "Generate a quiz"}
             ],
-            text_format=GeneratedQuiz
+            response_format=GeneratedQuiz,
+            user_id=user_id,
+            trace_name="quiz-generation",
+            metadata={
+                "textbook_id": textbook_id,
+                "chapter": chapter,
+                "num_questions": str(num_questions),
+                "hint": hint
+            }
         )
 
-        data = response.output[0].content[0].parsed
+        data = response.choices[0].message.parsed
+
+        if not data:
+            raise HTTPException(status_code=500, detail="Failed to parse quiz response")
 
         quiz_list = []
-        for i, question in enumerate(data.questions):
+        for question in data.questions:
             quiz_list.append({
                 "question": question.question,
                 "choices": question.choices,
@@ -75,7 +75,6 @@ async def generate_quiz(body: QuizRequest, current_user = Depends(validate_acces
 
         # Persist quiz for the user
         try:
-            user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
             quizzes = await get_collection("user_quizzes")
             doc = {
                 "_id": str(uuid.uuid4()),

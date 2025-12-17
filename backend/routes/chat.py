@@ -10,7 +10,12 @@ from fastapi import APIRouter, Depends, Request, BackgroundTasks, HTTPException,
 from sse_starlette.sse import EventSourceResponse
 
 from openai.types.chat import ChatCompletionMessageParam
-from backend.features.openai.service import get_openai_client
+from backend.features.openai.service import (
+    generate_chat_completion,
+    generate_chat_completion_stream,
+    generate_structured_chat_completion,
+    track_stream_completion
+)
 from backend.features.openai.prompts import chat_prompt
 from backend.db.database import get_collection
 from backend.features.users.models import User
@@ -67,8 +72,6 @@ class ConversationSummary(BaseModel):
 
 async def update_conversation_summary(user_id: str, session_id: str):
     try:
-        client = get_openai_client()
-
         history = MongoChatMessageHistory(session_id=session_id)
         messages = await history.get_messages(limit=10)
 
@@ -84,6 +87,9 @@ async def update_conversation_summary(user_id: str, session_id: str):
             "content": "Update the conversation summary with new information, and decide if the recent messages need to be added to important messages."
         })
 
+        # Track important message identifiers to avoid duplication
+        important_msg_ids = set()
+
         # Add important messages
         if important_messages:
             llm_msgs.append({
@@ -96,18 +102,23 @@ async def update_conversation_summary(user_id: str, session_id: str):
                         "role": msg["role"],
                         "content": msg["content"]
                     })
+                    # Track this message to avoid duplication
+                    msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                    important_msg_ids.add(msg_id)
 
-        # Add recent messages
+        # Add recent messages (excluding duplicates already in important messages)
         llm_msgs.append({
             "role": "system",
             "content": "Recent messages:"
         })
         for msg in messages:
             if msg["role"] in ["user", "assistant"]:
-                llm_msgs.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
+                msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                if msg_id not in important_msg_ids:
+                    llm_msgs.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
 
         # Get existing summary and title
         collection = await get_collection("conversation_summaries")
@@ -140,11 +151,15 @@ Guidelines for "important_messages":
         })
 
         # Use structured output with Pydantic model
-        completion = client.beta.chat.completions.parse(
+        completion = generate_structured_chat_completion(
+            trace_name="update_conversation_summary",
             model="gpt-4o-mini",
             messages=llm_msgs,
+            response_format=ConversationSummary,
+            user_id=user_id,
             temperature=0,
-            response_format=ConversationSummary
+            session_id=session_id,
+            metadata={"session_id": session_id}
         )
 
         result = completion.choices[0].message.parsed
@@ -233,8 +248,6 @@ async def chat_message(
     history = MongoChatMessageHistory(session_id=session_id)
     await history.add_message("user", user_message)
 
-    client = get_openai_client()
-
     recent_msgs = await history.get_messages(limit=10)
     llm_msgs: list[ChatCompletionMessageParam] = [{"role": "system", "content": chat_prompt}]
     for msg in recent_msgs:
@@ -244,10 +257,14 @@ async def chat_message(
                 "content": msg["content"]
             })
 
-    response = client.chat.completions.create(
+    response = generate_chat_completion(
         model="gpt-4o",
         messages=llm_msgs,
-        temperature=0
+        user_id=user_id,
+        trace_name="chat-message",
+        temperature=0,
+        session_id=session_id,
+        metadata={"session_id": session_id}
     )
 
     if not hasattr(response, "choices") or not response.choices or len(response.choices) == 0:
@@ -297,7 +314,6 @@ user_id: str = Depends(validate_access_token)
     async def event_generator() -> AsyncGenerator[str, None]:
         collected_chunks: list[str] = []
         try:
-            client = get_openai_client()
             recent_msgs = await history.get_messages(limit=10)
 
 
@@ -310,6 +326,9 @@ user_id: str = Depends(validate_access_token)
 
             llm_msgs: list[ChatCompletionMessageParam] = [{"role": "system", "content": chat_prompt}]
 
+            # Track important message identifiers to avoid duplication
+            important_msg_ids = set()
+
             if important_msgs:
                 llm_msgs.append({"role": "system", "content": "Important messages from the conversation:"})
                 for msg in important_msgs:
@@ -318,6 +337,9 @@ user_id: str = Depends(validate_access_token)
                             "role": msg["role"],
                             "content": msg["content"]
                         })
+                        # Track this message to avoid duplication in recent messages
+                        msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                        important_msg_ids.add(msg_id)
 
             textbook_text = await get_textbook_context(textbook_id, chapter_id) if (textbook_id and chapter_id) else None
             if textbook_text:
@@ -327,23 +349,33 @@ user_id: str = Depends(validate_access_token)
                 llm_msgs.append({"role": "system", "content": f"Conversation so far (summary): {summary_text}"})
                 print("Fine 2: Added conversation summary to system message.")
 
-
+            # Only add recent messages that aren't already in important messages
             for msg in recent_msgs:
                 if msg["role"] in ["user", "assistant"]:
-                    llm_msgs.append({
-                        "role": msg["role"],
-                        "content": str(msg["content"])
-                    })
-                    print(f"Fine 3/4: Added {msg['role']} message to history: {msg['content'][:30]}...")
+                    msg_id = (msg["role"], msg["content"], str(msg.get("timestamp", "")))
+                    if msg_id not in important_msg_ids:
+                        llm_msgs.append({
+                            "role": msg["role"],
+                            "content": str(msg["content"])
+                        })
+                        print(f"Fine 3/4: Added {msg['role']} message to history: {msg['content'][:30]}...")
+                    else:
+                        print(f"Skipped duplicate message (already in important messages): {msg['content'][:30]}...")
 
             llm_msgs.append({"role": "user", "content": str(user_message)})
             print(f"Fine 5: Added current user message: {user_message[:30]}...")
 
-            stream = client.chat.completions.create(
+            stream = generate_chat_completion_stream(
+                trace_name="chat-stream",
                 model="gpt-4o-mini",
                 messages=llm_msgs,
+                user_id=user_id,
                 temperature=0,
-                stream=True
+                session_id=session_id,
+                metadata={
+                    "session_id": session_id,
+                    "chapter_id": chapter_id
+                }
             )
 
             for chunk in stream:
@@ -353,6 +385,22 @@ user_id: str = Depends(validate_access_token)
                     yield json.dumps({'text': chunk_text, 'session_id': session_id})
 
             full_response = "".join(collected_chunks)
+
+            # Track the completed stream with Langfuse
+            track_stream_completion(
+                model="gpt-4o-mini",
+                messages=llm_msgs,
+                output=full_response,
+                user_id=user_id,
+                trace_name="chat-stream",
+                temperature=0,
+                session_id=session_id,
+                metadata={
+                    "session_id": session_id,
+                    "textbook_id": textbook_id,
+                    "chapter_id": chapter_id
+                }
+            )
 
             # Save both user message and assistant response to DB
             await history.add_message("user", user_message)

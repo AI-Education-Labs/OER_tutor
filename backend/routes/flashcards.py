@@ -1,37 +1,37 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from openai import OpenAI
-from backend.config import settings
 from backend.routes.textbooks import get_chapter_text
 from backend.features.sidebar_modules.models import *
 from backend.db.database import get_collection
 from backend.features.auth.service import validate_access_token
+from backend.features.openai.service import generate_with_responses_parse
 from typing import Any, Dict, List
 import uuid, time
 
 router = APIRouter()
 
 
-def get_openai_client() -> OpenAI:
-    api_key = settings.OPENAI_API_KEY
-    try:
-        if api_key:
-            return OpenAI(api_key=api_key)
-        return OpenAI()
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"OpenAI client init failed: {exc}")
-
-
 @router.post("/generate")
 async def generate_flashcard(body: FlashcardRequest, current_user = Depends(validate_access_token)):
-    context = body.context
     textbook_id = body.textbook_id
     chapter = body.chapter
     num_flashcards = body.num_flashcards
     hint = body.hint
-    print("chapter:", chapter)
-    client = get_openai_client()
+    user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
+    developer_prompt=  """
+    You are an expert tutor who creates effective flashcards for students studying textbooks.
 
-    system_prompt = f"You are a helpful tutor for a student currently studying a textbook. Help create a deck of flashcards quiz for the student. You will represent the flashcard deck in two arrays of equal size, one representing the front sides of the flashcards and one representing the backside of the flashcard. Use the flashcards to help the student learn and understand keywords, terms, and condensed concepts. Be sure to keep the order for the front and the back of the flashcard arrays respective of each other, e.g. Index 1 of the front array should correspond to the answer of Index 1 of the back array. Generate a deck of flashcards with {num_flashcards} flashcards based on the current chapter: "
+Your task is to generate flashcard decks that help students learn keywords, terms, and core concepts.
+
+Output format:
+- Return valid JSON with two arrays: "fronts" and "backs"
+- Each index in "fronts" must correspond to the same index in "backs"
+- Generate the requested number of flashcards
+
+Flashcard best practices:
+- Keep questions clear and concise
+- Avoid yes/no questions
+- Include enough context without revealing the answer
+- Focus on testable knowledge and understanding"""
 
     # Get the text from the chapter stored in S3 via shared helper
     chapter_text = ""
@@ -42,37 +42,42 @@ async def generate_flashcard(body: FlashcardRequest, current_user = Depends(vali
     except Exception:
         chapter_text = ""
 
-    print("chapter_text:", chapter_text)
-
     if(chapter_text == ""):
         raise HTTPException(status_code=500, detail="Error extracting text from chapter")
-    else:
-        system_prompt += f"{context}"
-
-    if hint:
-        system_prompt += f"[End of Chapter]\nFocus only on this section/topic if applicable: {hint}"
-
     try:
-        response = client.responses.parse(
+        response = generate_with_responses_parse(
             model="gpt-4.1",
-            input=[
-                {"role": "developer", "content": system_prompt},
-                {"role": "user", "content": "Generate a flashcard deck"}
+            messages=[
+                {"role": "developer", "content": developer_prompt },
+                {"role": "user", "content": f"Create {num_flashcards} flashcards.\nFocus on only this section/topic if applicable: {hint}\n from this chapter: \n\n {chapter_text}"}
             ],
-            text_format=FlashcardDeck
+            response_format=FlashcardDeck,
+            user_id=user_id,
+            trace_name="flashcard-generation",
+            metadata={
+                "textbook_id": textbook_id,
+                "chapter": chapter,
+                "num_flashcards": str(num_flashcards),
+                "hint": hint
+            }
         )
 
-        data = response.output[0].content[0].parsed
+        data = response.choices[0].message.parsed
+
+        if not data:
+            raise HTTPException(status_code=500, detail="Failed to parse flashcard response")
+        
+        # Trim the deck to the requested number of flashcards as a safeguard
+        if len(data.flashcards_front) > num_flashcards:
+            data.flashcards_front = data.flashcards_front[:num_flashcards]
+            data.flashcards_back = data.flashcards_back[:num_flashcards]
 
     except Exception as e:
         print("error:", e)
         raise HTTPException(status_code=500, detail=f"Error generating flashcard deck: {e}")
 
-    print("FLASHCARD DECK:", data)
-
     # Persist flashcards for the user
     try:
-        user_id = current_user if isinstance(current_user, str) else getattr(current_user, "id", current_user)
         flashcards_col = await get_collection("user_flashcards")
         doc = {
             "_id": str(uuid.uuid4()),

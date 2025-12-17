@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import asyncio
 from dotenv import load_dotenv
+from backend.features.openai.service import get_langfuse_client
 
 from backend.routes.auth import router as auth_router
 from backend.routes.textbooks import router as textbooks_router
@@ -32,7 +33,8 @@ if not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
+# Instrument LLMs
+get_langfuse_client()
 
 # Create FastAPI app
 
@@ -63,6 +65,11 @@ app.add_middleware(
 
 # Mangum handler
 handler = mangum.Mangum(app)
+
+# Flush llm observability
+@app.on_event("shutdown")
+def on_shutdown():
+    get_langfuse_client().flush()
 
 # Run the application
 if __name__ == "__main__":

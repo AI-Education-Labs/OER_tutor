@@ -84,6 +84,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [textbookData, setTextbookData] = useState<TextbookWithProgress | null>(null)
+  const [selectedChapter, setSelectedChapter] = useState<string | null>(null)
 
   // Change the initial expanded state to start collapsed
   const [expandedChapters, setExpandedChapters] = useState<string[]>([])
@@ -369,6 +370,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
 
     // Toggle the dropdown
     toggleChapter(chapterId)
+    setSelectedChapter(chapterId)
 
     // Load the PDF for this chapter
     if (onChapterSelect) {
