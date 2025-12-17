@@ -661,7 +661,7 @@ export function PDFViewer({
           {textbookId ? (
             <div
               ref={scrollContainerRef}
-              className="overflow-auto h-full bg-white p-4 relative"
+              className="overflow-auto h-full border border-[#3e3e42] bg-white p-4 relative"
               style={{ userSelect: "text", cursor: "text" }}
             >
               <div ref={pagesContainerRef} className="space-y-4" />
