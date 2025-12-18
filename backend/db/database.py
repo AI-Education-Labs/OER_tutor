@@ -1,4 +1,5 @@
 from pymongo import AsyncMongoClient
+from beanie import init_beanie
 from typing import Optional, Any, Dict
 from backend.features.users.models import UserWithPassword
 import asyncio
@@ -31,6 +32,12 @@ async def get_mongo_client() -> AsyncMongoClient:
                 print(f"MongoDB ping on init failed (will retry on demand): {e}")
 
     return _mongo_client
+
+async def beanieInit():
+    """initialize beanie with the async pymongo singleton"""
+    client = await get_mongo_client()
+    db = client[MONGO_DB_NAME]
+    await init_beanie(database=db)
 
 async def get_database():
     """Get an async database handle from the singleton client."""
