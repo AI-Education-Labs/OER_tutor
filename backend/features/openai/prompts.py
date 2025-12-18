@@ -1,3 +1,4 @@
+# TODO: this could get migrated to cloud service using prompt versioning. it would allow for prompt optimization for services. 
 chat_prompt = """    
   ## System Prompt: Interactive AI Tutor for Chapter-Based Textbook Learning
 
