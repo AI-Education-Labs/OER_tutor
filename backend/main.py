@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
-from backend.db.database import ensure_mongo_connection
+from backend.db.database import ensure_mongo_connection, beanieInit
 
 from dotenv import load_dotenv
 from pathlib import Path
@@ -65,6 +65,10 @@ app.add_middleware(
 
 # Mangum handler
 handler = mangum.Mangum(app)
+
+@app.on_event("startup")
+async def startup_event():
+    await beanieInit()
 
 # Flush llm observability
 @app.on_event("shutdown")

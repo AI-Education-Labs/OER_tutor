@@ -5,6 +5,9 @@ from typing import List, Dict, Optional
 from typing import Literal
 from datetime import datetime
 
+from pydantic import BaseModel, Field
+import uuid
+
 # Chat models and collections
 class ChatMessage(Document):
     session_id: str
@@ -48,14 +51,14 @@ class Textbook(Document):
     class Settings:
         name = "textbooks"
     
-class Chapter:
+class Chapter(BaseModel):
     id: int
     title: str
     startPage: int
     sub_chapters: List[SubChapter]
     file: str
     
-class SubChapter:
+class SubChapter(BaseModel):
     title: str
     pageOffset: int
     
@@ -81,11 +84,11 @@ class Flashcard:
     flashcards_front: List[str]
     flashcards_back: List[str]
 
-class LastVisit:
+class LastVisit(BaseModel):
     chapter: int
     page: int
 
-class TextbookProgress:
+class TextbookProgress(BaseModel):
     total_progress: int
     chapters: Dict[str, int]
     last_visit: LastVisit
@@ -108,16 +111,17 @@ class UserQuiz(Document):
     class Settings:
         name = "user_quizzes"
 
-class QuizQuestion:
+class QuizQuestion(BaseModel):
     question: str
     choices: List[str]
     answer: int
 
 class User(Document):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4())) # TODO: this is dumb and should get removed in favor of MongoDB's _id. requires messing with mongo schema 
     username: str
     email: str
     user_id: Optional[str] = None  # TODO: redundant with MongoDB's _id, consider removing
-    disabled: int = 0  # 0 for active, 1 for disabled
+    disabled: bool  # 0 for active, 1 for disabled
     hashed_password: str
 
     class Settings:

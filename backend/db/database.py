@@ -2,6 +2,7 @@ from pymongo import AsyncMongoClient
 from beanie import init_beanie
 from typing import Optional, Any, Dict
 from backend.features.users.models import UserWithPassword
+import backend.db.models as db_models
 import asyncio
 
 from backend.config import settings
@@ -37,7 +38,17 @@ async def beanieInit():
     """initialize beanie with the async pymongo singleton"""
     client = await get_mongo_client()
     db = client[MONGO_DB_NAME]
-    await init_beanie(database=db)
+    await init_beanie(database=db, document_models=[
+        db_models.User,
+        db_models.Textbook,
+        db_models.UserFlashcard,
+        db_models.UserQuiz,
+        db_models.UserBook,
+        db_models.UserProgress,
+        db_models.ChatMessage,
+        db_models.ConversationSummary,
+        db_models.ImportantMessage
+    ])
 
 async def get_database():
     """Get an async database handle from the singleton client."""
@@ -157,10 +168,10 @@ async def add_textbook_to_user(user_id: str, textbook_id: str):
         await create_user_book_document(user_id)
     await collection.update_one({"_id": user_id}, {"$addToSet": {"textbooks": textbook_id}})
 
-async def get_user_by_id(user_id: str) -> UserWithPassword:
+async def get_user_by_id(user_id: str) -> Optional[UserWithPassword]:
     collection = await get_collection("users")
     return await collection.find_one({"_id": user_id})
 
-async def get_user_by_username(username: str) -> UserWithPassword:
+async def get_user_by_username(username: str) -> Optional[UserWithPassword]:
     collection = await get_collection("users")
     return await collection.find_one({"username": username})
