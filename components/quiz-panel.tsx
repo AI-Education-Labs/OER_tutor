@@ -60,7 +60,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="w-6 h-6 rounded hover:bg-[#4b4b4b] flex items-center justify-center"
+            className="w-6 h-6 rounded hover:bg-background-surface flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
             aria-label="More options"
             title="More options"
@@ -72,8 +72,8 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
             </span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
-          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-[#3e3e42]">
+        <DropdownMenuContent className="bg-background-tertiary border-border text-foreground-secondary">
+          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-background-surface">
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -259,23 +259,23 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
   if (stage === "menu") {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-4 border-b border-[#3e3e42]">
-          <h3 className="text-sm font-medium text-[#ffffff]">Concept Check</h3>
-          <p className="text-xs text-[#969696]">Choose a subchapter to focus your quiz.</p>
+        <div className="p-4 border-b border-border">
+          <h3 className="text-sm font-medium text-foreground">Concept Check</h3>
+          <p className="text-xs text-foreground-muted">Choose a subchapter to focus your quiz.</p>
         </div>
         <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
           <div>
-            <label className="block text-xs text-[#cccccc] mb-2">Subchapter</label>
+            <label className="block text-xs text-foreground-secondary mb-2">Subchapter</label>
             <Select onValueChange={(v: string) => setSelectedSubchapter(v)}>
-              <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
+              <SelectTrigger className="w-full bg-background-tertiary border-border text-foreground-secondary">
                 <SelectValue placeholder="Select a subchapter" />
               </SelectTrigger>
-              <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
+              <SelectContent className="bg-background-tertiary border-border text-foreground-secondary max-h-60 overflow-auto">
                 {subchapters.length === 0 ? (
-                  <div className="px-2 py-1 text-xs text-[#969696]">No subchapters detected</div>
+                  <div className="px-2 py-1 text-xs text-foreground-muted">No subchapters detected</div>
                 ) : (
                   subchapters.map((s, i) => (
-                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-[#3e3e42]">
+                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-background-surface">
                       {s}
                     </SelectItem>
                   ))
@@ -287,7 +287,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
           {/* Quiz options */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-[#cccccc]">
+              <label className="flex items-center gap-2 text-xs text-foreground-secondary">
                 <input
                   type="checkbox"
                   checked={timedEnabled}
@@ -307,9 +307,9 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
                     setTimeMinutes(clamped)
                   }}
                   disabled={!timedEnabled}
-                  className="w-14 bg-[#2d2d30] border border-[#3e3e42] text-[#cccccc] rounded px-2 py-1 disabled:opacity-50"
+                  className="w-14 bg-background-tertiary border border-border text-foreground-secondary rounded px-2 py-1 disabled:opacity-50"
                 />
-                <span className="text-[#cccccc]">:</span>
+                <span className="text-foreground-secondary">:</span>
                 <input
                   type="number"
                   min={0}
@@ -321,21 +321,21 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
                     setTimeSeconds(clamped)
                   }}
                   disabled={!timedEnabled}
-                  className="w-14 bg-[#2d2d30] border border-[#3e3e42] text-[#cccccc] rounded px-2 py-1 disabled:opacity-50"
+                  className="w-14 bg-background-tertiary border border-border text-foreground-secondary rounded px-2 py-1 disabled:opacity-50"
                 />
-                <span className="text-[#969696]">mm:ss</span>
+                <span className="text-foreground-muted">mm:ss</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-[#cccccc] mb-2">Number of Questions</label>
+              <label className="block text-xs text-foreground-secondary mb-2">Number of Questions</label>
               <Select onValueChange={(v: string) => setNumQuestions(parseInt(v))} value={String(numQuestions)}>
-                <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
+                <SelectTrigger className="w-full bg-background-tertiary border-border text-foreground-secondary">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
+                <SelectContent className="bg-background-tertiary border-border text-foreground-secondary max-h-60 overflow-auto">
                   {Array.from({ length: 18 }, (_, i) => i + 3).map((n) => (
-                    <SelectItem key={n} value={String(n)} className="focus:bg-[#3e3e42]">
+                    <SelectItem key={n} value={String(n)} className="focus:bg-background-surface">
                       {n}
                     </SelectItem>
                   ))}
@@ -345,23 +345,23 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
           </div>
 
           <div className="flex gap-2 justify-center">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!selectedSubchapter}>
+            <Button className="bg-primary hover:bg-primary-hover" onClick={startGeneration} disabled={!selectedSubchapter}>
               Generate Quiz
             </Button>
           </div>
-          {!contextText && <div className="text-xs text-[#969696]">Select a chapter to get started!</div>}
-        <div className="pt-2 border-t border-[#3e3e42]">
+          {!contextText && <div className="text-xs text-foreground-muted">Select a chapter to get started!</div>}
+        <div className="pt-2 border-t border-border">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-medium text-[#ffffff]">Previous Quizzes</h4>
+            <h4 className="text-xs font-medium text-foreground">Previous Quizzes</h4>
             {prevLoading && (
-              <div className="text-[10px] text-[#969696] flex items-center gap-1">
+              <div className="text-[10px] text-foreground-muted flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> Loading
               </div>
             )}
           </div>
-          {prevError && <div className="text-[10px] text-[#ff6b6b] mb-2">{prevError}</div>}
+          {prevError && <div className="text-[10px] text-error mb-2">{prevError}</div>}
           {(!previousQuizzes || previousQuizzes.length === 0) && !prevLoading ? (
-            <div className="text-xs text-[#969696]">No saved quizzes yet</div>
+            <div className="text-xs text-foreground-muted">No saved quizzes yet</div>
           ) : (
             <div className="space-y-2 max-h-60 overflow-auto pr-1 show-scrollbar">
               {previousQuizzes.map((d, idx) => (
@@ -369,17 +369,17 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
                   <div
                     role="button"
                     tabIndex={0}
-                    className="w-full text-left px-3 py-2 rounded bg-[#2d2d30] hover:bg-[#3e3e42] border border-[#3e3e42]"
+                    className="w-full text-left px-3 py-2 rounded bg-background-tertiary hover:bg-background-surface border border-border"
                     onClick={() => loadQuiz(d)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); loadQuiz(d) } }}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-xs text-[#ffffff] truncate">{d?.hint || "Untitled quiz"}</div>
-                        <div className="text-[10px] text-[#969696] truncate">{new Date((d?.created_time ?? 0) * 1000).toLocaleString()}</div>
+                        <div className="text-xs text-foreground truncate">{d?.hint || "Untitled quiz"}</div>
+                        <div className="text-[10px] text-foreground-muted truncate">{new Date((d?.created_time ?? 0) * 1000).toLocaleString()}</div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="text-[11px] text-[#cccccc] whitespace-nowrap">{Array.isArray(d?.quiz) ? d.quiz.length : 0} questions</div>
+                        <div className="text-[11px] text-foreground-secondary whitespace-nowrap">{Array.isArray(d?.quiz) ? d.quiz.length : 0} questions</div>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                           <MenuButton
                             id={d?._id}
@@ -405,7 +405,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
   if (stage === "loading") {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[#cccccc]">
+        <div className="flex items-center gap-2 text-foreground-secondary">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Generating your quiz…</span>
         </div>
@@ -416,27 +416,27 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
   if (stage === "quiz") {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
+        <div className="p-3 border-b border-border flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
-            className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+            className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
             onClick={() => setStage("menu")}
           >
             Back
           </Button>
-          {selectedSubchapter && <span className="ml-2 text-xs text-[#969696] truncate">{selectedSubchapter}</span>}
+          {selectedSubchapter && <span className="ml-2 text-xs text-foreground-muted truncate">{selectedSubchapter}</span>}
           {timedEnabled && (
-            <div className="ml-auto text-xs px-2 py-1 rounded bg-[#3e3e42] text-[#ffffff]">
+            <div className="ml-auto text-xs px-2 py-1 rounded bg-background-surface text-foreground">
               {formatTime(remainingSeconds ?? timeMinutes * 60 + timeSeconds)}
             </div>
           )}
         </div>
         <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
           {questions.map((q, qi) => (
-            <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
+            <Card key={qi} className="bg-background-tertiary border-border">
               <CardContent className="p-3">
-                <div className="text-sm text-[#ffffff] mb-3 whitespace-pre-wrap break-words">{qi + 1}. {q.question}</div>
+                <div className="text-sm text-foreground mb-3 whitespace-pre-wrap break-words">{qi + 1}. {q.question}</div>
                 <div className="space-y-2">
                   {q.choices.map((choice, ci) => {
                     const active = answers[qi] === ci
@@ -444,7 +444,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
                       <Button
                         key={ci}
                         variant={active ? "default" : "outline"}
-                        className={`w-full justify-start h-auto py-2 text-left whitespace-normal break-words ${active ? "bg-[#007acc] hover:bg-[#005a9e]" : "bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] hover:bg-[#3e3e42] hover:text-[#ffffff]"}`}
+                        className={`w-full justify-start h-auto py-2 text-left whitespace-normal break-words ${active ? "bg-primary hover:bg-primary-hover" : "bg-background-tertiary border-border text-foreground-secondary hover:bg-background-surface hover:text-foreground"}`}
                         onClick={() => setAnswers((prev) => prev.map((a, idx) => (idx === qi ? ci : a)))}
                       >
                         <div className="flex items-start gap-2 min-w-0 w-full">
@@ -459,8 +459,8 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
             </Card>
           ))}
         </div>
-        <div className="p-3 border-t border-[#3e3e42] flex justify-end">
-          <Button className="bg-[#4ec9b0] hover:bg-[#3a9b85]" onClick={submitQuiz} disabled={answers.some((a) => a < 0)}>
+        <div className="p-3 border-t border-border flex justify-end">
+          <Button className="bg-accent-teal hover:bg-[#3a9b85]" onClick={submitQuiz} disabled={answers.some((a) => a < 0)}>
             Submit
           </Button>
         </div>
@@ -471,11 +471,11 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
   // summary
   return (
     <div className="h-full flex flex-col">
-      <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
+      <div className="p-3 border-b border-border flex items-center gap-2">
         <Button
           variant="ghost"
           size="sm"
-          className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+          className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
           onClick={() => setStage("menu")}
         >
           Back
@@ -484,7 +484,7 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+            className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
             onClick={() => setShowCorrectAnswers((v) => !v)}
           >
             {showCorrectAnswers ? "Hide Answers" : "Show Answers"}
@@ -492,12 +492,12 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
         </div>
       </div>
       <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
-        <Card className="bg-[#2d2d30] border-[#3e3e42]">
+        <Card className="bg-background-tertiary border-border">
           <CardContent className="p-4">
-            <div className="text-[#ffffff] text-sm mb-2">Your Score</div>
+            <div className="text-foreground text-sm mb-2">Your Score</div>
             <div className="flex items-center justify-between gap-3">
-              <div className="text-2xl font-bold text-[#4ec9b0]">{score} / {questions.length}</div>
-              <Button className="bg-[#007acc] hover:bg-[#005a9e]" size="sm" onClick={retryQuiz}>Retry Quiz</Button>
+              <div className="text-2xl font-bold text-accent-teal">{score} / {questions.length}</div>
+              <Button className="bg-primary hover:bg-primary-hover" size="sm" onClick={retryQuiz}>Retry Quiz</Button>
             </div>
           </CardContent>
         </Card>
@@ -507,20 +507,20 @@ export function QuizPanel({ textbookId, selectedChapterId }: QuizPanelProps) {
           const correct = q.answer
           const isCorrect = user === correct
           return (
-            <Card key={qi} className="bg-[#2d2d30] border-[#3e3e42]">
+            <Card key={qi} className="bg-background-tertiary border-border">
               <CardContent className="p-3">
-                <div className="text-sm text-[#ffffff] mb-2 whitespace-pre-wrap break-words">{qi + 1}. {q.question}</div>
+                <div className="text-sm text-foreground mb-2 whitespace-pre-wrap break-words">{qi + 1}. {q.question}</div>
                 <div className="grid grid-cols-1 gap-1">
                   {q.choices.map((c, ci) => {
                     const show = showCorrectAnswers
                     const base = "text-xs px-2 py-1 rounded whitespace-normal break-words"
                     const cls = show
                       ? (ci === correct
-                        ? `${base} bg-[#1e3a2f] text-[#4ec9b0]`
+                        ? `${base} bg-[#1e3a2f] text-accent-teal`
                         : ci === user
-                          ? (isCorrect ? `${base} bg-[#1e3a2f] text-[#4ec9b0]` : `${base} bg-[#3a1e1e] text-[#f28b82]`)
-                          : `${base} text-[#cccccc]`)
-                      : (ci === user ? `${base} bg-[#3e3e42] text-[#cccccc]` : `${base} text-[#cccccc]`)
+                          ? (isCorrect ? `${base} bg-[#1e3a2f] text-accent-teal` : `${base} bg-[#3a1e1e] text-error`)
+                          : `${base} text-foreground-secondary`)
+                      : (ci === user ? `${base} bg-background-surface text-foreground-secondary` : `${base} text-foreground-secondary`)
                     return (
                       <div key={ci} className={cls}>
                         <div className="flex items-start gap-2 min-w-0 w-full">

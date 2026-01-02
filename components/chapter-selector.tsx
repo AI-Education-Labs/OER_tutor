@@ -410,8 +410,8 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
   if (loading) {
     return (
       <div className="p-4 flex items-center justify-center">
-        <Loader2 className="w-4 h-4 animate-spin text-[#969696]" />
-        <span className="ml-2 text-sm text-[#969696]">Loading chapters...</span>
+        <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />
+        <span className="ml-2 text-sm text-foreground-muted">Loading chapters...</span>
       </div>
     )
   }
@@ -432,24 +432,24 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
   }
 
   if (!textbookData) {
-    return <div className="p-4 text-center text-sm text-[#969696]">No textbook data available</div>
+    return <div className="p-4 text-center text-sm text-foreground-muted">No textbook data available</div>
   }
 
   return (
     <div className="p-1.5 show-scrollbar">
-      <div className="mb-4 p-3 bg-[#252526] rounded border-b border-[#3e3e42]">
+      <div className="mb-4 p-3 bg-background-tertiary rounded border-b border-border">
         <div className="text-center mb-3">
-          <div className="text-medium font-medium text-[#ffffff]">Table of Contents</div>
+          <div className="text-medium font-medium text-foreground">Table of Contents</div>
         </div>
-        <div className="text-[10px] text-[#969696] mb-1">Progress</div>
+        <div className="text-[10px] text-foreground-muted mb-1">Progress</div>
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-[#3e3e42] rounded-full h-1">
+          <div className="flex-1 bg-background-surface rounded-full h-1">
             <div
-              className="bg-[#007acc] h-1 rounded-full transition-all duration-300"
+              className="bg-primary h-1 rounded-full transition-all duration-300"
               style={{ width: `${textbookData.overall_progress}%` }}
             />
           </div>
-          <span className="text-[10px] text-[#969696]">{Math.round(textbookData.overall_progress)}%</span>
+          <span className="text-[10px] text-foreground-muted">{Math.round(textbookData.overall_progress)}%</span>
         </div>
       </div>
 
@@ -471,7 +471,7 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
           >
             <Button
               variant="ghost"
-              className={`w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative ${
+              className={`w-full justify-start p-1.5 h-auto hover:bg-background-surface text-left relative ${
                 isActiveChapter ? "bg-[#3a3d40]" : ""
               }`}
               onClick={() => handleChapterClick(chapter.id)}
@@ -480,20 +480,20 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
             >
               <div className="flex items-center gap-1.5 w-full">
                 {expandedChapters.includes(chapter.id) ? (
-                  <ChevronDown className="w-3 h-3 text-[#969696] flex-shrink-0" />
+                  <ChevronDown className="w-3 h-3 text-foreground-muted flex-shrink-0" />
                 ) : (
-                  <ChevronRight className="w-3 h-3 text-[#969696] flex-shrink-0" />
+                  <ChevronRight className="w-3 h-3 text-foreground-muted flex-shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-[#cccccc] leading-tight transition-all duration-200 whitespace-normal">
+                  <div className="text-xs text-foreground-secondary leading-tight transition-all duration-200 whitespace-normal">
                     {chapterLabel}
                   </div>
                   {chapter.progress !== undefined && (
                     <div className="flex items-center gap-1.5 mt-1">
-                      <div className="w-12 bg-[#3e3e42] rounded-full h-0.5">
-                        <div className="bg-[#007acc] h-0.5 rounded-full" style={{ width: `${chapter.progress}%` }} />
+                      <div className="w-12 bg-background-surface rounded-full h-0.5">
+                        <div className="bg-primary h-0.5 rounded-full" style={{ width: `${chapter.progress}%` }} />
                       </div>
-                      <span className="text-[10px] text-[#969696] flex-shrink-0">{chapter.progress}%</span>
+                      <span className="text-[10px] text-foreground-muted flex-shrink-0">{chapter.progress}%</span>
                     </div>
                   )}
                 </div>
@@ -509,39 +509,39 @@ export function ChapterSelector({ textbookId, onSectionSelect, onChapterSelect, 
                   return (
                     <div
                       key={section.id}
-                      className={`w-full justify-start p-1.5 h-auto hover:bg-[#3e3e42] text-left relative group cursor-pointer rounded ${
-                        isActiveSection ? "bg-[#3a3d40] border-l-2 border-l-[#007acc]" : ""
+                      className={`w-full justify-start p-1.5 h-auto hover:bg-background-surface text-left relative group cursor-pointer rounded ${
+                        isActiveSection ? "bg-[#3a3d40] border-l-2 border-l-primary" : ""
                       }`}
                       onMouseEnter={() => setHoveredSection(section.id)}
                       onMouseLeave={() => setHoveredSection(null)}
                       onClick={() => handleSectionClick(chapter.id, section.id, pageOffset)}
                     >
                       <div className="flex items-center gap-1.5 w-full">
-                        <FileText className="w-2.5 h-2.5 text-[#969696] flex-shrink-0" />
+                        <FileText className="w-2.5 h-2.5 text-foreground-muted flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div
-                            className={`text-[11px] text-[#cccccc] leading-tight transition-all duration-200 ${
+                            className={`text-[11px] text-foreground-secondary leading-tight transition-all duration-200 ${
                               hoveredSection === section.id ? "whitespace-normal" : "truncate"
                             }`}
                           >
                             {section.title}
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <div className="text-[10px] text-[#969696]">Page {pageOffset}</div>
+                            <div className="text-[10px] text-foreground-muted">Page {pageOffset}</div>
                             {section.progress !== undefined && section.progress > 0 && (
-                              <div className="text-[10px] text-[#007acc]">{Math.round(section.progress)}%</div>
+                              <div className="text-[10px] text-primary">{Math.round(section.progress)}%</div>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
                           {section.completed ? (
-                            <div className="w-1.5 h-1.5 bg-[#4ec9b0] rounded-full flex-shrink-0" />
+                            <div className="w-1.5 h-1.5 bg-accent-teal rounded-full flex-shrink-0" />
                           ) : (
                             <div
                               className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto cursor-pointer"
                               onClick={(e) => markSectionComplete(chapter.id, section.id, e)}
                             >
-                              <div className="w-1.5 h-1.5 border border-[#969696] rounded-full" />
+                              <div className="w-1.5 h-1.5 border border-foreground-muted rounded-full" />
                             </div>
                           )}
                         </div>

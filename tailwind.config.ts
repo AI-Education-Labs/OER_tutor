@@ -20,39 +20,23 @@ const config: Config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
+        // Custom color system using CSS variables
+        'primary': "var(--color-primary)",
+        'primary-hover': "var(--color-primary-hover)",
+        'background': "var(--color-bg-primary)",
+        'background-secondary': "var(--color-bg-secondary)",
+        'background-tertiary': "var(--color-bg-tertiary)",
+        'background-surface': "var(--color-bg-surface)",
+        'foreground': "var(--color-text-primary)",
+        'foreground-secondary': "var(--color-text-secondary)",
+        'foreground-muted': "var(--color-text-muted)",
+        'accent-teal': "var(--color-accent-teal)",
+        'accent-yellow': "var(--color-accent-yellow)",
+        'success': "var(--color-success)",
+        'warning': "var(--color-warning)",
+        'error': "var(--color-error)",
+        'border': "var(--color-border)",
+        'border-focus': "var(--color-border-focus)",
       },
       borderRadius: {
         lg: "var(--radius)",

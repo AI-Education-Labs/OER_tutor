@@ -680,7 +680,7 @@ export function PDFViewer({
 
       {showActions && (
         <div
-          className="action-popup fixed z-50 bg-[#2d2d30] border border-[#3e3e42] rounded-lg shadow-lg p-2 flex gap-2"
+          className="action-popup fixed z-50 bg-background-tertiary border border-border rounded-lg shadow-lg p-2 flex gap-2"
           style={{
             left: `${actionPosition.x}px`,
             top: `${actionPosition.y}px`,
@@ -689,19 +689,19 @@ export function PDFViewer({
         >
           <button
             onClick={handleAsk}
-            className="px-3 py-1 text-xs bg-[#007acc] text-white rounded hover:bg-[#005a9e] transition-colors"
+            className="px-3 py-1 text-xs bg-primary text-foreground rounded hover:bg-primary-hover transition-colors"
           >
             Ask
           </button>
           <button
             onClick={handleAddToNotes}
-            className="px-3 py-1 text-xs bg-[#4ec9b0] text-white rounded hover:bg-[#3a9b85] transition-colors"
+            className="px-3 py-1 text-xs bg-accent-teal text-foreground rounded hover:bg-[#3a9b85] transition-colors"
           >
             Add to Notes
           </button>
           <button
             onClick={handleHighlight}
-            className="px-3 py-1 text-xs bg-[#dcdcaa] text-black rounded hover:bg-[#c7c78a] transition-colors"
+            className="px-3 py-1 text-xs bg-accent-yellow text-black rounded hover:bg-[#c7c78a] transition-colors"
           >
             Highlight
           </button>

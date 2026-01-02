@@ -29,11 +29,11 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
       {/* VSCode-style Header */}
-      <header className="sticky top-0 z-50 h-8 bg-[#323233] border-b border-[#2d2d30] flex items-center px-4 flex-shrink-0">
+      <header className="sticky top-0 z-50 h-8 bg-background-tertiary border-b border-background-tertiary flex items-center px-4 flex-shrink-0">
         {/* Left side - App icon and title */}
         <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-[#007acc]" />
-          <span className="text-sm font-medium text-[#cccccc]">TextbookAI</span>
+          <BookOpen className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium text-foreground-secondary">TextbookAI</span>
         </div>
 
         {/* Center - Empty for now, could add breadcrumbs later */}
@@ -47,15 +47,15 @@ export default function HomePage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="h-6 px-2 text-xs text-[#cccccc] hover:text-white hover:bg-[#3e3e42] transition-colors"
+                className="h-6 px-2 text-xs text-foreground-secondary hover:text-white hover:bg-background-surface transition-colors"
               >
                 <LogOut className="h-3 w-3 mr-1" />
                 Sign Out
               </Button>
-              <div className="w-px h-4 bg-[#3e3e42]" />
+              <div className="w-px h-4 bg-background-surface" />
               <Avatar className="h-6 w-6">
                 <AvatarImage src="/placeholder.svg?height=24&width=24" alt="User" />
-                <AvatarFallback className="text-xs bg-[#007acc] text-white">
+                <AvatarFallback className="text-xs bg-primary text-white">
                   <User className="h-3 w-3" />
                 </AvatarFallback>
               </Avatar>
@@ -66,14 +66,14 @@ export default function HomePage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogin}
-                className="h-6 px-3 text-xs text-[#cccccc] hover:text-white hover:bg-[#3e3e42] transition-colors"
+                className="h-6 px-3 text-xs text-foreground-secondary hover:text-white hover:bg-background-surface transition-colors"
               >
                 Sign In
               </Button>
               <Button
                 size="sm"
                 onClick={() => router.push("/auth?tab=register")}
-                className="h-6 px-3 text-xs bg-[#007acc] hover:bg-[#005a9e] text-white transition-colors"
+                className="h-6 px-3 text-xs bg-primary hover:bg-primary-hover text-white transition-colors"
               >
                 Sign Up
               </Button>
@@ -83,7 +83,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 bg-[#1e1e1e] min-h-0">
+      <main className="flex-1 bg-background min-h-0">
         <TextbookLibrary />
       </main>
     </div>

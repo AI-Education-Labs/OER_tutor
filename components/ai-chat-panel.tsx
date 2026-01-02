@@ -116,28 +116,28 @@ const MessageCard = React.memo(
     return (
       <div className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
         {message.role === "assistant" && (
-          <div className="w-8 h-8 bg-[#007acc] rounded-full flex items-center justify-center flex-shrink-0">
-            <Bot className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+            <Bot className="w-4 h-4 text-foreground" />
           </div>
         )}
         <Card
           className={`max-w-[80%] ${
             message.role === "user"
-              ? "bg-[#007acc] border-[#007acc] text-white"
-              : "bg-[#3e3e42] border-[#3e3e42] text-[#cccccc]"
+              ? "bg-primary border-primary text-foreground"
+              : "bg-background-surface border-background-surface text-foreground-secondary"
           }`}
         >
           <CardContent className="p-3">
             {message.content === "" && message.id.startsWith("temp-") ? (
-              <div className="flex items-center gap-2 text-[#cccccc]">
+              <div className="flex items-center gap-2 text-foreground-secondary">
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
                   <div
-                    className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"
+                    className="w-2 h-2 bg-primary rounded-full animate-bounce"
                     style={{ animationDelay: "0.1s" }}
                   ></div>
                   <div
-                    className="w-2 h-2 bg-[#007acc] rounded-full animate-bounce"
+                    className="w-2 h-2 bg-primary rounded-full animate-bounce"
                     style={{ animationDelay: "0.2s" }}
                   ></div>
                 </div>
@@ -163,8 +163,8 @@ const MessageCard = React.memo(
           </CardContent>
         </Card>
         {message.role === "user" && (
-          <div className="w-8 h-8 bg-[#4ec9b0] rounded-full flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 bg-accent-teal rounded-full flex items-center justify-center flex-shrink-0">
+            <User className="w-4 h-4 text-foreground" />
           </div>
         )}
       </div>
@@ -583,18 +583,18 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
   )
 
   return (
-    <div className="h-full flex bg-[#252526]">
+    <div className="h-full flex bg-background-secondary">
       {/* Sidebar - Full Width */}
       {showSidebar ? (
-        <div className="w-full bg-[#1e1e1e] border-r border-[#3e3e42] flex flex-col">
-          <div className="p-3 border-b border-[#3e3e42]">
+        <div className="w-full bg-background border-r border-border flex flex-col">
+          <div className="p-3 border-b border-border">
             <div className="flex items-center justify-between">
-              <div className="font-bold text-white">Chats</div>
+              <div className="font-bold text-foreground">Chats</div>
               <Button
                 onClick={() => setShowSidebar(false)}
                 size="sm"
                 variant="ghost"
-                className="text-[#969696] hover:text-white"
+                className="text-foreground-muted hover:text-foreground"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -604,13 +604,13 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
             {chats.map((c) => (
               <div key={c.session_id} className="relative">
                 <button
-                  className={`block w-full text-left px-3 py-2 hover:bg-[#2d2d30] text-sm border-b border-[#3e3e42] transition-colors ${
-                    sessionIdRef.current === c.session_id ? "bg-[#2d2d30] text-white" : "text-[#cccccc]"
+                  className={`block w-full text-left px-3 py-2 hover:bg-background-tertiary text-sm border-b border-border transition-colors ${
+                    sessionIdRef.current === c.session_id ? "bg-background-tertiary text-foreground" : "text-foreground-secondary"
                   }`}
                   onClick={() => loadChat(c.session_id, c.title || "Untitled Chat")}
                 >
                   <div className="font-medium">{c.title || "Untitled Chat"}</div>
-                  <div className="text-xs text-[#969696] mt-1">{formatChatDate(c.updated_at)}</div>
+                  <div className="text-xs text-foreground-muted mt-1">{formatChatDate(c.updated_at)}</div>
                 </button>
               </div>
             ))}
@@ -622,7 +622,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
         {/* Floating Header Buttons */}
         <div className="absolute top-2 left-3 z-10">
           <div
-            className="flex flex-col gap-1 border border-[#969696] rounded p-1 shadow-lg"
+            className="flex flex-col gap-1 border border-foreground-muted rounded p-1 shadow-lg"
             style={{
               backgroundColor: 'rgba(30, 30, 30, 0.3)',
               backdropFilter: 'blur(12px)',
@@ -637,7 +637,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
                 }}
                 size="sm"
                 variant="ghost"
-                className="text-[#969696] hover:text-white w-6 h-6 p-0"
+                className="text-foreground-muted hover:text-foreground w-6 h-6 p-0"
                 onMouseEnter={() => setHoveredButton("chats")}
                 onMouseLeave={() => setHoveredButton(null)}
               >
@@ -645,7 +645,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
               </Button>
               {hoveredButton === "chats" && (
                 <div
-                  className="absolute left-full bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] shadow-lg z-50 whitespace-nowrap pointer-events-none"
+                  className="absolute left-full bg-background-tertiary text-foreground-secondary text-xs px-2 py-1 rounded border border-border shadow-lg z-50 whitespace-nowrap pointer-events-none"
                   style={{ marginLeft: '28px', top: '50%', transform: 'translateY(calc(-50% - 2.5px))' }}
                 >
                   Chats
@@ -657,7 +657,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
                 onClick={clearChat}
                 size="sm"
                 variant="ghost"
-                className="text-[#969696] hover:text-white w-6 h-6 p-0"
+                className="text-foreground-muted hover:text-foreground w-6 h-6 p-0"
                 disabled={isLoading}
                 onMouseEnter={() => setHoveredButton("newchat")}
                 onMouseLeave={() => setHoveredButton(null)}
@@ -666,7 +666,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
               </Button>
               {hoveredButton === "newchat" && (
                 <div
-                  className="absolute left-full bg-[#2d2d30] text-[#cccccc] text-xs px-2 py-1 rounded border border-[#3e3e42] shadow-lg z-50 whitespace-nowrap pointer-events-none"
+                  className="absolute left-full bg-background-tertiary text-foreground-secondary text-xs px-2 py-1 rounded border border-border shadow-lg z-50 whitespace-nowrap pointer-events-none"
                   style={{ marginLeft: '28px', top: '50%', transform: 'translateY(calc(-50% - 2.5px))' }}
                 >
                   New Chat
@@ -684,13 +684,13 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
         {/* Message limit warning */}
         {!isLoggedIn && messageCount >= MAX_MESSAGES_GUEST && (
-          <div className="p-3 bg-[#2d2d30] border-t border-[#3e3e42] flex items-center gap-2 text-[#ce9178] text-sm">
+          <div className="p-3 bg-background-tertiary border-t border-border flex items-center gap-2 text-warning text-sm">
             <AlertCircle className="w-4 h-4" /> You've reached the message limit. Sign in for unlimited chat!
           </div>
         )}
 
         {/* Input */}
-        <div className="p-3 border-t border-[#3e3e42] bg-[#2d2d30]">
+        <div className="p-3 border-t border-border bg-background-tertiary">
           <form onSubmit={handleSendMessage}>
             <div className="relative">
               <Textarea
@@ -704,7 +704,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
                   }
                 }}
                 placeholder={canSend ? "Ask me anything..." : "Sign in to continue chatting"}
-                className="w-full pr-16 py-2 pl-3 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc] resize-none overflow-auto"
+                className="w-full pr-16 py-2 pl-3 bg-background-surface border-background-surface text-foreground-secondary placeholder-foreground-muted focus:border-border-focus focus:ring-border-focus resize-none overflow-auto"
                 style={{ minHeight: "40px", maxHeight: "240px", height: "40px" }}
                 disabled={!canSend || isLoading}
                 rows={1}
@@ -712,7 +712,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
               <Button
                 type="submit"
                 size="icon"
-                className="absolute h-7 w-7 bg-[#007acc] hover:bg-[#005a9e] text-white shrink-0"
+                className="absolute h-7 w-7 bg-primary hover:bg-primary-hover text-foreground shrink-0"
                 style={{ bottom: "-33px", right: "0px", left: "auto" }}
                 disabled={!input.trim() || !canSend || isLoading}
               >
@@ -720,7 +720,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
               </Button>
             </div>
           </form>
-          {canSend && <div className="text-xs text-[#969696] mt-2">Press Enter to send, Shift+Enter for new line</div>}
+          {canSend && <div className="text-xs text-foreground-muted mt-2">Press Enter to send, Shift+Enter for new line</div>}
         </div>
       </div>
       )}

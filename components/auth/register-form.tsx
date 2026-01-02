@@ -127,63 +127,63 @@ export default function RegisterForm() {
   }
 
   return (
-    <Card className="bg-[#252526] border-[#3e3e42]">
+    <Card className="bg-background-secondary border-border">
       <CardHeader className="pb-4">
-        <CardTitle className="text-[#ffffff] text-lg">Create your account</CardTitle>
-        <CardDescription className="text-[#969696]">
+        <CardTitle className="text-foreground text-lg">Create your account</CardTitle>
+        <CardDescription className="text-foreground-muted">
           Enter your details to get started with TextbookAI
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleRegister}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="register-username" className="text-[#cccccc] text-sm font-medium">
+            <Label htmlFor="register-username" className="text-foreground-secondary text-sm font-medium">
               Username
             </Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#969696]" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground-muted" />
               <Input
                 id="register-username"
                 name="username"
                 value={registerData.username}
                 onChange={handleRegisterChange}
-                className="pl-10 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc]"
+                className="pl-10 bg-background-surface border-border text-foreground-secondary placeholder-foreground-muted focus:border-primary focus:ring-primary"
                 placeholder="Choose a username"
                 required
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-[#cccccc] text-sm font-medium">
+            <Label htmlFor="email" className="text-foreground-secondary text-sm font-medium">
               Email
             </Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#969696]" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground-muted" />
               <Input
                 id="email"
                 name="email"
                 type="email"
                 value={registerData.email}
                 onChange={handleRegisterChange}
-                className="pl-10 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc]"
+                className="pl-10 bg-background-surface border-border text-foreground-secondary placeholder-foreground-muted focus:border-primary focus:ring-primary"
                 placeholder="Enter your email"
                 required
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="register-password" className="text-[#cccccc] text-sm font-medium">
+            <Label htmlFor="register-password" className="text-foreground-secondary text-sm font-medium">
               Password
             </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#969696]" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground-muted" />
               <Input
                 id="register-password"
                 name="password"
                 type={showRegisterPassword ? "text" : "password"}
                 value={registerData.password}
                 onChange={handleRegisterChange}
-                className="pl-10 pr-10 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc]"
+                className="pl-10 pr-10 bg-background-surface border-border text-foreground-secondary placeholder-foreground-muted focus:border-primary focus:ring-primary"
                 placeholder="Create a password, minimum 8 characters"
                 required
               />
@@ -191,25 +191,25 @@ export default function RegisterForm() {
                 type="button"
                 aria-label={showRegisterPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowRegisterPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#969696] hover:text-[#cccccc]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground-secondary"
               >
                 {showRegisterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirm-password" className="text-[#cccccc] text-sm font-medium">
+            <Label htmlFor="confirm-password" className="text-foreground-secondary text-sm font-medium">
               Confirm Password
             </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#969696]" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground-muted" />
               <Input
                 id="confirm-password"
                 name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 value={registerData.confirmPassword}
                 onChange={handleRegisterChange}
-                className="pl-10 pr-10 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc]"
+                className="pl-10 pr-10 bg-background-surface border-border text-foreground-secondary placeholder-foreground-muted focus:border-primary focus:ring-primary"
                 placeholder="Confirm your password"
                 required
               />
@@ -217,7 +217,7 @@ export default function RegisterForm() {
                 type="button"
                 aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowConfirmPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#969696] hover:text-[#cccccc]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground-secondary"
               >
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -227,7 +227,7 @@ export default function RegisterForm() {
         <CardFooter className="pt-4">
           <Button
             type="submit"
-            className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white transition-colors"
+            className="w-full bg-primary hover:bg-primary-hover text-foreground transition-colors"
             disabled={isLoading}
           >
             {isLoading ? (

@@ -59,7 +59,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="w-6 h-6 rounded hover:bg-[#4b4b4b] flex items-center justify-center"
+            className="w-6 h-6 rounded hover:bg-background-surface flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
             aria-label="More options"
             title="More options"
@@ -71,8 +71,8 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
             </span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
-          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-[#3e3e42]">
+        <DropdownMenuContent className="bg-background-tertiary border-border text-foreground-secondary">
+          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-background-surface">
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -206,51 +206,51 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
   if (stage === "menu") {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-4 border-b border-[#3e3e42]">
-          <h3 className="text-sm font-medium text-[#ffffff]">Key Concepts</h3>
-          <p className="text-xs text-[#969696]">Choose a subchapter to generate structured key concepts.</p>
+        <div className="p-4 border-b border-border">
+          <h3 className="text-sm font-medium text-foreground">Key Concepts</h3>
+          <p className="text-xs text-foreground-muted">Choose a subchapter to generate structured key concepts.</p>
         </div>
         <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
           <div>
-            <label className="block text-xs text-[#cccccc] mb-2">Subchapter</label>
+            <label className="block text-xs text-foreground-secondary mb-2">Subchapter</label>
             <Select onValueChange={(v: string) => setSelectedSubchapter(v)}>
-              <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
+              <SelectTrigger className="w-full bg-background-tertiary border-border text-foreground-secondary">
                 <SelectValue placeholder={hasSubchapters ? "Select a subchapter" : "No subchapters detected"} />
               </SelectTrigger>
-              <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
+              <SelectContent className="bg-background-tertiary border-border text-foreground-secondary max-h-60 overflow-auto">
                 {hasSubchapters ? (
                   subchapters.map((s, i) => (
-                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-[#3e3e42]">
+                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-background-surface">
                       {s}
                     </SelectItem>
                   ))
                 ) : (
-                  <div className="px-2 py-1 text-xs text-[#969696]">No subchapters detected</div>
+                  <div className="px-2 py-1 text-xs text-foreground-muted">No subchapters detected</div>
                 )}
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex gap-2 justify-center">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!canGenerate}>
+            <Button className="bg-primary hover:bg-primary-hover" onClick={startGeneration} disabled={!canGenerate}>
               Generate Key Concepts
             </Button>
           </div>
           {!canGenerate && (
-            <div className="text-xs text-[#969696]">Preparing chapter content. Please wait a moment…</div>
+            <div className="text-xs text-foreground-muted">Preparing chapter content. Please wait a moment…</div>
           )}
-        <div className="pt-2 border-t border-[#3e3e42]">
+        <div className="pt-2 border-t border-border">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="text-xs font-medium text-[#ffffff]">Previous Study Guides</h4>
+            <h4 className="text-xs font-medium text-foreground">Previous Study Guides</h4>
             {prevLoading && (
-              <div className="text-[10px] text-[#969696] flex items-center gap-1">
+              <div className="text-[10px] text-foreground-muted flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> Loading
               </div>
             )}
           </div>
-          {prevError && <div className="text-[10px] text-[#ff6b6b] mb-2">{prevError}</div>}
+          {prevError && <div className="text-[10px] text-error mb-2">{prevError}</div>}
           {(!previousNotes || previousNotes.length === 0) && !prevLoading ? (
-            <div className="text-xs text-[#969696]">No saved study guides yet</div>
+            <div className="text-xs text-foreground-muted">No saved study guides yet</div>
           ) : (
             <div className="space-y-2 max-h-60 overflow-auto pr-1 show-scrollbar">
               {previousNotes.map((d, idx) => (
@@ -258,17 +258,17 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
                   <div
                     role="button"
                     tabIndex={0}
-                    className="w-full text-left px-3 py-2 rounded bg-[#2d2d30] hover:bg-[#3e3e42] border border-[#3e3e42]"
+                    className="w-full text-left px-3 py-2 rounded bg-background-tertiary hover:bg-background-surface border border-border"
                     onClick={() => loadNote(d)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); loadNote(d) } }}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-xs text-[#ffffff] truncate">{d?.hint || "Untitled study guide"}</div>
-                        <div className="text-[10px] text-[#969696] truncate">{new Date((d?.created_time ?? 0) * 1000).toLocaleString()}</div>
+                        <div className="text-xs text-foreground truncate">{d?.hint || "Untitled study guide"}</div>
+                        <div className="text-[10px] text-foreground-muted truncate">{new Date((d?.created_time ?? 0) * 1000).toLocaleString()}</div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="text-[11px] text-[#cccccc] whitespace-nowrap">View</div>
+                        <div className="text-[11px] text-foreground-secondary whitespace-nowrap">View</div>
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                           <MenuButton
                             id={d?._id}
@@ -294,7 +294,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
   if (stage === "loading") {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[#cccccc]">
+        <div className="flex items-center gap-2 text-foreground-secondary">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Generating key concepts…</span>
         </div>
@@ -304,23 +304,23 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
+      <div className="p-3 border-b border-border flex items-center gap-2">
         <Button
           variant="ghost"
           size="sm"
-          className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+          className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
           onClick={() => setStage("menu")}
         >
           Back
         </Button>
-        {selectedSubchapter && <span className="ml-2 text-xs text-[#969696] truncate">{selectedSubchapter}</span>}
+        {selectedSubchapter && <span className="ml-2 text-xs text-foreground-muted truncate">{selectedSubchapter}</span>}
       </div>
 
       <div className="flex-1 overflow-auto p-4 show-scrollbar">
         <div className="max-w-2xl mx-auto w-full">
-          <Card className="bg-[#2d2d30] border-[#3e3e42]">
+          <Card className="bg-background-tertiary border-border">
             <CardContent className="p-6">
-              <div className="text-[#ffffff] text-sm prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: resultHtml }} />
+              <div className="text-foreground text-sm prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: resultHtml }} />
             </CardContent>
           </Card>
         </div>

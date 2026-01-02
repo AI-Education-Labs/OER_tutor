@@ -30,6 +30,8 @@ chroma/
 
 .DS_Store
 
+# Backup files
+*.backup
 
 __pycache__/
 
@@ -51,6 +53,7 @@ samconfig.toml
 # python environement
 .venv
 venv
+v3.venv
 
 # Local s3 syncs
 s3
