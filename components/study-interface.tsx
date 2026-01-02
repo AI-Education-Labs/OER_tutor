@@ -484,16 +484,16 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   // Mobile bottom drawer for tools
   const renderMobileToolsDrawer = () => (
     <div
-      className={`md:hidden fixed inset-x-0 bottom-0 bg-[#252526] border-t border-[#3e3e42] transform transition-transform duration-300 z-50 ${
+      className={`md:hidden fixed inset-x-0 bottom-0 bg-background-secondary border-t border-border transform transition-transform duration-300 z-50 ${
         mobileToolsOpen ? "translate-y-0" : "translate-y-full"
       }`}
     >
-      <div className="flex items-center justify-between p-3 border-b border-[#3e3e42]">
-        <h3 className="text-sm font-medium text-[#ffffff]">Learning Tools</h3>
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <h3 className="text-sm font-medium text-foreground">Learning Tools</h3>
         <Button
           variant="ghost"
           size="sm"
-          className="w-8 h-8 p-0 hover:bg-[#3e3e42]"
+          className="w-8 h-8 p-0 hover:bg-background-surface"
           onClick={() => setMobileToolsOpen(false)}
         >
           <X className="w-4 h-4" />
@@ -526,16 +526,16 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   // Mobile chapters drawer
   const renderMobileChaptersDrawer = () => (
     <div
-      className={`md:hidden fixed inset-x-0 bottom-0 bg-[#252526] border-t border-[#3e3e42] transform transition-transform duration-300 z-50 ${
+      className={`md:hidden fixed inset-x-0 bottom-0 bg-background-secondary border-t border-border transform transition-transform duration-300 z-50 ${
         mobileChaptersOpen ? "translate-y-0" : "translate-y-full"
       }`}
     >
-      <div className="flex items-center justify-between p-3 border-b border-[#3e3e42]">
-        <h3 className="text-sm font-medium text-[#ffffff]">Chapters</h3>
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <h3 className="text-sm font-medium text-foreground">Chapters</h3>
         <Button
           variant="ghost"
           size="sm"
-          className="w-8 h-8 p-0 hover:bg-[#3e3e42]"
+          className="w-8 h-8 p-0 hover:bg-background-surface"
           onClick={() => setMobileChaptersOpen(false)}
         >
           <X className="w-4 h-4" />
@@ -562,7 +562,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       onCreateGroup={createNewTabGroup}
       onSplitGroup={handleSplitGroup}
     >
-      <div className="h-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col overflow-hidden">
+      <div className="h-screen bg-background text-foreground-secondary flex flex-col overflow-hidden">
         {/* Custom CSS for flash animation */}
         <style jsx>{`
           @keyframes flash-bg {
@@ -577,7 +577,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
         {/* VSCode-style title bar */}
         <div
           ref={titleBarRef}
-          className="h-8 bg-[#323233] border-b border-[#2d2d30] flex items-center px-4 flex-shrink-0"
+          className="h-8 bg-[#323233] border-b border-background-tertiary flex items-center px-4 flex-shrink-0"
         >
           <div className="flex items-center gap-2">
             <Link href="/">
@@ -589,15 +589,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
               </div>
             </Link>
           </div>
-          <div className="flex-1 text-center text-sm">Research Methods in Psychology</div> 
+          <div className="flex-1 text-center text-sm">Research Methods in Psychology</div>
         </div>
 
         {/* Mobile Navigation Bar */}
-        <div className="md:hidden h-12 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-around flex-shrink-0">
+        <div className="md:hidden h-12 bg-background-tertiary border-b border-border flex items-center justify-around flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className={`flex flex-col items-center gap-1 h-10 px-3 ${mobileChaptersOpen ? "bg-[#3e3e42]" : ""}`}
+            className={`flex flex-col items-center gap-1 h-10 px-3 ${mobileChaptersOpen ? "bg-background-surface" : ""}`}
             onClick={() => setMobileChaptersOpen(!mobileChaptersOpen)}
           >
             <BookOpen className="w-4 h-4" />
@@ -621,7 +621,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
           <Button
             variant="ghost"
             size="sm"
-            className={`flex flex-col items-center gap-1 h-10 px-3 ${mobileToolsOpen ? "bg-[#3e3e42]" : ""}`}
+            className={`flex flex-col items-center gap-1 h-10 px-3 ${mobileToolsOpen ? "bg-background-surface" : ""}`}
             onClick={() => setMobileToolsOpen(!mobileToolsOpen)}
           >
             <Target className="w-4 h-4" />
@@ -636,12 +636,12 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
             {/* Desktop Left panel - Chapter selector (hidden on mobile) */}
             {!leftPanelCollapsed && (
               <div
-                className="hidden md:flex relative bg-[#252526] border-r border-[#3e3e42] flex-shrink-0 flex-col"
+                className="hidden md:flex relative bg-background-secondary border-r border-border flex-shrink-0 flex-col"
                 style={{ width: `${leftPanelWidth}px` }}
               >
                 {/* Resize handle */}
                 <div
-                  className="absolute right-0 top-0 bottom-0 w-1 bg-transparent hover:bg-[#2d2d30] cursor-col-resize z-10 group"
+                  className="absolute right-0 top-0 bottom-0 w-1 bg-transparent hover:bg-background-tertiary cursor-col-resize z-10 group"
                   onMouseDown={(e) => {
                     e.preventDefault()
                     const startX = e.clientX
@@ -675,12 +675,11 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   </div>
                 </div>
 
-                <div className="h-8 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-between px-3 flex-shrink-0">
-                  {/* <span className="text-sm font-medium">CHAPTERS</span> */}
+                <div className="h-8 bg-background-tertiary border-b border-border flex items-center justify-between px-3 flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-6 h-6 p-0 hover:bg-[#3e3e42]"
+                    className="w-6 h-6 p-0 hover:bg-background-surface"
                     onClick={() => setLeftPanelCollapsed(true)}
                   >
                     <ChevronLeft className="w-4 h-4" />
@@ -699,15 +698,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
             )}
 
             {/* Center panel - PDF viewer */}
-            <div className="flex-1 bg-[#1e1e1e] min-w-0 flex flex-col">
-              <div className="relative h-8 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center px-3 flex-shrink-0 overflow-visible">
+            <div className="flex-1 bg-background min-w-0 flex flex-col">
+              <div className="relative h-8 bg-background-tertiary border-b border-border flex items-center px-3 flex-shrink-0 overflow-visible">
                 {/* Overlays to mask adjacent panel borders just for this bar */}
                 <div
-                  className="pointer-events-none absolute -left-[1px] top-0 bottom-0 w-[2px] bg-[#2d2d30]"
+                  className="pointer-events-none absolute -left-[1px] top-0 bottom-0 w-[2px] bg-background-tertiary"
                   aria-hidden="true"
                 />
                 <div
-                  className="pointer-events-none absolute -right-[1px] top-0 bottom-0 w-[2px] bg-[#2d2d30]"
+                  className="pointer-events-none absolute -right-[1px] top-0 bottom-0 w-[2px] bg-background-tertiary"
                   aria-hidden="true"
                 />
                 <div className="flex items-center justify-between w-full">
@@ -717,15 +716,15 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`w-6 h-6 p-0 hover:bg-[#3e3e42] group relative rounded ${
+                        className={`w-6 h-6 p-0 hover:bg-background-surface group relative rounded ${
                           chaptersFlashing ? "flash-animation" : ""
-                      }`}
-                      onClick={() => setLeftPanelCollapsed(false)}
-                      title="Show Chapters"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  )}
+                        }`}
+                        onClick={() => setLeftPanelCollapsed(false)}
+                        title="Show Chapters"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
 
                   {/* Breadcrumb Navigation */}
@@ -735,7 +734,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                       return (
                         <>
                           <span
-                            className="truncate block text-[#cccccc] hover:text-[#ffffff] cursor-pointer transition-colors"
+                            className="truncate block text-foreground-secondary hover:text-foreground cursor-pointer transition-colors"
                             title={`Chapter ${chapterInfo.chapterNumber}: ${chapterInfo.chapterTitle}`}
                           >
                             Chapter {chapterInfo.chapterNumber}: {chapterInfo.chapterTitle}
@@ -743,9 +742,9 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
                           {chapterInfo.sectionTitle && (
                             <>
-                              <ChevronRight className="w-3 h-3 text-[#969696] flex-shrink-0" />
+                              <ChevronRight className="w-3 h-3 text-foreground-muted flex-shrink-0" />
                               <span
-                                className="truncate block text-[#007acc] font-medium"
+                                className="truncate block flex-1 text-primary font-medium"
                                 title={chapterInfo.sectionTitle}
                               >
                                 {chapterInfo.sectionTitle}
@@ -753,7 +752,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                             </>
                           )}
 
-                          <span className="text-[#969696] ml-2 flex-shrink-0 hidden sm:inline">
+                          <span className="text-foreground-muted ml-2 flex-shrink-0 hidden sm:inline">
                             • Page {currentPage}
                           </span>
                         </>
@@ -766,7 +765,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={`w-6 h-6 p-0 hover:bg-[#3e3e42] rounded ${toolsFlashing ? "flash-animation" : ""}`}
+                        className={`w-6 h-6 p-0 hover:bg-background-surface rounded ${toolsFlashing ? "flash-animation" : ""}`}
                         onClick={() => setRightPanelCollapsed(false)}
                         title="Open Learning Tools"
                       >
@@ -791,7 +790,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
             {/* Desktop Right panel - Resizable tutoring tools (hidden on mobile) */}
             {!rightPanelCollapsed && (
               <div
-                className="hidden md:flex relative bg-[#252526] border-l border-[#3e3e42] flex-col flex-shrink-0"
+                className="hidden md:flex relative bg-background-secondary border-l border-border flex-col flex-shrink-0"
                 style={{ width: `${rightPanelWidth}px` }}
               >
                 {/* Resize handle */}
@@ -828,7 +827,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                 >
                   {/* Thin hover line (keeps the affordance visually narrow while the hit-area is wider) */}
                   <div
-                    className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-1 bg-transparent group-hover:bg-[#2d2d30]"
+                    className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-1 bg-transparent group-hover:bg-background-tertiary"
                     aria-hidden="true"
                   />
 
@@ -842,16 +841,16 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                 </div>
 
                 {/* Panel header */}
-                <div className="relative h-8 bg-[#2d2d30] border-b border-[#3e3e42] flex items-center justify-between px-3 flex-shrink-0">
+                <div className="relative h-8 bg-background-tertiary border-b border-border flex items-center justify-between px-3 flex-shrink-0">
                   <div
-                    className="pointer-events-none absolute -left-[1px] top-0 bottom-0 w-[2px] bg-[#2d2d30]"
+                    className="pointer-events-none absolute -left-[1px] top-0 bottom-0 w-[2px] bg-background-tertiary"
                     aria-hidden="true"
                   />
                   <div className="flex items-center gap-2"></div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-6 h-6 p-0 hover:bg-[#3e3e42]"
+                    className="w-6 h-6 p-0 hover:bg-background-surface"
                     onClick={() => setRightPanelCollapsed(true)}
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -893,7 +892,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
         </div>
 
         {/* Desktop Status bar */}
-        <div className="hidden md:flex h-6 bg-[#007acc] text-white text-xs items-center px-4 flex-shrink-0">
+        <div className="hidden md:flex h-6 bg-primary text-foreground text-xs items-center px-4 flex-shrink-0">
           {(() => {
             const chapterInfo = getCurrentChapterInfo()
             return (
@@ -911,7 +910,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
         </div>
 
         {/* Mobile Status bar */}
-        <div className="md:hidden h-8 bg-[#007acc] text-white text-xs flex items-center justify-center px-4 flex-shrink-0">
+        <div className="md:hidden h-8 bg-primary text-foreground text-xs flex items-center justify-center px-4 flex-shrink-0">
           {(() => {
             const chapterInfo = getCurrentChapterInfo()
             return (

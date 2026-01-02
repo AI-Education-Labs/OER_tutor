@@ -21,28 +21,28 @@ export default function AuthForm() {
   }, [tabParam])
 
   return (
-    <div className="min-h-screen bg-[#1e1e1e] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" aria-label="Go to home" className="flex items-center justify-center gap-2 mb-4">
-            <BookOpen className="h-8 w-8 text-[#007acc]" />
-            <h1 className="text-2xl font-semibold text-[#ffffff]">TextbookAI</h1>
+            <BookOpen className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl font-semibold text-foreground">TextbookAI</h1>
           </Link>
-          <p className="text-[#969696] text-sm">Access your interactive learning platform</p>
+          <p className="text-foreground-muted text-sm">Access your interactive learning platform</p>
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-[#2d2d30] border border-[#3e3e42] p-1">
+          <TabsList className="grid w-full grid-cols-2 bg-background-tertiary border border-border p-1">
             <TabsTrigger
               value="login"
-              className="data-[state=active]:bg-[#007acc] data-[state=active]:text-white text-[#cccccc] hover:text-white transition-colors"
+              className="data-[state=active]:bg-primary data-[state=active]:text-foreground text-foreground-secondary hover:text-foreground transition-colors"
             >
               Sign In
             </TabsTrigger>
             <TabsTrigger
               value="register"
-              className="data-[state=active]:bg-[#007acc] data-[state=active]:text-white text-[#cccccc] hover:text-white transition-colors"
+              className="data-[state=active]:bg-primary data-[state=active]:text-foreground text-foreground-secondary hover:text-foreground transition-colors"
             >
               Sign Up
             </TabsTrigger>

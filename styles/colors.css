@@ -1,0 +1,42 @@
+/*
+ * Centralized Color Variables
+ * Change these hex values to update the entire website's color scheme
+ */
+
+:root {
+  /* Primary Colors */
+  --color-primary: #fc5c00;
+  --color-primary-hover: #fc5c00;
+
+  /* Background Colors */
+  --color-bg-primary: #1e1e1e;
+  --color-bg-secondary: #252526;
+  --color-bg-tertiary: #2d2d30;
+  --color-bg-surface: #3e3e42;
+
+  /* Text Colors */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #cccccc;
+  --color-text-muted: #969696;
+
+  /* Accent Colors */
+  --color-accent-teal: #4ec9b0;
+  --color-accent-yellow: #dcdcaa;
+
+  /* Status Colors */
+  --color-success: #4ec9b0;
+  --color-warning: #dcdcaa;
+  --color-error: #fc5c00;
+
+  /* Border Colors */
+  --color-border: #3e3e42;
+  --color-border-focus: #fc5c00;
+
+  /* Scrollbar Colors */
+  --color-scrollbar-track: #252526;
+  --color-scrollbar-thumb: #3e3e42;
+  --color-scrollbar-hover: #4e4e52;
+
+  /* Hover States */
+  --color-hover-surface: #3e3e42;
+}

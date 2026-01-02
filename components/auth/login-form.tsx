@@ -77,45 +77,45 @@ export default function LoginForm() {
   }
 
   return (
-    <Card className="bg-[#252526] border-[#3e3e42]">
+    <Card className="bg-background-secondary border-border">
       <CardHeader className="pb-4">
-        <CardTitle className="text-[#ffffff] text-lg">Welcome back</CardTitle>
-        <CardDescription className="text-[#969696]">
+        <CardTitle className="text-foreground text-lg">Welcome back</CardTitle>
+        <CardDescription className="text-foreground-muted">
           Enter your credentials to access your account
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleLogin}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-[#cccccc] text-sm font-medium">
+            <Label htmlFor="username" className="text-foreground-secondary text-sm font-medium">
               Username
             </Label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#969696]" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground-muted" />
               <Input
                 id="username"
                 name="username"
                 value={loginData.username}
                 onChange={handleLoginChange}
-                className="pl-10 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc]"
+                className="pl-10 bg-background-surface border-border text-foreground-secondary placeholder-foreground-muted focus:border-primary focus:ring-primary"
                 placeholder="Enter your username"
                 required
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-[#cccccc] text-sm font-medium">
+            <Label htmlFor="password" className="text-foreground-secondary text-sm font-medium">
               Password
             </Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#969696]" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-foreground-muted" />
               <Input
                 id="password"
                 name="password"
                 type={showLoginPassword ? "text" : "password"}
                 value={loginData.password}
                 onChange={handleLoginChange}
-                className="pl-10 pr-10 bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] focus:border-[#007acc] focus:ring-[#007acc]"
+                className="pl-10 pr-10 bg-background-surface border-border text-foreground-secondary placeholder-foreground-muted focus:border-primary focus:ring-primary"
                 placeholder="Enter your password"
                 required
               />
@@ -123,7 +123,7 @@ export default function LoginForm() {
                 type="button"
                 aria-label={showLoginPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowLoginPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#969696] hover:text-[#cccccc]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground-secondary"
               >
                 {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -133,7 +133,7 @@ export default function LoginForm() {
         <CardFooter className="pt-4">
           <Button
             type="submit"
-            className="w-full bg-[#007acc] hover:bg-[#005a9e] text-white transition-colors"
+            className="w-full bg-primary hover:bg-primary-hover text-foreground transition-colors"
             disabled={isLoading}
           >
             {isLoading ? (

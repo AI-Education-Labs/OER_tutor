@@ -356,17 +356,17 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
 
   const renderDialogueNode = (node: DialogueNode, treeId: string, depth = 0) => {
     const nodeTypeStyles = {
-      question: "bg-[#2d2d30] border-l-4 border-[#569cd6]",
-      explanation: "bg-[#252526] border-l-4 border-[#4ec9b0]",
-      insight: "bg-[#252526] border-l-4 border-[#dcdcaa]",
-      challenge: "bg-[#252526] border-l-4 border-[#ce9178]",
-      system: "bg-[#252526] border-l-4 border-[#808080]",
+      question: "bg-background-tertiary border-l-4 border-primary",
+      explanation: "bg-background-secondary border-l-4 border-accent-teal",
+      insight: "bg-background-secondary border-l-4 border-accent-yellow",
+      challenge: "bg-background-secondary border-l-4 border-[#ce9178]",
+      system: "bg-background-secondary border-l-4 border-foreground-muted",
     }
 
     const nodeTypeIcons = {
-      question: <ChevronRight className="w-4 h-4 text-[#569cd6]" />,
-      explanation: <BookOpen className="w-4 h-4 text-[#4ec9b0]" />,
-      insight: <Lightbulb className="w-4 h-4 text-[#dcdcaa]" />,
+      question: <ChevronRight className="w-4 h-4 text-primary" />,
+      explanation: <BookOpen className="w-4 h-4 text-accent-teal" />,
+      insight: <Lightbulb className="w-4 h-4 text-accent-yellow" />,
       challenge: <ArrowRight className="w-4 h-4 text-[#ce9178]" />,
       system: null,
     }
@@ -375,7 +375,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
       <div key={node.id} className={`mb-2 ${depth > 0 ? "ml-6" : ""}`}>
         <div
           className={`p-3 rounded ${nodeTypeStyles[node.type]} ${
-            node.type === "question" ? "cursor-pointer hover:bg-[#3e3e42]" : ""
+            node.type === "question" ? "cursor-pointer hover:bg-background-surface" : ""
           }`}
           onClick={() => {
             if (node.type === "question") {
@@ -389,9 +389,9 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
             {node.children && node.children.length > 0 && node.type === "question" ? (
               <div className="mt-1">
                 {node.expanded ? (
-                  <ChevronDown className="w-4 h-4 text-[#569cd6]" />
+                  <ChevronDown className="w-4 h-4 text-primary" />
                 ) : (
-                  <ChevronRight className="w-4 h-4 text-[#569cd6]" />
+                  <ChevronRight className="w-4 h-4 text-primary" />
                 )}
               </div>
             ) : (
@@ -402,7 +402,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
 
               {node.source && (
                 <div
-                  className={`mt-2 text-xs bg-[#3e3e42] p-2 rounded flex items-center gap-2 cursor-pointer hover:bg-[#4e4e52] min-w-0`}
+                  className={`mt-2 text-xs bg-background-surface p-2 rounded flex items-center gap-2 cursor-pointer hover:bg-background-surface min-w-0`}
                   onClick={(e) => {
                     e.stopPropagation()
                     console.log("Navigate to source:", node.source)
@@ -410,7 +410,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
                   onMouseEnter={(e) => e.stopPropagation()}
                   onMouseLeave={(e) => e.stopPropagation()}
                 >
-                  <BookOpen className="w-3 h-3 text-[#569cd6] flex-shrink-0" />
+                  <BookOpen className="w-3 h-3 text-primary flex-shrink-0" />
                   <span className="truncate">
                     Source: Page {node.source.page} - {node.source.paragraph}
                   </span>
@@ -435,7 +435,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
         {dialogueTrees.map((tree) => (
           <div key={tree.id} className="mb-4">
             <div
-              className="flex items-center gap-2 p-2 bg-[#3e3e42] rounded cursor-pointer hover:bg-[#4e4e52] min-w-0"
+              className="flex items-center gap-2 p-2 bg-background-surface rounded cursor-pointer hover:bg-background-surface min-w-0"
               onClick={() => {
                 toggleTreeExpansion(tree.id)
                 setActiveTree(tree.id)
@@ -444,9 +444,9 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
               onMouseLeave={handleElementLeave}
             >
               {tree.expanded ? (
-                <ChevronDown className="w-4 h-4 text-[#cccccc] flex-shrink-0" />
+                <ChevronDown className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-[#cccccc] flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
               )}
               <span className="tree-title text-sm font-medium min-w-0 truncate">{tree.topic}</span>
             </div>
@@ -454,7 +454,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
             {tree.expanded && (
               <div className="mt-2">
                 {renderDialogueNode(tree.rootNode, tree.id)}
-                <div className="mt-4 p-2 border border-dashed border-[#3e3e42] rounded text-center text-xs text-[#808080] hover:border-[#569cd6] hover:text-[#569cd6] cursor-pointer">
+                <div className="mt-4 p-2 border border-dashed border-border rounded text-center text-xs text-foreground-muted hover:border-primary hover:text-primary cursor-pointer">
                   <span>Explore more aspects of this topic...</span>
                 </div>
               </div>
@@ -463,13 +463,13 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
         ))}
       </div>
 
-      <div className="p-3 border-t border-[#3e3e42]">
+      <div className="p-3 border-t border-border">
         <div className="flex flex-col gap-2">
           <Textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
             placeholder="Ask a question to explore further..."
-            className="bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] placeholder-[#969696] min-h-[80px] resize-none"
+            className="bg-background-surface border-border text-foreground-secondary placeholder-foreground-muted min-h-[80px] resize-none"
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.ctrlKey) {
                 e.preventDefault()
@@ -478,8 +478,8 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
             }}
           />
           <div className="flex justify-between items-center">
-            <div className="text-xs text-[#808080]">Press Ctrl+Enter to ask</div>
-            <Button onClick={addUserQuestion} size="sm" className="bg-[#007acc] hover:bg-[#005a9e]">
+            <div className="text-xs text-foreground-muted">Press Ctrl+Enter to ask</div>
+            <Button onClick={addUserQuestion} size="sm" className="bg-primary hover:bg-primary-hover">
               Explore
             </Button>
           </div>
@@ -489,7 +489,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
       {/* Floating tooltip for any truncated text */}
       {tooltipInfo && (
         <div
-          className="fixed bg-[#2d2d30] text-[#cccccc] text-xs px-3 py-2 rounded border border-[#3e3e42] shadow-lg z-50 pointer-events-none max-w-xs"
+          className="fixed bg-background-tertiary text-foreground-secondary text-xs px-3 py-2 rounded border border-border shadow-lg z-50 pointer-events-none max-w-xs"
           style={{
             left: `${tooltipInfo.position.x}px`,
             top: `${tooltipInfo.position.y}px`,
@@ -505,12 +505,12 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
   const renderHighlightsTab = () => (
     <div className="h-full flex flex-col relative">
       <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
-        <h3 className="text-[#ffffff] text-sm font-medium">Highlighted Concepts</h3>
+        <h3 className="text-foreground text-sm font-medium">Highlighted Concepts</h3>
 
         {highlightedText.map((highlight) => (
           <Card
             key={highlight.id}
-            className="bg-[#2d2d30] border-[#3e3e42] max-w-full"
+            className="bg-background-tertiary border-border max-w-full"
             onMouseEnter={() => setHoveredHighlightId(highlight.id)}
             onMouseLeave={() => setHoveredHighlightId(null)}
           >
@@ -532,9 +532,9 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
                   }}
                   onMouseLeave={handleElementLeave}
                 >
-                  <h4 className="highlight-title text-[#ffffff] text-sm font-medium truncate">{highlight.concept}</h4>
+                  <h4 className="highlight-title text-foreground text-sm font-medium truncate">{highlight.concept}</h4>
                 </div>
-                <span className="text-xs text-[#969696] flex-shrink-0 whitespace-nowrap">Page {highlight.page}</span>
+                <span className="text-xs text-foreground-muted flex-shrink-0 whitespace-nowrap">Page {highlight.page}</span>
               </div>
               <div
                 className="mb-3"
@@ -552,7 +552,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
                 }}
                 onMouseLeave={handleElementLeave}
               >
-                <p className="highlight-text text-xs text-[#969696] italic line-clamp-2">"{highlight.text}"</p>
+                <p className="highlight-text text-xs text-foreground-muted italic line-clamp-2">"{highlight.text}"</p>
               </div>
 
               <div className="space-y-2">
@@ -577,7 +577,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start text-left text-[#569cd6] hover:bg-[#3e3e42] hover:text-[#569cd6] h-auto py-2"
+                  className="w-full justify-start text-left text-primary hover:bg-background-surface hover:text-primary h-auto py-2"
                   onMouseEnter={(e) =>
                     handleElementHover(
                       e,
@@ -623,11 +623,11 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
     <div className="h-full flex flex-col relative">
       <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[#ffffff] text-sm font-medium">Study Notes</h3>
+          <h3 className="text-foreground text-sm font-medium">Study Notes</h3>
           <Button
             size="sm"
             variant="outline"
-            className="border-[#3e3e42] text-[#cccccc] text-xs hover:text-[#ffffff] bg-transparent"
+            className="border-border text-foreground-secondary text-xs hover:text-foreground bg-transparent"
           >
             <Plus className="w-3 h-3 mr-1" />
             New Note
@@ -635,22 +635,22 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
         </div>
 
         {studyNotes.map((note) => (
-          <Card key={note.id} className="bg-[#2d2d30] border-[#3e3e42]">
+          <Card key={note.id} className="bg-background-tertiary border-border">
             <CardContent className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="text-[#ffffff] text-sm font-medium truncate">{note.title}</h4>
+                    <h4 className="text-foreground text-sm font-medium truncate">{note.title}</h4>
                     {note.aiGenerated && (
-                      <span className="text-xs bg-[#007acc] text-white px-2 py-0.5 rounded">AI</span>
+                      <span className="text-xs bg-primary text-white px-2 py-0.5 rounded">AI</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-[#969696]">
+                  <div className="flex items-center gap-2 text-xs text-foreground-muted">
                     <span>{note.timestamp}</span>
                     <span>•</span>
                     <div className="flex gap-1">
                       {note.tags.map((tag) => (
-                        <span key={tag} className="bg-[#3e3e42] px-1.5 py-0.5 rounded text-[10px]">
+                        <span key={tag} className="bg-background-surface px-1.5 py-0.5 rounded text-[10px]">
                           {tag}
                         </span>
                       ))}
@@ -660,7 +660,7 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="w-8 h-8 p-0 hover:bg-[#3e3e42]"
+                  className="w-8 h-8 p-0 hover:bg-background-surface"
                   onClick={() => startEditingNote(note)}
                 >
                   <Edit3 className="w-3 h-3" />
@@ -668,8 +668,8 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
               </div>
 
               {note.highlightedText && (
-                <div className="mb-3 p-2 bg-[#252526] rounded border-l-2 border-[#ce9178]">
-                  <div className="text-xs text-[#969696] italic">Highlighted: "{note.highlightedText}"</div>
+                <div className="mb-3 p-2 bg-background-secondary rounded border-l-2 border-[#ce9178]">
+                  <div className="text-xs text-foreground-muted italic">Highlighted: "{note.highlightedText}"</div>
                 </div>
               )}
 
@@ -678,17 +678,17 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
                   <Textarea
                     value={editingContent}
                     onChange={(e) => setEditingContent(e.target.value)}
-                    className="bg-[#3e3e42] border-[#3e3e42] text-[#cccccc] min-h-[120px] resize-none"
+                    className="bg-background-surface border-border text-foreground-secondary min-h-[120px] resize-none"
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" className="bg-[#007acc] hover:bg-[#005a9e]" onClick={() => saveNote(note.id)}>
+                    <Button size="sm" className="bg-primary hover:bg-primary-hover" onClick={() => saveNote(note.id)}>
                       <Save className="w-3 h-3 mr-1" />
                       Save
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-[#3e3e42] text-[#cccccc] hover:text-[#ffffff] bg-transparent"
+                      className="border-border text-foreground-secondary hover:text-foreground bg-transparent"
                       onClick={cancelEditing}
                     >
                       Cancel
@@ -696,14 +696,14 @@ export function TutorPanel({ activeTab, textbookId, selectedChapterId }: TutorPa
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-[#cccccc] whitespace-pre-wrap">{note.content}</div>
+                <div className="text-sm text-foreground-secondary whitespace-pre-wrap">{note.content}</div>
               )}
 
               <div className="flex gap-2 mt-3">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs bg-[#3e3e42] border-[#4e4e52] hover:bg-[#4e4e52] flex-1"
+                  className="h-7 text-xs bg-background-surface border-border hover:bg-background-surface flex-1"
                 >
                   <BookOpen className="w-3 h-3 mr-1" />
                   Ask about this

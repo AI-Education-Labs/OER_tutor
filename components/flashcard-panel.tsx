@@ -69,8 +69,8 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
             </span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
-          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-[#3e3e42]">
+        <DropdownMenuContent className="bg-background-tertiary border-border text-foreground-secondary">
+          <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-background-surface">
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -100,7 +100,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           }
           const rawSubs = current_chapter?.sub_chapters ?? []
           const sub_chapters: string[] = Array.isArray(rawSubs)
-            ? rawSubs.map((s: any) => (typeof s === "string" ? (s === "Introduction" ? '' : s) 
+            ? rawSubs.map((s: any) => (typeof s === "string" ? (s === "Introduction" ? '' : s)
             : String(s?.title === "Introduction" ? "" : String(s?.title ?? "")))).filter((s: string) => s)
             : []
           console.log("Subs:", sub_chapters);
@@ -309,23 +309,23 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   if (stage === "menu") {
     return (
       <div className="h-full flex flex-col">
-        <div className="p-4 border-b border-[#3e3e42]">
-          <h3 className="text-sm font-medium text-[#ffffff]">Flashcards</h3>
-          <p className="text-xs text-[#969696]">Choose a subchapter to generate a deck.</p>
+        <div className="p-4 border-b border-border">
+          <h3 className="text-sm font-medium text-foreground">Flashcards</h3>
+          <p className="text-xs text-foreground-muted">Choose a subchapter to generate a deck.</p>
         </div>
         <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
           <div>
-            <label className="block text-xs text-[#cccccc] mb-2">Subchapter</label>
+            <label className="block text-xs text-foreground-secondary mb-2">Subchapter</label>
             <Select onValueChange={(v: string) => setSelectedSubchapter(v)}>
-              <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
+              <SelectTrigger className="w-full bg-background-tertiary border-border text-foreground-secondary">
                 <SelectValue placeholder="Select a subchapter" />
               </SelectTrigger>
-              <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
+              <SelectContent className="bg-background-tertiary border-border text-foreground-secondary max-h-60 overflow-auto">
                 {subchapters.length === 0 ? (
-                  <div className="px-2 py-1 text-xs text-[#969696]">No subchapters detected</div>
+                  <div className="px-2 py-1 text-xs text-foreground-muted">No subchapters detected</div>
                 ) : (
                   subchapters.map((s, i) => (
-                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-[#3e3e42]">
+                    <SelectItem key={`${s}-${i}`} value={s} className="focus:bg-background-surface">
                       {s}
                     </SelectItem>
                   ))
@@ -335,14 +335,14 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           </div>
 
           <div>
-            <label className="block text-xs text-[#cccccc] mb-2">Number of Flashcards</label>
-            <Select onValueChange={(v: string) => setNumCards(Number(v))} defaultValue="5">
-              <SelectTrigger className="w-full bg-[#2d2d30] border-[#3e3e42] text-[#cccccc]">
-                <SelectValue placeholder="Select number of cards" />
+            <label className="block text-xs text-foreground-secondary mb-2">Number of Flashcards</label>
+            <Select onValueChange={(v: string) => setNumCards(parseInt(v))} value={String(numCards)}>
+              <SelectTrigger className="w-full bg-background-tertiary border-border text-foreground-secondary">
+                <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#2d2d30] border-[#3e3e42] text-[#cccccc] max-h-60 overflow-auto">
+              <SelectContent className="bg-background-tertiary border-border text-foreground-secondary max-h-60 overflow-auto">
                 {Array.from({ length: 18 }, (_, i) => i + 3).map((n) => (
-                  <SelectItem key={n} value={String(n)} className="focus:bg-[#3e3e42]">
+                  <SelectItem key={n} value={String(n)} className="focus:bg-background-surface">
                     {n}
                   </SelectItem>
                 ))}
@@ -351,25 +351,25 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           </div>
 
           <div className="flex gap-2 justify-center">
-            <Button className="bg-[#007acc] hover:bg-[#005a9e]" onClick={startGeneration} disabled={!selectedSubchapter}>
+            <Button className="bg-primary hover:bg-primary-hover" onClick={startGeneration} disabled={!selectedSubchapter}>
               Generate Flashcards
             </Button>
           </div>
           {!contextText && (
-            <div className="text-xs text-[#969696]">Select a chapter to get started!</div>
+            <div className="text-xs text-foreground-muted">Select a chapter to get started!</div>
           )}
-          <div className="pt-2 border-t border-[#3e3e42]">
+          <div className="pt-2 border-t border-border">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-medium text-[#ffffff]">Previous Decks</h4>
+              <h4 className="text-xs font-medium text-foreground">Previous Decks</h4>
               {prevLoading && (
-                <div className="text-[10px] text-[#969696] flex items-center gap-1">
+                <div className="text-[10px] text-foreground-muted flex items-center gap-1">
                   <Loader2 className="w-3 h-3 animate-spin" /> Loading
                 </div>
               )}
             </div>
-            {prevError && <div className="text-[10px] text-[#ff6b6b] mb-2">{prevError}</div>}
+            {prevError && <div className="text-[10px] text-app-error mb-2">{prevError}</div>}
             {(!previousDecks || previousDecks.length === 0) && !prevLoading ? (
-              <div className="text-xs text-[#969696]">No saved decks yet</div>
+              <div className="text-xs text-foreground-muted">No saved decks yet</div>
             ) : (
               <div className="space-y-2 max-h-60 overflow-auto pr-1 show-scrollbar">
               {previousDecks.map((d, idx) => {
@@ -382,17 +382,17 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
                     <div
                       role="button"
                       tabIndex={0}
-                      className="w-full text-left px-3 py-2 rounded bg-[#2d2d30] hover:bg-[#3e3e42] border border-[#3e3e42]"
+                      className="w-full text-left px-3 py-2 rounded bg-background-tertiary hover:bg-background-surface border border-border"
                       onClick={() => loadDeck(d)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); loadDeck(d) } }}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="text-xs text-[#ffffff] truncate">{d?.hint || "Untitled deck"}</div>
-                          <div className="text-[10px] text-[#969696] truncate">{formatWhen(d?.created_time)}</div>
+                          <div className="text-xs text-foreground truncate">{d?.hint || "Untitled deck"}</div>
+                          <div className="text-[10px] text-foreground-muted truncate">{formatWhen(d?.created_time)}</div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <div className="text-[11px] text-[#cccccc] whitespace-nowrap">{count} cards</div>
+                          <div className="text-[11px] text-foreground-secondary whitespace-nowrap">{count} cards</div>
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <MenuButton
                               id={d?._id}
@@ -419,7 +419,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   if (stage === "loading") {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[#cccccc]">
+        <div className="flex items-center gap-2 text-foreground-secondary">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Generating your flashcards…</span>
         </div>
@@ -430,21 +430,21 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
   // study
   return (
     <div className="h-full flex flex-col">
-      <div className="p-3 border-b border-[#3e3e42] flex items-center gap-2">
+      <div className="p-3 border-b border-border flex items-center gap-2">
         <Button
           variant="ghost"
           size="sm"
-          className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+          className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
           onClick={() => setStage("menu")}
         >
           Back
         </Button>
-        {selectedSubchapter && <span className="ml-2 text-xs text-[#969696] truncate">{selectedSubchapter}</span>}
+        {selectedSubchapter && <span className="ml-2 text-xs text-foreground-muted truncate">{selectedSubchapter}</span>}
         <div className="ml-auto flex items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
-            className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+            className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
             onClick={toggleDefaultSide}
           >
             {defaultFront ? "Original" : "Flipped"}
@@ -452,7 +452,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           <Button
             variant="ghost"
             size="sm"
-            className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+            className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
             onClick={shuffleDeck}
           >
             <Shuffle className="w-3 h-3 mr-1" />
@@ -461,7 +461,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           <Button
             variant="ghost"
             size="sm"
-            className="px-2 py-1 bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] rounded"
+            className="px-2 py-1 bg-background-tertiary text-foreground-secondary hover:bg-background-surface rounded"
             onClick={() => {}}
           >
             <RefreshCw className="w-3 h-3 mr-1" />
@@ -472,7 +472,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
 
       <div className="flex-1 overflow-auto p-4 space-y-4 show-scrollbar">
         <div className="max-w-xl mx-auto w-full">
-          <Card className="bg-[#2d2d30] border-[#3e3e42]">
+          <Card className="bg-background-tertiary border-border">
             <CardContent className="p-6">
               <div
                 className="relative w-full h-64 sm:h-72 md:h-80 cursor-pointer select-none [perspective:1000px]"
@@ -483,13 +483,13 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
                 >
                   {/* Front */}
                   <div className="absolute inset-0 flex items-center justify-center p-4 [backface-visibility:hidden]">
-                    <div className="text-center text-[#ffffff] text-sm whitespace-pre-wrap break-words">
+                    <div className="text-center text-foreground text-sm whitespace-pre-wrap break-words">
                       {currentCard?.front}
                     </div>
                   </div>
                   {/* Back */}
                   <div className="absolute inset-0 flex items-center justify-center p-4 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-                    <div className="text-center text-[#ffffff] text-sm whitespace-pre-wrap break-words">
+                    <div className="text-center text-foreground text-sm whitespace-pre-wrap break-words">
                       {currentCard?.back}
                     </div>
                   </div>
@@ -501,18 +501,18 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
             <Button
               size="sm"
-              className="bg-[#3e3e42] text-[#ffffff] hover:bg-[#4a4a50] w-full sm:w-auto"
+              className="bg-background-surface text-foreground hover:bg-[#4a4a50] w-full sm:w-auto"
               onClick={goPrev}
               disabled={!canPrev}
             >
               Previous
             </Button>
-            <div className="text-sm text-[#cccccc] py-1">
+            <div className="text-sm text-foreground-secondary py-1">
               Card {cards.length > 0 ? currentIndex + 1 : 0} of {cards.length}
             </div>
             <Button
               size="sm"
-              className="bg-[#007acc] hover:bg-[#005a9e] w-full sm:w-auto"
+              className="bg-primary hover:bg-primary-hover w-full sm:w-auto"
               onClick={goNext}
               disabled={!canNext}
             >
@@ -524,4 +524,3 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
     </div>
   )
 }
-
