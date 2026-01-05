@@ -53,8 +53,6 @@ export function ToolGrid({ tutorTabs, onSelectTool }: ToolGridProps) {
               ) : (
                 <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="flex items-center justify-center gap-1 text-xs text-primary">
-                    <Plus className="w-3 h-3" />
-                    <span>Add Tool</span>
                   </div>
                 </div>
               )}
