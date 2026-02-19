@@ -1,9 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 import logging
+import uuid
+import string
+import random
+from datetime import datetime, timezone
 from backend.features.textbooks.models import Textbook
 from pydantic import BaseModel
-from backend.db.database import get_document, add_textbook_to_user
+from backend.db.database import get_collection, get_document, get_user_by_id, add_textbook_to_user
 from backend.features.textbooks.repo import (
     find_textbook_by_code,
     find_textbook_by_id,
@@ -11,7 +15,7 @@ from backend.features.textbooks.repo import (
 )
 from backend.features.auth.service import validate_access_token_optional, validate_access_token
 from backend.config import settings
-from backend.db.s3_service import generate_presigned_get_url
+from backend.db.s3_service import generate_presigned_get_url, generate_presigned_put_url
 
 S3_BUCKET = settings.S3_BUCKET
 
@@ -53,6 +57,129 @@ async def get_textbooks(user_uuid: str = Depends(validate_access_token_optional)
         is_authenticated=is_authenticated,
         message=message
     )
+
+@router.get("/search")
+async def search_textbooks(q: str = "", user_id: str = Depends(validate_access_token)):
+    """Search textbooks by title, author, or code. Returns up to 20 matches."""
+    collection = await get_collection("textbooks")
+    query = q.strip()
+    if not query:
+        return {"textbooks": []}
+
+    regex_filter = {
+        "$or": [
+            {"title": {"$regex": query, "$options": "i"}},
+            {"author": {"$regex": query, "$options": "i"}},
+            {"code": query.upper()},
+        ]
+    }
+    cursor = collection.find(regex_filter).limit(20)
+    docs = await cursor.to_list(length=20)
+    textbooks = []
+    for doc in docs:
+        try:
+            tb = Textbook.model_validate(doc)
+            textbooks.append(tb.model_dump(by_alias=True))
+        except Exception:
+            continue
+    return {"textbooks": textbooks}
+
+
+class AddTextbookRequest(BaseModel):
+    code: str
+
+class AddTextbookResponse(BaseModel):
+    ok: bool
+    textbook_id: Optional[str] = None
+    title: Optional[str] = None
+    error: Optional[str] = None
+
+logger = logging.getLogger(__name__)
+
+@router.post("/add", response_model=AddTextbookResponse)
+async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_access_token)):
+    """Add a textbook to the authenticated user's library using a 6-char code."""
+    textbook_code = (payload.code or "").strip().upper()
+
+    # Check if the textbook ID is valid
+    valid_textbook = await find_textbook_by_code(textbook_code)
+    if(valid_textbook is None):
+        # If no textbook exists, let the user know
+        raise HTTPException(status_code=404, detail="Textbook not found")
+    else:
+        # If the textbook exists, add it to the user's books
+        textbook_id = valid_textbook.id
+        textbook_title = valid_textbook.title
+        print(f"Adding Textbook {textbook_title} ({textbook_id}) to user {user_id}")
+        await add_textbook_to_user(user_id, textbook_id)
+        return AddTextbookResponse(ok=True, textbook_id=textbook_id, title=textbook_title)
+
+
+# ── Textbook upload (professor) ──────────────────────────────────────────
+
+class TextbookUploadRequest(BaseModel):
+    title: str
+    author: Optional[str] = None
+    subject: Optional[str] = None
+
+
+class TextbookUploadResponse(BaseModel):
+    ok: bool
+    textbook_id: str
+    code: str
+    upload_url: str
+
+
+def _generate_textbook_code(length: int = 6) -> str:
+    chars = string.ascii_uppercase + string.digits
+    return "".join(random.choices(chars, k=length))
+
+
+@router.post("/upload", response_model=TextbookUploadResponse)
+async def upload_textbook(payload: TextbookUploadRequest, user_id: str = Depends(validate_access_token)):
+    """
+    Create a new textbook record and return a presigned URL for the professor
+    to upload the PDF. The textbook starts with no chapters; chapters can be
+    added later once the PDF is processed.
+    """
+    user = await get_user_by_id(user_id)
+    if not user or user.get("role") != "professor":
+        raise HTTPException(status_code=403, detail="Only professors can upload textbooks")
+
+    textbook_id = str(uuid.uuid4())
+    code = _generate_textbook_code()
+
+    textbook_doc = {
+        "_id": textbook_id,
+        "title": payload.title,
+        "author": payload.author,
+        "subject": payload.subject,
+        "code": code,
+        "chapters": [],
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    collection = await get_collection("textbooks")
+    await collection.insert_one(textbook_doc)
+
+    # Also add to the professor's own library
+    await add_textbook_to_user(user_id, textbook_id)
+
+    s3_key = f"{textbook_id}/original.pdf"
+    upload_url = generate_presigned_put_url(
+        key=s3_key,
+        bucket=S3_BUCKET,
+        content_type="application/pdf",
+        expires_in_seconds=3600,
+    )
+
+    return TextbookUploadResponse(
+        ok=True,
+        textbook_id=textbook_id,
+        code=code,
+        upload_url=upload_url,
+    )
+
 
 # TODO: These routes need to be protected
 @router.get("/{textbook_uuid}")
@@ -117,34 +244,3 @@ async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
     except Exception as e:
         logger.error(f"Error getting chapter PDF: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving chapter PDF: {str(e)}")
-    
-
-
-class AddTextbookRequest(BaseModel):
-    code: str
-
-class AddTextbookResponse(BaseModel):
-    ok: bool
-    textbook_id: Optional[str] = None
-    title: Optional[str] = None
-    error: Optional[str] = None
-
-logger = logging.getLogger(__name__)
-
-@router.post("/add", response_model=AddTextbookResponse)
-async def add_user_textbook(payload: AddTextbookRequest, user_id: str = Depends(validate_access_token)):
-    """Add a textbook to the authenticated user's library using a 6-char code."""
-    textbook_code = (payload.code or "").strip().upper()
-
-    # Check if the textbook ID is valid
-    valid_textbook = await find_textbook_by_code(textbook_code)
-    if(valid_textbook is None):
-        # If no textbook exists, let the user know
-        raise HTTPException(status_code=404, detail="Textbook not found")
-    else:
-        # If the textbook exists, add it to the user's books
-        textbook_id = valid_textbook.id
-        textbook_title = valid_textbook.title
-        print(f"Adding Textbook {textbook_title} ({textbook_id}) to user {user_id}")
-        await add_textbook_to_user(user_id, textbook_id)
-        return AddTextbookResponse(ok=True, textbook_id=textbook_id, title=textbook_title)

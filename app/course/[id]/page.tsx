@@ -1,48 +1,55 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { BookOpen, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { TextbookLibrary } from "@/components/textbook-library"
+import { CourseDetail } from "@/components/courses/course-detail"
 
-export default function HomePage() {
+function parseJwt(token: string): Record<string, any> | null {
+  try {
+    const base64Url = token.split(".")[1]
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+    return JSON.parse(atob(base64))
+  } catch {
+    return null
+  }
+}
+
+export default function CourseDetailPage() {
   const router = useRouter()
+  const params = useParams()
+  const courseId = params.id as string
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState<string>("student")
 
   useEffect(() => {
     const token = localStorage.getItem("access_token")
     if (token) {
       setIsLoggedIn(true)
-      router.push("/dashboard")
+      const payload = parseJwt(token)
+      if (payload?.role) setUserRole(payload.role)
     }
-  }, [router])
-
-  const handleLogin = () => {
-    router.push("/auth")
-  }
+  }, [])
 
   const handleLogout = () => {
     localStorage.removeItem("access_token")
     setIsLoggedIn(false)
-    window.location.reload()
+    router.push("/")
   }
 
   return (
     <div className="flex min-h-screen flex-col">
       {/* VSCode-style Header */}
       <header className="sticky top-0 z-50 h-8 bg-background-tertiary border-b border-background-tertiary flex items-center px-4 flex-shrink-0">
-        {/* Left side - App icon and title */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("/dashboard")}>
           <BookOpen className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-foreground-secondary">TextbookAI</span>
         </div>
 
-        {/* Center - Empty for now, could add breadcrumbs later */}
         <div className="flex-1" />
 
-        {/* Right side - Auth buttons */}
         <div className="flex items-center gap-2">
           {isLoggedIn ? (
             <>
@@ -68,7 +75,7 @@ export default function HomePage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleLogin}
+                onClick={() => router.push("/auth")}
                 className="h-6 px-3 text-xs text-foreground-secondary hover:text-white hover:bg-background-surface transition-colors"
               >
                 Sign In
@@ -85,9 +92,8 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 bg-background min-h-0">
-        <TextbookLibrary />
+        <CourseDetail courseId={courseId} isAuthenticated={isLoggedIn} userRole={userRole} />
       </main>
     </div>
   )

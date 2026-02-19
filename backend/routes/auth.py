@@ -37,7 +37,8 @@ async def assign_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     user_id = user.get("id")
     access_token = await create_access_token(
-        data={"sub": user_id, "user_id": user_id}, expires_delta=access_token_expires
+        data={"sub": user_id, "user_id": user_id, "role": user.get("role", "student")},
+        expires_delta=access_token_expires,
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -76,6 +77,11 @@ async def register_user(user_create: UserCreate):
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
+    # Validate role
+    valid_roles = {"student", "professor"}
+    if user_create.role not in valid_roles:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role must be 'student' or 'professor'")
+
     hashed_password = await hash_password(user_create.password)
 
     user_id = str(uuid.uuid4()) 
@@ -83,8 +89,10 @@ async def register_user(user_create: UserCreate):
         id=user_id,
         username=user_create.username,
         email=user_create.email,
+        role=user_create.role,
         hashed_password=hashed_password,
         disabled=0,
+        onboarding=user_create.onboarding,
     )
     await create_user_document(user)
     return {"message": "User registered successfully", "user": user}

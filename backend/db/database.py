@@ -157,3 +157,17 @@ async def get_user_by_id(user_id: str) -> UserWithPassword:
 async def get_user_by_username(username: str) -> UserWithPassword:
     collection = await get_collection("users")
     return await collection.find_one({"username": username})
+
+
+# ── Course & Enrollment helpers ──────────────────────────────────────────
+
+async def ensure_course_indexes():
+    """Create indexes for courses and enrollments collections."""
+    enrollments = await get_collection("enrollments")
+    await enrollments.create_index([("course_id", 1), ("user_id", 1)], unique=True)
+    await enrollments.create_index("user_id")
+    await enrollments.create_index("course_id")
+
+    courses = await get_collection("courses")
+    await courses.create_index("instructor_id")
+    await courses.create_index("invite_code", sparse=True)

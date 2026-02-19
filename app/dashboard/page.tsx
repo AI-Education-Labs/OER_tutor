@@ -5,19 +5,31 @@ import { useRouter } from "next/navigation"
 import { BookOpen, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { TextbookLibrary } from "@/components/textbook-library"
+import { CourseDashboard } from "@/components/courses/course-dashboard"
 
-export default function HomePage() {
+function parseJwt(token: string): Record<string, any> | null {
+  try {
+    const base64Url = token.split(".")[1]
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+    return JSON.parse(atob(base64))
+  } catch {
+    return null
+  }
+}
+
+export default function DashboardPage() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState<string>("student")
 
   useEffect(() => {
     const token = localStorage.getItem("access_token")
     if (token) {
       setIsLoggedIn(true)
-      router.push("/dashboard")
+      const payload = parseJwt(token)
+      if (payload?.role) setUserRole(payload.role)
     }
-  }, [router])
+  }, [])
 
   const handleLogin = () => {
     router.push("/auth")
@@ -26,7 +38,7 @@ export default function HomePage() {
   const handleLogout = () => {
     localStorage.removeItem("access_token")
     setIsLoggedIn(false)
-    window.location.reload()
+    router.push("/")
   }
 
   return (
@@ -34,12 +46,12 @@ export default function HomePage() {
       {/* VSCode-style Header */}
       <header className="sticky top-0 z-50 h-8 bg-background-tertiary border-b border-background-tertiary flex items-center px-4 flex-shrink-0">
         {/* Left side - App icon and title */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("/")}>
           <BookOpen className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-foreground-secondary">TextbookAI</span>
         </div>
 
-        {/* Center - Empty for now, could add breadcrumbs later */}
+        {/* Center */}
         <div className="flex-1" />
 
         {/* Right side - Auth buttons */}
@@ -87,7 +99,7 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="flex-1 bg-background min-h-0">
-        <TextbookLibrary />
+        <CourseDashboard isAuthenticated={isLoggedIn} userRole={userRole} />
       </main>
     </div>
   )

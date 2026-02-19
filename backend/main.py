@@ -12,6 +12,7 @@ from backend.routes.quiz import router as quiz_router
 from backend.routes.studyguide import router as study_guide_router
 from backend.routes.user_progress import router as textbook_progress_router
 from backend.routes.chat import router as chat_router
+from backend.routes.courses import router as courses_router
 from backend.features.observability.service import setup_observability
 
 import mangum
@@ -20,7 +21,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
-from backend.db.database import ensure_mongo_connection
+from backend.db.database import ensure_mongo_connection, ensure_course_indexes
 
 from dotenv import load_dotenv
 from pathlib import Path
@@ -51,6 +52,7 @@ api_router.include_router(quiz_router, prefix="/quiz", tags=["quizzes"])
 api_router.include_router(study_guide_router, prefix="/study-guide", tags=["study-guide"])
 api_router.include_router(textbook_progress_router, prefix="/progress", tags=["progress"])
 api_router.include_router(chat_router, prefix="/chat", tags=["chat"])
+api_router.include_router(courses_router, prefix="/courses", tags=["courses"])
 
 app.include_router(api_router)
 
@@ -65,6 +67,10 @@ app.add_middleware(
 
 # Mangum handler
 handler = mangum.Mangum(app)
+
+@app.on_event("startup")
+async def on_startup():
+    await ensure_course_indexes()
 
 # Flush llm observability
 @app.on_event("shutdown")
