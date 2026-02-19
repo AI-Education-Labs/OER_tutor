@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { BookOpen, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { TextbookLibrary } from "@/components/textbook-library"
+import { LandingPage } from "@/components/landing-page"
 
 export default function HomePage() {
   const router = useRouter()
@@ -39,7 +39,7 @@ export default function HomePage() {
           <span className="text-sm font-medium text-foreground-secondary">TextbookAI</span>
         </div>
 
-        {/* Center - Empty for now, could add breadcrumbs later */}
+        {/* Center */}
         <div className="flex-1" />
 
         {/* Right side - Auth buttons */}
@@ -87,7 +87,7 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="flex-1 bg-background min-h-0">
-        <TextbookLibrary />
+        <LandingPage />
       </main>
     </div>
   )

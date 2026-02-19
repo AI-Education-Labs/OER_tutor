@@ -8,8 +8,8 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "StudyCode - Interactive Learning Platform",
-  description: "An interactive learning platform with PDF viewing and AI tutoring",
+  title: "TextbookAI - AI-Powered Study Platform",
+  description: "An AI-powered study platform with intelligent tutoring, smart flashcards, and personalized learning tools",
   icons: {
     icon: '/favicon.png',
   }
