@@ -37,7 +37,7 @@ async def assign_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     user_id = user.get("id")
     access_token = await create_access_token(
-        data={"sub": user_id, "user_id": user_id, "role": user.get("role", "student")},
+        data={"sub": user_id, "user_id": user_id, "role": user.get("role", "student"), "username": user.get("username", "")},
         expires_delta=access_token_expires,
     )
     

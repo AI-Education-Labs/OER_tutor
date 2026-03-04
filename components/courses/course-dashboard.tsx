@@ -231,18 +231,8 @@ export function CourseDashboard({ isAuthenticated, userRole }: CourseDashboardPr
 
   return (
     <div className="min-h-screen bg-background text-foreground-secondary">
-      {/* VSCode-style title bar */}
-      <div className="h-8 bg-background-tertiary border-b border-border flex items-center px-4">
-        <div className="flex-1 text-center text-sm">Course Dashboard</div>
-      </div>
-
       {/* Main content */}
       <div className="p-6">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold mb-2 text-foreground">Course Dashboard</h1>
-          <p className="text-foreground-muted">Browse and manage your courses</p>
-        </div>
 
         {/* Search + action buttons */}
         <div className="mb-6 flex flex-col sm:flex-row gap-3">

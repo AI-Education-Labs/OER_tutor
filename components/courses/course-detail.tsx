@@ -284,18 +284,15 @@ export function CourseDetail({ courseId, isAuthenticated, userRole }: CourseDeta
 
   return (
     <div className="min-h-screen bg-background text-foreground-secondary">
-      {/* Back button bar */}
-      <div className="h-8 bg-background-tertiary border-b border-border flex items-center px-4">
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Back to dashboard */}
         <button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground-secondary transition-colors"
+          className="flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground-secondary transition-colors mb-4"
         >
           <ArrowLeft className="h-3 w-3" /> Dashboard
         </button>
-        <div className="flex-1 text-center text-sm">{course.title}</div>
-      </div>
 
-      <div className="max-w-4xl mx-auto p-6">
         {/* Course header */}
         <div className="mb-8">
           <div className="flex items-start justify-between mb-2">
@@ -310,7 +307,9 @@ export function CourseDetail({ courseId, isAuthenticated, userRole }: CourseDeta
               </div>
               <p className="text-sm text-foreground-muted mb-1">{course.instructor_name}</p>
               {course.subject && (
-                <span className="text-xs text-accent-teal">{course.subject}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
+                  {course.subject}
+                </span>
               )}
             </div>
 
@@ -358,22 +357,6 @@ export function CourseDetail({ courseId, isAuthenticated, userRole }: CourseDeta
               </Button>
             )}
 
-            {/* Enrolled indicator + leave */}
-            {isAuthenticated && course.is_enrolled && !course.is_owner && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-primary font-medium">Enrolled</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleUnenroll}
-                  className="border-border text-foreground-muted hover:text-red-400 hover:border-red-400"
-                >
-                  <LeaveIcon className="h-3 w-3 mr-1" />
-                  Leave Course
-                </Button>
-              </div>
-            )}
-
             {/* Professor actions */}
             {course.is_owner && (
               <>
@@ -404,7 +387,7 @@ export function CourseDetail({ courseId, isAuthenticated, userRole }: CourseDeta
         {course.description && (
           <div className="mb-8">
             <h2 className="text-lg font-medium text-foreground mb-2">About this course</h2>
-            <div className="rounded-lg border border-border bg-background-surface p-4">
+            <div className="rounded-lg border border-border p-4">
               <p className="text-sm text-foreground-secondary whitespace-pre-wrap">{course.description}</p>
             </div>
           </div>
@@ -470,6 +453,21 @@ export function CourseDetail({ courseId, isAuthenticated, userRole }: CourseDeta
             </div>
           )}
         </div>
+
+        {/* Leave Course (bottom-right) */}
+        {isAuthenticated && course.is_enrolled && !course.is_owner && (
+          <div className="flex justify-end mt-8">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUnenroll}
+              className="border-border text-foreground-muted hover:text-red-400 hover:border-red-400"
+            >
+              <LeaveIcon className="h-3 w-3 mr-1" />
+              Leave Course
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Edit Course Dialog */}

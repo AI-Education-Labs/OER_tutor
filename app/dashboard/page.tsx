@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { BookOpen, LogOut, User } from "lucide-react"
+import { BookOpen, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { CourseDashboard } from "@/components/courses/course-dashboard"
 
 function parseJwt(token: string): Record<string, any> | null {
@@ -17,10 +22,28 @@ function parseJwt(token: string): Record<string, any> | null {
   }
 }
 
+const AVATAR_COLORS = ["#ef4444", "#f97316", "#3b82f6", "#22c55e", "#a855f7"] as const
+
+function getAvatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+function getInitials(name: string): string {
+  const raw = name || "??"
+  const first = raw[0].toUpperCase()
+  const second = raw.length > 1 ? raw[1].toLowerCase() : ""
+  return first + second
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userRole, setUserRole] = useState<string>("student")
+  const [userName, setUserName] = useState<string>("")
 
   useEffect(() => {
     const token = localStorage.getItem("access_token")
@@ -28,6 +51,7 @@ export default function DashboardPage() {
       setIsLoggedIn(true)
       const payload = parseJwt(token)
       if (payload?.role) setUserRole(payload.role)
+      if (payload?.username) setUserName(payload.username)
     }
   }, [])
 
@@ -40,6 +64,8 @@ export default function DashboardPage() {
     setIsLoggedIn(false)
     router.push("/")
   }
+
+  const avatarColor = getAvatarColor(userName)
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -57,24 +83,24 @@ export default function DashboardPage() {
         {/* Right side - Auth buttons */}
         <div className="flex items-center gap-2">
           {isLoggedIn ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="h-6 px-2 text-xs text-foreground-secondary hover:text-white hover:bg-background-surface transition-colors"
-              >
-                <LogOut className="h-3 w-3 mr-1" />
-                Sign Out
-              </Button>
-              <div className="w-px h-4 bg-background-surface" />
-              <Avatar className="h-6 w-6">
-                <AvatarImage src="/placeholder.svg?height=24&width=24" alt="User" />
-                <AvatarFallback className="text-xs bg-primary text-white">
-                  <User className="h-3 w-3" />
-                </AvatarFallback>
-              </Avatar>
-            </>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background-tertiary"
+                  style={{
+                    background: `linear-gradient(135deg, ${avatarColor}50, white)`,
+                  }}
+                >
+                  {getInitials(userName)}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[140px]">
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <>
               <Button
