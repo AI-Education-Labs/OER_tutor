@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 import logging
+import re
 import uuid
 import string
 import random
@@ -66,10 +67,11 @@ async def search_textbooks(q: str = "", user_id: str = Depends(validate_access_t
     if not query:
         return {"textbooks": []}
 
+    escaped_query = re.escape(query)
     regex_filter = {
         "$or": [
-            {"title": {"$regex": query, "$options": "i"}},
-            {"author": {"$regex": query, "$options": "i"}},
+            {"title": {"$regex": escaped_query, "$options": "i"}},
+            {"author": {"$regex": escaped_query, "$options": "i"}},
             {"code": query.upper()},
         ]
     }

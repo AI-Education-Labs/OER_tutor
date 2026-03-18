@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional, AsyncGenerator
 
 import logging
@@ -44,7 +44,7 @@ class MongoChatMessageHistory:
             "session_id": self.session_id,
             "role": role,
             "content": content,
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.utc)
         })
 
 
@@ -180,7 +180,7 @@ Guidelines for "important_messages":
 
         await collection.update_one(
             {"session_id": session_id, "user_id": user_id},
-            {"$set": {"title": new_title, "summary": new_summary, "updated_at": datetime.utcnow()}},
+            {"$set": {"title": new_title, "summary": new_summary, "updated_at": datetime.now(timezone.utc)}},
             upsert=True
         )
     except Exception as e:

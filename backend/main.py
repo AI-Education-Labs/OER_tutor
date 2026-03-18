@@ -1,8 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-import asyncio
-from dotenv import load_dotenv
 from backend.features.openai.service import get_langfuse_client
 
 from backend.config import settings
@@ -18,10 +16,6 @@ from backend.features.observability.service import setup_observability
 
 import mangum
 
-from dotenv import load_dotenv
-from pathlib import Path
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
-
 from backend.db.database import ensure_mongo_connection, ensure_course_indexes
 
 from dotenv import load_dotenv
@@ -29,7 +23,7 @@ from pathlib import Path
 import os
 # Only load local .env during development (not in Lambda)
 if not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-	load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+    load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -79,6 +73,7 @@ async def on_startup():
     if not settings.OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY must be set")
 
+    await ensure_mongo_connection()
     await ensure_course_indexes()
 
 # Flush llm observability
@@ -90,4 +85,3 @@ def on_shutdown():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
-    asyncio.run(ensure_mongo_connection())

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import DOMPurify from "dompurify"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -320,7 +321,7 @@ export function KeyConceptsPanel({ textbookId, selectedChapterId }: KeyConceptsP
         <div className="max-w-2xl mx-auto w-full">
           <Card className="bg-background-tertiary border-border">
             <CardContent className="p-6">
-              <div className="text-foreground text-sm prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: resultHtml }} />
+              <div className="text-foreground text-sm prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(resultHtml) }} />
             </CardContent>
           </Card>
         </div>

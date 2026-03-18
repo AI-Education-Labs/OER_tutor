@@ -25,110 +25,45 @@ This codebase is a functional AI-powered tutoring platform built during a senior
 
 ## Critical — Fix Immediately
 
-### 1. SHA-256 Used for Password Hashing
+### ~~1. SHA-256 Used for Password Hashing~~ DONE
 
-**File:** `backend/features/auth/service.py:20-21`
-
-```python
-async def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-```
-
-SHA-256 is a general-purpose hash, not a password-hashing algorithm. It is fast by design, making brute-force attacks trivial. `bcrypt` is already in `requirements.txt` but is not used.
-
-**Fix:** Replace with `bcrypt.hashpw()` / `bcrypt.checkpw()`. Requires a one-time migration to re-hash all existing user passwords (e.g., force a password reset or re-hash on next login).
+Replaced with `bcrypt.hashpw()` / `bcrypt.checkpw()`. Added gradual migration: legacy SHA-256 hashes are auto-detected and re-hashed with bcrypt on next login. New registrations use bcrypt only.
 
 ---
 
-### 2. Wildcard CORS with Credentials Enabled
+### ~~2. Wildcard CORS with Credentials Enabled~~ DONE
 
-**File:** `backend/main.py:60-66`
-
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
-
-`allow_origins=["*"]` combined with `allow_credentials=True` is a well-known misconfiguration. In some browsers/specs this is outright blocked; in others it allows any site to make authenticated cross-origin requests.
-
-**Fix:** Replace `"*"` with the actual frontend URL(s) (e.g., `["https://yourdomain.com", "http://localhost:3000"]`). Use an environment variable so dev and prod differ.
+Added `ALLOWED_ORIGINS` env var to `config.py` (defaults to `http://localhost:3000`). `main.py` now parses it into a list for the CORS middleware. Production sets the real frontend URL via environment variable.
 
 ---
 
-### 3. Build Pipeline Ignores All Errors
+### ~~3. Build Pipeline Ignores All Errors~~ DONE
 
-**File:** `next.config.mjs:3-8`
-
-```js
-eslint: { ignoreDuringBuilds: true },
-typescript: { ignoreBuildErrors: true },
-```
-
-This means the Next.js build will succeed even with type errors and lint violations. Bugs, broken imports, and security issues accumulate silently.
-
-**Fix:** Remove both flags. Fix all resulting build errors. This is a one-time investment that prevents ongoing regression.
+Removed both `eslint.ignoreDuringBuilds` and `typescript.ignoreBuildErrors` from `next.config.mjs`. Fixed all resulting build errors (async params type, ref type annotation). Also deleted 27 unused scaffolded shadcn/ui components and installed missing `next-themes` dependency.
 
 ---
 
-### 4. Default Secret Key for JWT Signing
+### ~~4. Default Secret Key for JWT Signing~~ DONE
 
-**File:** `backend/config.py:13`
-
-```python
-SECRET_KEY: str = "your-secret-key"
-```
-
-If the `SECRET_KEY` environment variable is not set, JWTs are signed with this public default. Anyone who reads the source code can forge tokens.
-
-**Fix:** Remove the default value (or set it to `""`) and add a startup check that raises an error if `SECRET_KEY` is not set in the environment.
+Changed `SECRET_KEY` default to `""`. Added startup validation in `on_startup` that raises `RuntimeError` if `SECRET_KEY` is empty or still the old default. Also validates `MONGO_URI` and `OPENAI_API_KEY`.
 
 ---
 
-### 5. JWT Token Expiration Set to ~34 Days
+### ~~5. JWT Token Expiration Set to ~34 Days~~ DONE
 
-**File:** `backend/config.py:15`
-
-```python
-ACCESS_TOKEN_EXPIRE_MINUTES: int = 50000  # ~34.7 days
-```
-
-A stolen token is valid for over a month. There is no refresh-token mechanism, so shortening this is the only mitigation.
-
-**Fix:** Reduce to 30-60 minutes and implement a refresh-token flow, or at minimum reduce to 24 hours with a sliding window.
+Reduced `ACCESS_TOKEN_EXPIRE_MINUTES` from 50000 (~34 days) to 10080 (7 days). Existing tokens with the old expiration will naturally expire.
 
 ---
 
-### 6. Unprotected Textbook Routes
+### ~~6. Unprotected Textbook Routes~~ DONE
 
-**File:** `backend/routes/textbooks.py`
-
-Several endpoints have no `@Depends(validate_access_token)`:
-- `GET /textbooks/{textbook_uuid}` (line ~185, has a TODO comment acknowledging this)
-- `GET /textbooks/{textbook_uuid}/chapters`
-- `GET /textbooks/{textbook_uuid}/chapters/{chapter_id}/pdf`
-
-Any unauthenticated user can access all textbook content.
-
-**Fix:** Add the auth dependency. If guest/preview access is intentional, use `validate_access_token_optional` and enforce limits.
+Added `view_type: str = "public"` field to the `Textbook` model. All 3 unprotected routes now use `validate_access_token_optional` and return 401 for non-public textbooks when no token is provided. Public textbooks remain accessible without auth. Removed the TODO comment.
 
 ---
 
-### 7. Inconsistent JWT Claim Reading
+### ~~7. Inconsistent JWT Claim Reading~~ DONE
 
-**File:** `backend/features/auth/service.py`
-
-- `validate_access_token` reads `payload.get("sub")` (line 86)
-- `validate_access_token_optional` reads `payload.get("user_id")` (line 46)
-- Token creation puts `"sub": user_id` AND `"user_id": user_id` in the payload
-
-If either claim is missing or the creation ever changes, one of the two validators silently breaks.
-
-**Fix:** Standardize on a single claim key (conventionally `"sub"`) and use it in both validators.
+Removed duplicate `"user_id"` claim from token creation. Both `validate_access_token` and `validate_access_token_optional` now read from `"sub"` consistently.
 
 ---
 
@@ -193,26 +128,15 @@ Both GitHub Actions workflows (`deploy-fastapi-dev.yml`, `deploy-fastapi-main.ym
 
 ---
 
-### 13. Regex Injection in Textbook Search
+### ~~13. Regex Injection in Textbook Search~~ DONE
 
-**File:** `backend/routes/textbooks.py:69-75`
-
-User-supplied query string `q` is passed directly into a MongoDB `$regex` filter without escaping. A malicious pattern (e.g., `.*`) can cause expensive regex evaluation (ReDoS) or return unintended data.
-
-**Fix:** Use `re.escape(q)` before passing to the regex filter, or use MongoDB's `$text` search.
+User-supplied query is now escaped with `re.escape()` before passing to MongoDB `$regex`. The `code` field exact match is unchanged.
 
 ---
 
-### 14. `dangerouslySetInnerHTML` Without Sanitization
+### ~~14. `dangerouslySetInnerHTML` Without Sanitization~~ DONE
 
-Used in:
-- `components/key-concepts-panel.tsx` (line ~323)
-- `components/tutor-panel.tsx` (line ~692)
-- `components/markdown.tsx` (lines ~23, ~73)
-
-If any backend response includes unsanitized user content or LLM output that contains `<script>` tags, this is an XSS vector.
-
-**Fix:** Use a sanitizer like `DOMPurify` before rendering, or stick with `react-markdown` (which is already used elsewhere and is safe by default).
+Added `DOMPurify.sanitize()` to `utils/markdown.tsx` and `components/key-concepts-panel.tsx`. Installed `dompurify` as a dependency.
 
 ---
 
@@ -224,38 +148,21 @@ There is no `/health` or `/ready` endpoint in the FastAPI app. The Lambda has no
 
 ---
 
-### 16. Unreachable Code After `uvicorn.run()`
+### ~~16. Unreachable Code After `uvicorn.run()`~~ DONE
 
-**File:** `backend/main.py:83-84`
-
-```python
-uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
-asyncio.run(ensure_mongo_connection())  # Never reached
-```
-
-`uvicorn.run()` blocks until the server shuts down. The `ensure_mongo_connection()` call never executes.
-
-**Fix:** Move the connection check to the `@app.on_event("startup")` handler (which already exists at line 71).
+Moved `ensure_mongo_connection()` into the `@app.on_event("startup")` handler. Removed the unreachable `asyncio.run()` call and unused `asyncio` import.
 
 ---
 
-### 17. Triple `load_dotenv` Import/Call
+### ~~17. Triple `load_dotenv` Import/Call~~ DONE
 
-**File:** `backend/main.py:5, 20-22, 26-31`
-
-`load_dotenv` is imported three times and called twice. The first unconditional call (line 22) runs before the Lambda-aware conditional (line 30-31), so the `.env` file is always loaded even in Lambda.
-
-**Fix:** Keep only the conditional block (lines 29-31). Remove the duplicate imports.
+Removed two duplicate `load_dotenv` imports and the unconditional call. Only the Lambda-aware conditional block remains.
 
 ---
 
-### 18. Deprecated `datetime.utcnow()`
+### ~~18. Deprecated `datetime.utcnow()`~~ DONE
 
-**File:** `backend/features/auth/service.py:26, 28`
-
-`datetime.utcnow()` is deprecated as of Python 3.12. The same codebase already uses `datetime.now(timezone.utc)` elsewhere (e.g., `user_progress.py`).
-
-**Fix:** Replace all `datetime.utcnow()` with `datetime.now(timezone.utc)`.
+Replaced all `datetime.utcnow()` with `datetime.now(timezone.utc)` in `auth/service.py` and `routes/chat.py`.
 
 ---
 
@@ -399,7 +306,7 @@ Both workflow files hardcode the AWS account ID, ECR repository name, and Lambda
 - `study-interface.tsx:555-556` — TODO for unimplemented split functionality
 - `tutor-panel.tsx:745` — unused "progress" tab
 - `flashcard-panel.tsx:112-114` — commented-out default selection
-- `backend/main.py:83-84` — unreachable code after `uvicorn.run()`
+- ~~`backend/main.py:83-84` — unreachable code after `uvicorn.run()`~~ (fixed in item 16)
 
 **Fix:** Remove dead code. Convert TODOs to GitHub issues so they're tracked.
 
@@ -509,10 +416,8 @@ The backend uses `print()` for most debug output and has `logging.basicConfig(le
 
 ### Suggested Priority Order
 
-If tackling this debt incrementally, here is a recommended sequence:
-
-1. **Security hardening** (items 1-7) — These are real vulnerabilities
-2. **Enable build errors** (item 3) — Prevents new debt from accumulating
+~~1. **Security hardening** (items 1-7) — DONE~~
+~~2. **Enable build errors** (item 3) — DONE~~
 3. **Centralize API client & auth** (items 9, 23) — Reduces duplication and improves security
 4. **Add backend tests + CI gates** (items 11, 12) — Catches regressions
 5. **Rate limiting** (item 8) — Protects the OpenAI budget
