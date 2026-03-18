@@ -181,32 +181,40 @@ async def upload_textbook(payload: TextbookUploadRequest, user_id: str = Depends
     )
 
 
-# TODO: These routes need to be protected
 @router.get("/{textbook_uuid}")
-async def get_textbook_details(textbook_uuid: str):
+async def get_textbook_details(textbook_uuid: str, current_user: Optional[str] = Depends(validate_access_token_optional)):
     textbook = await find_textbook_by_id(textbook_uuid)
     if textbook is None:
         raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
+    if textbook.view_type != "public" and current_user is None:
+        raise HTTPException(status_code=401, detail="Authentication required to access this textbook")
     return textbook
-    
+
 
 @router.get("/{textbook_uuid}/chapters")
-async def get_chapters(textbook_uuid: str):
+async def get_chapters(textbook_uuid: str, current_user: Optional[str] = Depends(validate_access_token_optional)):
     """Get available chapters for a textbook.
     and returns a consistent response shape: { "chapters": [...] }.
     """
-    textbook = await get_textbook_details(textbook_uuid)
+    textbook = await find_textbook_by_id(textbook_uuid)
+    if textbook is None:
+        raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
+    if textbook.view_type != "public" and current_user is None:
+        raise HTTPException(status_code=401, detail="Authentication required to access this textbook")
     chapters = textbook.chapters or []
 
     return {"chapters": chapters}
 
 @router.get("/{textbook_uuid}/chapters/{chapter_id}/pdf")
-async def get_chapter_pdf(textbook_uuid: str, chapter_id: str):
+async def get_chapter_pdf(textbook_uuid: str, chapter_id: str, current_user: Optional[str] = Depends(validate_access_token_optional)):
     """Return a presigned URL to the chapter PDF stored in S3."""
     print(f"Getting chapter PDF for {textbook_uuid} and {chapter_id}")
     try:
-        # --- keep your metadata lookup ---
-        textbook = await get_textbook_details(textbook_uuid)
+        textbook = await find_textbook_by_id(textbook_uuid)
+        if textbook is None:
+            raise HTTPException(status_code=404, detail=f"Textbook not found: {textbook_uuid}")
+        if textbook.view_type != "public" and current_user is None:
+            raise HTTPException(status_code=401, detail="Authentication required to access this textbook")
         chapters = textbook.chapters or []
         target_chapter = next(
             (c for c in chapters if str(c.id) == str(chapter_id)), None

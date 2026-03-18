@@ -10,9 +10,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    SECRET_KEY: str = "your-secret-key"  # Change in production
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 50000
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+
+    # CORS
+    ALLOWED_ORIGINS: str = "http://localhost:3000"
     
     # Database settings
     MONGO_URI: str = ""

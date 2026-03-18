@@ -5,6 +5,7 @@ import asyncio
 from dotenv import load_dotenv
 from backend.features.openai.service import get_langfuse_client
 
+from backend.config import settings
 from backend.routes.auth import router as auth_router
 from backend.routes.textbooks import router as textbooks_router
 from backend.routes.flashcards import router as flashcards_router
@@ -59,7 +60,7 @@ app.include_router(api_router)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,6 +71,14 @@ handler = mangum.Mangum(app)
 
 @app.on_event("startup")
 async def on_startup():
+    # Validate required settings
+    if not settings.SECRET_KEY or settings.SECRET_KEY == "your-secret-key":
+        raise RuntimeError("SECRET_KEY must be set to a secure value (not empty or default)")
+    if not settings.MONGO_URI:
+        raise RuntimeError("MONGO_URI must be set")
+    if not settings.OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY must be set")
+
     await ensure_course_indexes()
 
 # Flush llm observability
