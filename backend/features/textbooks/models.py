@@ -26,6 +26,7 @@ class Textbook(BaseModel):
     created_at: Optional[datetime] = None
     subject: Optional[str] = None
     title: str
+    view_type: str = "public"
 
 class ChapterProgress(BaseModel):
     completed: bool = False

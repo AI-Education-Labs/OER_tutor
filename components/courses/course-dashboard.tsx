@@ -156,8 +156,8 @@ export function CourseDashboard({ isAuthenticated, userRole }: CourseDashboardPr
     toast({ title: "Copied!", description: `Invite code "${code}" copied to clipboard.` })
   }
 
-  const renderCourseCard = (course: CourseCard, showEnroll = false) => (
-    <Link key={course.id} href={`/course/${course.id}`}>
+  const renderCourseCard = (course: CourseCard, showEnroll = false, index = 0) => (
+    <Link key={course.id} href={`/course/${course.id}`} {...(index === 0 ? { "data-tutorial": "course-card" } : {})}>
       <Card className="bg-background-tertiary border-border hover:border-primary transition-colors cursor-pointer group h-full overflow-hidden">
         <CardContent className="p-0 flex h-full">
           {/* Left: course details */}
@@ -249,6 +249,7 @@ export function CourseDashboard({ isAuthenticated, userRole }: CourseDashboardPr
           <div className="flex gap-2">
             {isAuthenticated && (
               <Button
+                data-tutorial="join-course-btn"
                 variant="outline"
                 size="sm"
                 onClick={() => setJoinDialogOpen(true)}
@@ -261,6 +262,7 @@ export function CourseDashboard({ isAuthenticated, userRole }: CourseDashboardPr
 
             {isAuthenticated && userRole === "professor" && (
               <Button
+                data-tutorial="create-course-btn"
                 size="sm"
                 onClick={() => setCreateDialogOpen(true)}
                 className="bg-primary hover:bg-primary-hover text-white"
@@ -273,7 +275,7 @@ export function CourseDashboard({ isAuthenticated, userRole }: CourseDashboardPr
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs data-tutorial="course-tabs" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-background-tertiary border border-border">
             {isAuthenticated && (
               <TabsTrigger value="my-courses" className="data-[state=active]:bg-background-surface">
@@ -301,7 +303,7 @@ export function CourseDashboard({ isAuthenticated, userRole }: CourseDashboardPr
                   </Card>
                 )}
 
-                {filterCourses(myCourses).map((c) => renderCourseCard(c))}
+                {filterCourses(myCourses).map((c, i) => renderCourseCard(c, false, i))}
 
                 {userRole === "professor" && (
                   <button onClick={() => setCreateDialogOpen(true)} className="h-full min-h-[12rem]">
@@ -343,7 +345,7 @@ export function CourseDashboard({ isAuthenticated, userRole }: CourseDashboardPr
                 </Card>
               )}
 
-              {filterCourses(browseCourses).map((c) => renderCourseCard(c, true))}
+              {filterCourses(browseCourses).map((c, i) => renderCourseCard(c, true, i))}
             </div>
           </TabsContent>
         </Tabs>

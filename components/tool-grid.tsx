@@ -24,6 +24,7 @@ export function ToolGrid({ tutorTabs, onSelectTool }: ToolGridProps) {
         {tutorTabs.map((tool) => (
           <Card
             key={tool.id}
+            data-tutorial="tool-grid-card"
             className={`bg-background-tertiary border-border transition-colors group ${
               tool.disabled ? "opacity-50 cursor-not-allowed" : "hover:border-primary cursor-pointer"
             }`}

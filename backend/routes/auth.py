@@ -7,7 +7,7 @@ from backend.features.users.models import UserWithPassword, UserCreate
 from backend.features.auth.models import Token
 from backend.config import settings
 from backend.db.database import create_user_document, get_collection, get_user_by_username
-from backend.features.auth.service import hash_password, create_access_token
+from backend.features.auth.service import hash_password, verify_password, create_access_token
 
 router = APIRouter()
 
@@ -17,16 +17,16 @@ async def assign_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     Logs in a user and returns an access token.
     """
     user = await get_user_by_username(form_data.username)
-    input_password_hash = await hash_password(form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    hashed_password = user.get("hashed_password")
-    
-    if hashed_password != input_password_hash:
+
+    stored_hash = user.get("hashed_password")
+    user_id = user.get("id")
+    if not await verify_password(form_data.password, stored_hash, user_id):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -37,7 +37,7 @@ async def assign_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     user_id = user.get("id")
     access_token = await create_access_token(
-        data={"sub": user_id, "user_id": user_id, "role": user.get("role", "student"), "username": user.get("username", "")},
+        data={"sub": user_id, "role": user.get("role", "student"), "username": user.get("username", "")},
         expires_delta=access_token_expires,
     )
     

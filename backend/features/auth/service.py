@@ -4,28 +4,53 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
 from backend.config import settings
-from backend.db.database import get_user_by_id
+from backend.db.database import get_user_by_id, get_collection
+import bcrypt
 import hashlib
 
 
 # JWT Configuration
-SECRET_KEY = settings.SECRET_KEY  # Use your secret key from settings
-ALGORITHM = settings.ALGORITHM  # Use your algorithm from settings
-ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES  # Use your token expiration time from settings
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
-# Hashes the password using SHA-256.
+
 async def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash a password using bcrypt."""
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+async def verify_password(plain_password: str, stored_hash: str, user_id: str) -> bool:
+    """
+    Verify a password against a stored hash.
+    Supports both legacy SHA-256 hashes (64 hex chars) and bcrypt hashes.
+    Legacy hashes are automatically re-hashed with bcrypt on successful login.
+    """
+    import re
+    is_legacy_sha256 = bool(re.fullmatch(r"[0-9a-f]{64}", stored_hash))
+
+    if is_legacy_sha256:
+        # Legacy SHA-256 verification
+        if hashlib.sha256(plain_password.encode()).hexdigest() != stored_hash:
+            return False
+        # Re-hash with bcrypt and update the DB
+        new_hash = await hash_password(plain_password)
+        users = await get_collection("users")
+        await users.update_one({"id": user_id}, {"$set": {"hashed_password": new_hash}})
+        return True
+    else:
+        # bcrypt verification
+        return bcrypt.checkpw(plain_password.encode(), stored_hash.encode())
 
 async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
@@ -43,9 +68,9 @@ async def validate_access_token_optional(token: str = Depends(oauth2_scheme)):
     try:
         # Decode the token (verify its signature and expiration)
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("user_id")
+        user_id: str = payload.get("sub")
         if not user_id:
-            print(f"validate_access_token_optional: no user_id in payload")
+            print(f"validate_access_token_optional: no 'sub' in payload")
             return None
 
         expiration = payload.get("exp")

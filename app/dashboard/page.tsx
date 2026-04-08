@@ -11,16 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CourseDashboard } from "@/components/courses/course-dashboard"
-
-function parseJwt(token: string): Record<string, any> | null {
-  try {
-    const base64Url = token.split(".")[1]
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
-    return JSON.parse(atob(base64))
-  } catch {
-    return null
-  }
-}
+import { TutorialProvider } from "@/components/tutorial/tutorial-provider"
+import { TutorialReplayButton } from "@/components/tutorial/tutorial-replay-button"
+import { dashboardTutorial } from "@/config/tutorial/dashboard-steps"
+import { parseJwt } from "@/lib/auth"
+import type { UserRole } from "@/config/tutorial/types"
 
 const AVATAR_COLORS = ["#ef4444", "#f97316", "#3b82f6", "#22c55e", "#a855f7"] as const
 
@@ -68,6 +63,11 @@ export default function DashboardPage() {
   const avatarColor = getAvatarColor(userName)
 
   return (
+    <TutorialProvider
+      tutorialConfig={dashboardTutorial}
+      userRole={userRole as UserRole}
+      beforeShowHandlers={{}}
+    >
     <div className="flex min-h-screen flex-col">
       {/* VSCode-style Header */}
       <header className="sticky top-0 z-50 h-8 bg-background-tertiary border-b border-background-tertiary flex items-center px-4 flex-shrink-0">
@@ -82,6 +82,7 @@ export default function DashboardPage() {
 
         {/* Right side - Auth buttons */}
         <div className="flex items-center gap-2">
+          {isLoggedIn && <TutorialReplayButton />}
           {isLoggedIn ? (
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
@@ -128,5 +129,6 @@ export default function DashboardPage() {
         <CourseDashboard isAuthenticated={isLoggedIn} userRole={userRole} />
       </main>
     </div>
+    </TutorialProvider>
   )
 }

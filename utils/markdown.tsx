@@ -1,4 +1,5 @@
 import React from "react";
+import DOMPurify from "dompurify";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
@@ -70,7 +71,7 @@ export const formatMarkdown = (text: string): React.ReactNode => {
     html = html.replace(/\n/g, "<br />");
 
 
-    return <div dangerouslySetInnerHTML={{ __html: html }} />;
+    return <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
   };
 
   while ((match = codeBlockRegex.exec(text)) !== null) {

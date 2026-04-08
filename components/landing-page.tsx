@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, type RefObject } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
   BookOpen,
@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 
-function useFadeInOnScroll(): RefObject<HTMLDivElement | null> {
+function useFadeInOnScroll() {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
