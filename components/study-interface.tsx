@@ -29,7 +29,7 @@ import { ToolGrid } from "@/components/tool-grid"
 import { TutorialProvider } from "@/components/tutorial/tutorial-provider"
 import { TutorialReplayButton } from "@/components/tutorial/tutorial-replay-button"
 import { studyInterfaceTutorial } from "@/config/tutorial/study-interface-steps"
-import { parseJwt } from "@/lib/auth"
+import { getValidTokenPayload } from "@/lib/auth"
 import type { UserRole } from "@/config/tutorial/types"
 import Link from "next/link"
 
@@ -175,19 +175,16 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
 
   // Get user authentication on component mount
   useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
+    const payload = getValidTokenPayload()
+    setIsLoggedIn(!!payload)
     setAuthLoading(false)
 
-    if (token) {
-      const payload = parseJwt(token)
-      if (payload?.role) setUserRole(payload.role as UserRole)
-    }
+    if (payload?.role) setUserRole(payload.role as UserRole)
 
     console.log("StudyInterface - Authentication check:", {
-      hasToken: !!token,
+      hasToken: !!payload,
       textbookId,
-      isLoggedIn: !!token,
+      isLoggedIn: !!payload,
     })
   }, [])
 

@@ -170,7 +170,7 @@ export function FlashcardPanel({ textbookId, selectedChapterId }: FlashcardPanel
       setPrevError("")
       const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null
       const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL
-      const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } })
+      const resp = await fetch(`${backendUrl}/api/v1/flashcards/list`, { cache: "no-store", headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
       if (!resp.ok) {
         if (resp.status === 401 || resp.status === 403) {
           setPreviousDecks([])

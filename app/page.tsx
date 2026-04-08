@@ -6,14 +6,14 @@ import { BookOpen, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { LandingPage } from "@/components/landing-page"
+import { getValidTokenPayload } from "@/lib/auth"
 
 export default function HomePage() {
   const router = useRouter()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    if (token) {
+    if (getValidTokenPayload()) {
       setIsLoggedIn(true)
       router.push("/dashboard")
     }

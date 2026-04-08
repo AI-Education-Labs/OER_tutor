@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Message, ChatContext, BranchCandidate, ChatSession } from "@/types/chat"
 import { formatMarkdown } from "@/utils/markdown"
+import { getValidTokenPayload } from "@/lib/auth"
 
 interface AiChatPanelProps {
   context?: ChatContext
@@ -208,8 +209,7 @@ export function AiChatPanel({ context, textbookId, selectedChapterId }: AiChatPa
 
   // Detect login
   useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    setIsLoggedIn(!!token)
+    setIsLoggedIn(!!getValidTokenPayload())
   }, [])
 
   // Auto-resize textarea as user types (up to 10 lines)

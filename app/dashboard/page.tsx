@@ -14,7 +14,7 @@ import { CourseDashboard } from "@/components/courses/course-dashboard"
 import { TutorialProvider } from "@/components/tutorial/tutorial-provider"
 import { TutorialReplayButton } from "@/components/tutorial/tutorial-replay-button"
 import { dashboardTutorial } from "@/config/tutorial/dashboard-steps"
-import { parseJwt } from "@/lib/auth"
+import { getValidTokenPayload } from "@/lib/auth"
 import type { UserRole } from "@/config/tutorial/types"
 
 const AVATAR_COLORS = ["#ef4444", "#f97316", "#3b82f6", "#22c55e", "#a855f7"] as const
@@ -41,12 +41,11 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState<string>("")
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    if (token) {
+    const payload = getValidTokenPayload()
+    if (payload) {
       setIsLoggedIn(true)
-      const payload = parseJwt(token)
-      if (payload?.role) setUserRole(payload.role)
-      if (payload?.username) setUserName(payload.username)
+      if (payload.role) setUserRole(payload.role)
+      if (payload.username) setUserName(payload.username)
     }
   }, [])
 

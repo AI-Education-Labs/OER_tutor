@@ -11,16 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CourseDetail } from "@/components/courses/course-detail"
-
-function parseJwt(token: string): Record<string, any> | null {
-  try {
-    const base64Url = token.split(".")[1]
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
-    return JSON.parse(atob(base64))
-  } catch {
-    return null
-  }
-}
+import { getValidTokenPayload } from "@/lib/auth"
 
 const AVATAR_COLORS = ["#ef4444", "#f97316", "#3b82f6", "#22c55e", "#a855f7"] as const
 
@@ -48,12 +39,11 @@ export default function CourseDetailPage() {
   const [userName, setUserName] = useState<string>("")
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    if (token) {
+    const payload = getValidTokenPayload()
+    if (payload) {
       setIsLoggedIn(true)
-      const payload = parseJwt(token)
-      if (payload?.role) setUserRole(payload.role)
-      if (payload?.username) setUserName(payload.username)
+      if (payload.role) setUserRole(payload.role)
+      if (payload.username) setUserName(payload.username)
     }
   }, [])
 
