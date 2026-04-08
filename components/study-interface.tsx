@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useParams } from "next/navigation"
 import {
   ChevronLeft,
@@ -26,6 +26,11 @@ import { PDFViewer } from "@/components/pdf-viewer"
 import { TabGroup } from "@/components/tab-group"
 import { DragDropProvider } from "@/components/drag-drop-provider"
 import { ToolGrid } from "@/components/tool-grid"
+import { TutorialProvider } from "@/components/tutorial/tutorial-provider"
+import { TutorialReplayButton } from "@/components/tutorial/tutorial-replay-button"
+import { studyInterfaceTutorial } from "@/config/tutorial/study-interface-steps"
+import { parseJwt } from "@/lib/auth"
+import type { UserRole } from "@/config/tutorial/types"
 import Link from "next/link"
 
 interface StudyInterfaceProps {
@@ -84,7 +89,17 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
   const [rightPanelWidth, setRightPanelWidth] = useState(400)
   const [showHelpTab, setShowHelpTab] = useState(false)
   const [isRightPanelNarrow, setIsRightPanelNarrow] = useState(false)
+  const [userRole, setUserRole] = useState<UserRole | undefined>(undefined)
   const titleBarRef = useRef<HTMLDivElement | null>(null)
+
+  // Tutorial system: beforeShow handlers for auto-expanding panels
+  const tutorialBeforeShowHandlers = useMemo(() => ({
+    expandLeftPanel: () => setLeftPanelCollapsed(false),
+    expandRightPanel: () => {
+      setRightPanelCollapsed(false)
+      setShowHelpTab(true)
+    },
+  }), [])
 
   // Set initial chapter panel width to 20% of viewport on first load
   useEffect(() => {
@@ -163,6 +178,11 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
     const token = localStorage.getItem("access_token")
     setIsLoggedIn(!!token)
     setAuthLoading(false)
+
+    if (token) {
+      const payload = parseJwt(token)
+      if (payload?.role) setUserRole(payload.role as UserRole)
+    }
 
     console.log("StudyInterface - Authentication check:", {
       hasToken: !!token,
@@ -562,6 +582,11 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
       onCreateGroup={createNewTabGroup}
       onSplitGroup={handleSplitGroup}
     >
+      <TutorialProvider
+        tutorialConfig={studyInterfaceTutorial}
+        userRole={userRole}
+        beforeShowHandlers={tutorialBeforeShowHandlers}
+      >
       <div className="h-screen bg-background text-foreground-secondary flex flex-col overflow-hidden">
         {/* Custom CSS for flash animation */}
         <style jsx>{`
@@ -588,12 +613,13 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                 <Home className="w-4 h-4 text-[#cccccc] group-hover:text-[#ffffff] transition-colors" />
               </div>
             </Link>
+            <TutorialReplayButton />
           </div>
           <div className="flex-1 text-center text-sm">Research Methods in Psychology</div>
         </div>
 
         {/* Mobile Navigation Bar */}
-        <div className="md:hidden h-12 bg-background-tertiary border-b border-border flex items-center justify-around flex-shrink-0">
+        <div data-tutorial="mobile-nav-bar" className="md:hidden h-12 bg-background-tertiary border-b border-border flex items-center justify-around flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
@@ -619,6 +645,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
           </Button>
 
           <Button
+            data-tutorial="mobile-tools-btn"
             variant="ghost"
             size="sm"
             className={`flex flex-col items-center gap-1 h-10 px-3 ${mobileToolsOpen ? "bg-background-surface" : ""}`}
@@ -636,6 +663,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
             {/* Desktop Left panel - Chapter selector (hidden on mobile) */}
             {!leftPanelCollapsed && (
               <div
+                data-tutorial="chapter-selector"
                 className="hidden md:flex relative bg-background-secondary border-r border-border flex-shrink-0 flex-col"
                 style={{ width: `${leftPanelWidth}px` }}
               >
@@ -775,7 +803,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
                   </div>
                 </div>
               </div>
-              <div id="pdf-root" className="flex-1 min-h-0 min-w-0 overflow-hidden">
+              <div id="pdf-root" data-tutorial="pdf-viewer" className="flex-1 min-h-0 min-w-0 overflow-hidden">
                 <PDFViewer
                   textbookId={textbookId}
                   selectedChapterId={selectedChapterId}
@@ -790,6 +818,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
             {/* Desktop Right panel - Resizable tutoring tools (hidden on mobile) */}
             {!rightPanelCollapsed && (
               <div
+                data-tutorial="ai-tools-panel"
                 className="hidden md:flex relative bg-background-secondary border-l border-border flex-col flex-shrink-0"
                 style={{ width: `${rightPanelWidth}px` }}
               >
@@ -936,6 +965,7 @@ export function StudyInterface({ textbookId: propTextbookId }: StudyInterfacePro
           />
         )}
       </div>
+      </TutorialProvider>
     </DragDropProvider>
   )
 }
